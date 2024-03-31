@@ -1,2 +1,2 @@
 # GenshinOJ
-An great online judge judge judgment via websocket
+A great online judge judges judgment via websocket
