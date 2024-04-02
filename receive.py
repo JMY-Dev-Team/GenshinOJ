@@ -125,7 +125,9 @@ async def receive(this_websocket):
                         response['content'].append(session_username)
                         
                     await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
-
+                elif message['type'] == 'chat_message':
+                    
+                
             except Exception as e:
                 pass     
 
