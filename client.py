@@ -16,6 +16,7 @@ register_username: str = ''; register_password: str = ''
 is_processing: bool = True; is_logged: bool = False
 t: threading.Thread
 ws: websocket.WebSocketApp
+exit_event: threading.Event
 
 def message_processing(self, original_message):
     global is_processing, is_logged, session_token
@@ -59,13 +60,16 @@ def message_processing(self, original_message):
         elif message['type'] == 'online_user':
             print('Online Users: ', end = '')
             for online_user in message['content']:
-                print('{} '.format(online_user), end = '')
+                if online_user == message['content'][-1]:
+                    print('{}'.format(online_user), end = '')
+                else:
+                    print('{}, '.format(online_user), end = '')
             
             print()
             is_processing = False
 
         elif message['type'] == 'chat_echo':
-            is_processing = True
+            is_processing = False
 
         elif message['type'] == 'chat_message':
             print('+ Chat Message')
@@ -116,7 +120,7 @@ def input_processing(exit_event, self):
                 print('使用 %problem_set 来获取题目列表')
                 print('使用 %problem_statement[题目编号] 来获取指定题目信息')
                 print('使用 %submit [题目编号] [源文件名] 来递交代码测评指定题目')
-                print('使用 %chat [聊天对象] 来短讯聊天')
+                print('使用 %chat [短讯聊天对象] 来短讯聊天，此命令会使你进入短讯聊天环境，键入 %send 来确认发送，键入 %cancel 来取消发送')
                 print('使用 %online_user 来查询在线用户')
                 print('使用 %debug [on / off] 来开启或关闭调试模式')
                 print('使用 %quit 或 %exit 退出')
@@ -154,22 +158,33 @@ def input_processing(exit_event, self):
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%chat': # Send short chat message
-                if len(command) < 1:
+                if len(command) < 2:
+                    print('Please specify who you want to send this message to.')
                     continue
                 
-                chat_messages: list[str] = []; chat_message: str
+                chat_messages: list[str] = []; chat_message: str; confirmed_flag = True
                 while chat_message := input('chat> '):
                     chat_message = chat_message.strip()
-                    if chat_message == '%eof':
+                    if chat_message == '%confirm':
+                        break
+                    if chat_message == '%cancel':
+                        confirmed_flag = False
                         break
                     
                     chat_messages.append(chat_message)
+                
+                if not confirmed_flag:
+                    continue
                 
                 is_processing = True
                 message = {'type': 'chat_message', 'from': login_username, 'to': command[1], 'content': chat_messages, 'session_token': session_token}
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%debug': # Toggle debug mode
+                if len(command) < 2:
+                    print('Please specify whether you want to turn on the debug output or not.')
+                    continue
+                
                 if command[1] == 'on':
                     websocket.enableTrace(True)
                 if command[1] == 'off':
@@ -211,7 +226,7 @@ def websocket_session_on_close(self, close_status_code, close_msg):
     time.sleep(1)
 
 def websocket_session(on_open):
-    global ws, t
+    global t, ws
     exit_event = threading.Event()
     try:
         ws = websocket.WebSocketApp(SERVER_HOST, on_message = message_processing, on_open = on_open, on_close = websocket_session_on_close)
