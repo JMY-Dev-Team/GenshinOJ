@@ -159,7 +159,7 @@ def input_processing(exit_event, self):
 
             elif command[0] == '%chat': # Send short chat message
                 if len(command) < 2:
-                    print('Please specify who you want to send this message to.')
+                    print('Please specify whom you want to send this message to.')
                     continue
                 
                 chat_messages: list[str] = []; chat_message: str; confirmed_flag = True

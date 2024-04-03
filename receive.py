@@ -27,6 +27,30 @@ def generate_session_token(session_token_seed: int):
     else:
         return 's'
 
+async def receive(this_websocket):
+    global session_token
+    setattr(this_websocket, 'session_token', '')
+    # Client messages process
+    try:
+        async for original_message in this_websocket: 
+            await process(this_websocket, original_message)
+            await asyncio.sleep(0)
+            
+        await this_websocket.recv()
+        await asyncio.sleep(0)
+    except Exception as e:
+        print('Connection closed, session token: {}'.format(this_websocket.session_token))
+        if not this_websocket.session_token == '':
+            try:
+                del global_matter.sessions[this_websocket.session_token]
+                del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
+            except:
+                pass
+
+        await this_websocket.close()
+        
+# TODO(JMY): Hash encoding for better password restoration
+
 async def process(this_websocket: websockets.server.WebSocketServerProtocol, original_message: str):
     try:
         response = dict()
@@ -58,11 +82,13 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 global_matter.chat_server_message_queue[login_username]['websocket_protocol'] = this_websocket
                 
                 print(f'The user {login_username} logged in successfully.')
-                print(f'The session token: {new_session_token}')
+                print(f'The session token: {new_session_token}');
             else:
                 print(f'The user {login_username} failed to login.')
                 response = {'type': 'quit', 'content': 'authentication_failure'}
-                await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
+                await this_websocket.send(json.dumps(response)); response.clear();
+                
+            await asyncio.sleep(0)
 
         elif message['type'] == 'register':
             register_username = message['register_username']; register_password = message['register_password']
@@ -88,6 +114,7 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
             print('user ' + global_matter.sessions[message['session_token']] + ' quit.')
             try:
                 del global_matter.sessions[this_websocket.session_token]
+                del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
             except:
                 pass 
             await this_websocket.close(); response.clear(); await asyncio.sleep(0)
@@ -105,7 +132,7 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 submission_code.write(line)
 
             submission_code.flush(); submission_code.close()
-            global_matter.judgment_queue.append({'submission_id': global_matter.now_submission_id, 'problem_number': message['problem_number'], 'language': message['language'], 'username': global_matter.sessions[message['session_token']], 'websocket': this_websocket})
+            global_matter.judgment_queue.append({'submission_id': global_matter.now_submission_id, 'problem_number': message['problem_number'], 'language': message['language'], 'username': global_matter.sessions[message['session_token']], 'websocket': this_websocket}); await asyncio.sleep(0)
         elif message['type'] == 'problem_statement':
             problem_number = message['problem_number']
             try:
@@ -140,12 +167,16 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
         elif message['type'] == 'chat_message':
             chat_message_user_from = message['from']; chat_message_user_to = message['to']; chat_messages = message['content']; session_token = message['session_token']
             if global_matter.sessions[session_token] == chat_message_user_from:
-                global_matter.chat_server_message_queue[chat_message_user_to]['message_queue'].append({
-                    'from': chat_message_user_from,
-                    'chat_messages': chat_messages
-                })
-                response['type'] = 'chat_echo'; response['content'] = [1]
-                await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
+                if chat_message_user_to in global_matter.sessions.values: # To whom is online
+                    global_matter.chat_server_message_queue[chat_message_user_to]['message_queue'].append({
+                        'from': chat_message_user_from,
+                        'chat_messages': chat_messages
+                    })
+                    response['type'] = 'chat_echo'; response['content'] = [1]
+                    await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
+                else: # To whom is offline
+                    response['type'] = 'chat_echo'; response['content'] = [0, 'The function of chat cache is not implemented yet. Please retry to send message to whom is online.']
+                    pass # TODO(JMY): Implement the function of chat cache
             else:
                 response['type'] = 'chat_echo'; response['content'] = [0, 'Bad session token. Please logout and retry.']
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
@@ -154,25 +185,7 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
         if not this_websocket.session_token == '':
             try:
                 del global_matter.sessions[this_websocket.session_token]
-            except:
-                pass
-
-        await this_websocket.close()
-
-async def receive(this_websocket):
-    setattr(this_websocket, 'session_token', '')
-    # Client messages process
-    try:
-        async for original_message in this_websocket: 
-            await process(this_websocket, original_message)
-            await asyncio.sleep(0)
-            
-        await this_websocket.recv()
-    except Exception as e:
-        print('Connection closed, session token: {}'.format(this_websocket.session_token))
-        if not this_websocket.session_token == '':
-            try:
-                del global_matter.sessions[this_websocket.session_token]
+                del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
             except:
                 pass
 
