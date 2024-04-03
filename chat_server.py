@@ -14,9 +14,8 @@ async def chat_server():
                     'from': chat_messages['from'],
                     'content': chat_messages['chat_messages'],
                 }
-                await global_matter.chat_server_message_queue[chat_server_user_to]['websocket_protocol'].send(json.dumps(response)); await asyncio.sleep(0)
+                await global_matter.chat_server_message_queue[chat_server_user_to]['websocket_protocol'].send(json.dumps(response));
             
             global_matter.chat_server_message_queue[chat_server_user_to]['message_queue'].clear()
-            await asyncio.sleep(0)
         
         await asyncio.sleep(0) 
