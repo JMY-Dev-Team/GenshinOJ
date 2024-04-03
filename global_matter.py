@@ -46,7 +46,8 @@ def DatabaseConnection(DATABASE_USER = 'root', DATABASE_PASSWORD = '123456', DAT
     )
 
 judgment_queue = []
-SERVER_HOST = '127.0.0.1'
+chat_server_message_queue = dict()
+SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 9982
 
 is_server_closed = False

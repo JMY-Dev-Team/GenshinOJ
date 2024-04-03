@@ -5,7 +5,7 @@ except:
     os.system('pip install websocket-client urwid')
     import websocket
 
-SERVER_HOST = 'ws://148.100.112.58:80'
+SERVER_HOST = 'ws://148.100.112.58:80' # Test server address
 
 session_token = ''
 login_username = ''; login_password = ''
