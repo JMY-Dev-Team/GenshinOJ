@@ -53,7 +53,9 @@ async def receive(this_websocket):
                         response = {'type': 'session_token', 'content': new_session_token}
                         await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
                         global_matter.sessions[new_session_token] = login_username
-                        setattr(this_websocket, 'session_token', new_session_token)
+                        global_matter.chat_server_message_queue[login_username] = dict
+                        global_matter.chat_server_message_queue[login_username]['message_queue'] = []
+                        global_matter.chat_server_message_queue[login_username]['websocket_protocol'] = this_websocket
                         print(f'The user {login_username} logged in successfully.')
                         print(f'The session token: {new_session_token}')
                     else:
@@ -126,8 +128,17 @@ async def receive(this_websocket):
                         
                     await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
                 elif message['type'] == 'chat_message':
-                    pass
-                
+                    chat_message = message['content']
+                    chat_message_user_from = message['from']; chat_message_user_to = message['to']; session_token = message['session_token']
+                    if global_matter.sessions[session_token] == chat_message_user_from:
+                        global_matter.chat_server_message_queue[chat_message_user_to]['message_queue'].append({'from': chat_message_user_from, \
+                                                                                                               'chat_message': chat_message})
+                        response['type'] = 'chat_echo'; response['content'] = [1]
+                        await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
+                    else:
+                        response['type'] = 'chat_echo'; response['content'] = [0, 'Bad session token. Please logout and retry.']
+                        await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
+                    
             except Exception as e:
                 pass     
 
