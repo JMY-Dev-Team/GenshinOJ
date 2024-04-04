@@ -1,5 +1,12 @@
-import json, random, logging
-import asyncio, websockets.server
+import os, sys, json, random, logging
+import asyncio, websockets, websockets.server
+from .. import server
+
+class ws_server:
+    def __init__(self) -> None:
+        self.ws_server = websockets.serve(receive)
+        server.get_module_instance('global_message_queue').add_task_to_event_loop(self.ws_server)
+        pass
 
 def generate_session_token(session_token_seed: int):
     if session_token_seed > 1:

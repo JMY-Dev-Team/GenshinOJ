@@ -1,5 +1,18 @@
 import os
-import pymysql, hashlib
+import pymysql, hashlib, asyncio
+
+class global_message_queue:
+    def __init__(self):
+        self.global_message_queue = dict()
+        
+    def get_message_of(self, module_id: str) -> list:
+        return self.global_message_queue[module_id]
+    
+    def push_message(self, to_module_id: str, message: dict) -> bool:
+        self.global_message_queue[to_module_id].append(message)
+
+    def add_task_to_event_loop(self, task):
+        pass
 
 def get_problem_testcase_config_json_path(problem_number):
     problem_number = str(problem_number)

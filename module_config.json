@@ -4,8 +4,40 @@
             "name": "Global Message Queue",
             "id": "global_message_queue",
             "enabled": true,
-            "path": "/global_message_queue/global_message_queue.py",
+            "path": "global_message_queue.global_message_queue",
             "dependencies": [],
+            "unload_timeout": 0
+        },
+        {
+            "name": "Database Connector",
+            "id": "db_connector",
+            "enabled": true,
+            "path": "db_connector.db_connector",
+            "dependencies": ["global_message_queue"],
+            "unload_timeout": 0
+        },
+        {
+            "name": "Websocket Server",
+            "id": "ws_server",
+            "enabled": true,
+            "path": "ws_server.ws_server",
+            "dependencies": ["db_connector"],
+            "unload_timeout": 0
+        },
+        {
+            "name": "Compilers Manager",
+            "id": "compilers_manager",
+            "enabled": true,
+            "path": "compilers_manager.compilers_manager",
+            "dependencies": ["ws_server"],
+            "unload_timeout": 0
+        },
+        {
+            "name": "Judge",
+            "id": "judge",
+            "enabled": true,
+            "path": "judge.judge",
+            "dependencies": ["compilers_manager"],
             "unload_timeout": 0
         }
     ]
