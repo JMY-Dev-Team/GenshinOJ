@@ -1,0 +1,12 @@
+{
+    "working_load": [
+        {
+            "name": "Global Message Queue",
+            "id": "global_message_queue",
+            "enabled": true,
+            "path": "/global_message_queue/global_message_queue.py",
+            "dependencies": [],
+            "unload_timeout": 0
+        }
+    ]
+}

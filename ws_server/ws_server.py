@@ -1,6 +1,5 @@
 import json, random, logging
 import asyncio, websockets.server
-import global_matter
 
 def generate_session_token(session_token_seed: int):
     if session_token_seed > 1:
@@ -45,8 +44,8 @@ async def receive(this_websocket):
         print('Connection closed, session token: {}'.format(this_websocket.session_token))
         if not this_websocket.session_token == '':
             try:
-                del global_matter.sessions[this_websocket.session_token]
-                del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
+                del global_message_queue.sessions[this_websocket.session_token]
+                del global_message_queue.chat_server_message_queue[session_token[this_websocket.session_token]]
             except:
                 pass
 
@@ -59,10 +58,10 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
         print(f'Received message from {this_websocket.remote_address[0]} (port: {this_websocket.remote_address[1]}): {message}')
         if message['type'] == 'login':
             login_username = message['login_username']; login_password = message['login_password']
-            login_password_hash = global_matter.get_md5(login_password)
+            login_password_hash = global_message_queue.get_md5(login_password)
             print(f'The user {login_username} try to login with hash: {login_password_hash}.')
-            global_matter.database_cursor.execute(f'SELECT password FROM users WHERE username = \'{login_username}\';')
-            tmp = global_matter.database_cursor.fetchone()
+            global_message_queue.database_cursor.execute(f'SELECT password FROM users WHERE username = \'{login_username}\';')
+            tmp = global_message_queue.database_cursor.fetchone()
             try:
                 real_password_hash = tmp[0]
             except Exception as e:
@@ -78,10 +77,10 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 response = {'type': 'session_token', 'content': new_session_token}
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
                 this_websocket.session_token = new_session_token
-                global_matter.sessions[new_session_token] = login_username
-                global_matter.chat_server_message_queue[login_username] = dict()
-                global_matter.chat_server_message_queue[login_username]['message_queue'] = []
-                global_matter.chat_server_message_queue[login_username]['websocket_protocol'] = this_websocket
+                global_message_queue.sessions[new_session_token] = login_username
+                global_message_queue.chat_server_message_queue[login_username] = dict()
+                global_message_queue.chat_server_message_queue[login_username]['message_queue'] = []
+                global_message_queue.chat_server_message_queue[login_username]['websocket_protocol'] = this_websocket
                 
                 print(f'The user {login_username} logged in successfully.')
                 print(f'The session token: {new_session_token}');
@@ -94,17 +93,17 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
 
         elif message['type'] == 'register':
             register_username = message['register_username']; register_password = message['register_password']
-            register_password_hash = global_matter.get_md5(register_password)
+            register_password_hash = global_message_queue.get_md5(register_password)
             print(f'The user {register_username} try to register with hash: {register_password_hash}.')
-            global_matter.database_cursor.execute(f'SELECT password FROM users WHERE username = \'{register_username}\';')
-            tmp = global_matter.database_cursor.fetchone()
+            global_message_queue.database_cursor.execute(f'SELECT password FROM users WHERE username = \'{register_username}\';')
+            tmp = global_message_queue.database_cursor.fetchone()
             if tmp == None:
                 try:
-                    global_matter.database_cursor.execute(f'INSERT INTO users (username, password) VALUES (\'{register_username}\', \'{register_password_hash}\');')
-                    global_matter.database.commit()
+                    global_message_queue.database_cursor.execute(f'INSERT INTO users (username, password) VALUES (\'{register_username}\', \'{register_password_hash}\');')
+                    global_message_queue.database.commit()
                     print(f'The user {register_username} registered successfully.')
                 except:
-                    global_matter.database.rollback()
+                    global_message_queue.database.rollback()
 
                 response = {'type': 'quit', 'content': 'registration_success'}    
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
@@ -114,10 +113,10 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
 
         elif message['type'] == 'quit':
-            print('user ' + global_matter.sessions[message['session_token']] + ' quit.')
+            print('user ' + global_message_queue.sessions[message['session_token']] + ' quit.')
             try:
-                del global_matter.sessions[this_websocket.session_token]
-                del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
+                del global_message_queue.sessions[this_websocket.session_token]
+                del global_message_queue.chat_server_message_queue[session_token[this_websocket.session_token]]
             except:
                 pass 
             await this_websocket.close(); response.clear(); await asyncio.sleep(0)
@@ -126,8 +125,8 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
             await this_websocket.close()
 
         elif message['type'] == 'submission': # Submission
-            global_matter.now_submission_id = global_matter.now_submission_id + 1
-            submission_code_path = global_matter.get_submission_code_path(global_matter.now_submission_id, message['language']); open(submission_code_path, 'w').close()
+            global_message_queue.now_submission_id = global_message_queue.now_submission_id + 1
+            submission_code_path = global_message_queue.get_submission_code_path(global_message_queue.now_submission_id, message['language']); open(submission_code_path, 'w').close()
             submission_code = open(submission_code_path, 'w+'); submission_code.seek(0)
             content = submission_code.read(); new_content = '' + content
             submission_code.seek(0); submission_code.write(new_content)
@@ -135,11 +134,11 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 submission_code.write(line)
 
             submission_code.flush(); submission_code.close()
-            global_matter.judgment_queue.append({'submission_id': global_matter.now_submission_id, 'problem_number': message['problem_number'], 'language': message['language'], 'username': global_matter.sessions[message['session_token']], 'websocket': this_websocket}); await asyncio.sleep(0)
+            global_message_queue.judgment_queue.append({'submission_id': global_message_queue.now_submission_id, 'problem_number': message['problem_number'], 'language': message['language'], 'username': global_message_queue.sessions[message['session_token']], 'websocket': this_websocket}); await asyncio.sleep(0)
         elif message['type'] == 'problem_statement':
             problem_number = message['problem_number']
             try:
-                with open(global_matter.get_problem_statement_json_path(problem_number), 'r') as problem_statement_json_file:
+                with open(global_message_queue.get_problem_statement_json_path(problem_number), 'r') as problem_statement_json_file:
                     response = json.load(problem_statement_json_file)
                 
                 response['type'] = 'problem_statement'
@@ -152,7 +151,7 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
             response['type'] = 'problem_set'; response['problem_set'] = []
             try:
                 # print('Try to open ' + os.path.dirname(__file__) + '/problem/problem_set.json')
-                with open(global_matter.get_problem_set_json_path(), 'r') as problem_set_json_file:
+                with open(global_message_queue.get_problem_set_json_path(), 'r') as problem_set_json_file:
                     response['problem_set'] = json.load(problem_set_json_file)['problem_set']
                     
             except Exception:
@@ -162,16 +161,16 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
 
         elif message['type'] == 'online_user':
             response['type'] = 'online_user'; response['content'] = []
-            for session_token, session_username in global_matter.sessions.items():
+            for session_token, session_username in global_message_queue.sessions.items():
                 response['content'].append(session_username)
             
             await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
 
         elif message['type'] == 'chat_message':
             chat_message_user_from = message['from']; chat_message_user_to = message['to']; chat_messages = message['content']; session_token = message['session_token']
-            if global_matter.sessions[session_token] == chat_message_user_from:
-                if chat_message_user_to in global_matter.sessions.values(): # To whom is online
-                    global_matter.chat_server_message_queue[chat_message_user_to]['message_queue'].append({
+            if global_message_queue.sessions[session_token] == chat_message_user_from:
+                if chat_message_user_to in global_message_queue.sessions.values(): # To whom is online
+                    global_message_queue.chat_server_message_queue[chat_message_user_to]['message_queue'].append({
                         'from': chat_message_user_from,
                         'chat_messages': chat_messages
                     })
@@ -190,8 +189,8 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
         print('Connection closed, session token: {}'.format(this_websocket.session_token))
         if not this_websocket.session_token == '':
             try:
-                del global_matter.sessions[this_websocket.session_token]
-                del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
+                del global_message_queue.sessions[this_websocket.session_token]
+                del global_message_queue.chat_server_message_queue[session_token[this_websocket.session_token]]
             except:
                 pass
         

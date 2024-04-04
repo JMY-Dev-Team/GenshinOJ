@@ -2,10 +2,7 @@ import os, sys, json, time, logging, platform, threading
 try:
     import websocket, urwid
 except:
-    if platform.system() == "Windows":
-        os.system('pip install websocket-client urwid')
-    elif platform.system() == "Linux":
-        os.system('pip3 install websocket-client urwid')
+    os.system('pip3 install websocket-client urwid')
     import websocket
 
 SERVER_HOST: str = 'ws://127.0.0.1:9982' # Test server address

@@ -1,27 +1,19 @@
 import os, json
 import asyncio, logging
-import global_matter
-
-# TODO(JMY): Add multi-language judgment support
+import global_message_queue.global_message_queue as global_message_queue
 
 async def judge():
     while True:
         await asyncio.sleep(0)
-        for judgment in global_matter.judgment_queue:
+        for judgment in global_message_queue.judgment_queue:
             # submission_username = judgment['username']
             submission_id = judgment['submission_id']
             submission_language = judgment['language']
             submission_problem_number = judgment['problem_number'] # Problem number
-            submission_code_path = global_matter.get_submission_code_path(submission_id, submission_language) # Source code path
-            submission_executable_path = global_matter.get_executable_path(submission_id, submission_language) # Generated executable path
-            submission_executable_run_command = global_matter.get_executable_run_command(submission_id, submission_language) # Command to run executable
-            submission_compile_command = global_matter.get_compile_command(submission_code_path, submission_executable_path, submission_language) # Command to compile executable 
-            # Compile Part
-            global_matter.execute_command(submission_compile_command) # Compile
 
             # Judging Part
             try:
-                with open(global_matter.get_problem_testcase_config_json_path(submission_problem_number), 'r') as problem_testcase_config_json_file: # Get the configuration of the problem
+                with open(global_message_queue.get_problem_testcase_config_json_path(submission_problem_number), 'r') as problem_testcase_config_json_file: # Get the configuration of the problem
                     problem_testcase_config = json.load(problem_testcase_config_json_file)
                     testcases = problem_testcase_config['testcases'] # Testcases
 
@@ -33,7 +25,7 @@ async def judge():
                     testcase_input_path = '{}/problem/{}/input/{}'.format(os.getcwd(), submission_problem_number, testcase['input']) # Input file path 
                     testcase_answer_path = '{}/problem/{}/answer/{}'.format(os.getcwd(), submission_problem_number, testcase['answer']) # Answer file path
                     testcase_output_path = '{}/problem/{}/output/{}'.format(os.getcwd(), submission_problem_number, 'output{}.txt'.format(testcase_number)) # Output file path
-                    global_matter.execute_command('{} < \"{}\" > \"{}\"'.format(submission_executable_run_command, testcase_input_path, testcase_output_path))
+                    #global_matter.execute_command('{} < \"{}\" > \"{}\"'.format(submission_executable_run_command, testcase_input_path, testcase_output_path))
                     testcase_AC_flag = True
                     with open(testcase_output_path, 'r') as testcase_output:
                         with open(testcase_answer_path, 'r') as testcase_answer:
@@ -54,7 +46,7 @@ async def judge():
                     else:
                         general_AC_flag = False
 
-                    global_matter.execute_command('rm -f \"{}\"'.format(testcase_output_path))
+                    global_message_queue.execute_command('rm -f \"{}\"'.format(testcase_output_path))
                 
                 judgment_result = dict()
                 if general_AC_flag == True:
@@ -65,8 +57,6 @@ async def judge():
                 response = judgment_result; response['type'] = 'submission_result'
                 await judgment['websocket'].send(json.dumps(response)); response.clear(); 
                 del judgment_result
-                global_matter.execute_command('rm -f \"{}\"'.format(submission_code_path))
-                global_matter.execute_command('rm -f \"{}\"'.format(submission_executable_path))
                 print('Judged one.')
                 await asyncio.sleep(0)
             except Exception as e:
@@ -75,4 +65,4 @@ async def judge():
                 
             await asyncio.sleep(0)
             
-        global_matter.judgment_queue.clear()
+        global_message_queue.judgment_queue.clear()
