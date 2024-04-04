@@ -140,8 +140,8 @@ def input_processing(exit_event, self):
 
             elif command[0] == '%submit': # Submit source code for judgment
                 is_processing = True
-                problem_number = command[1]; file_name = command[2]
-                message = {'type': 'submission', 'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': 'cpp', 'code': []}
+                problem_number = command[1]; file_name = command[2]; language = command[3]
+                message = {'type': 'submission', 'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': language, 'code': []}
                 try:
                     with open(file_name, 'r') as file:
                         lines = file.readlines()

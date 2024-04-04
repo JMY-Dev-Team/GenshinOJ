@@ -1,0 +1,1 @@
+print('Genshin Impact, launch!')
