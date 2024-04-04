@@ -39,6 +39,9 @@ async def receive(this_websocket):
         await this_websocket.recv()
         await asyncio.sleep(0)
     except Exception as e:
+        if type(e) is not websockets.exceptions.ConnectionClosedOK:
+            logging.exception(e)
+        
         print('Connection closed, session token: {}'.format(this_websocket.session_token))
         if not this_websocket.session_token == '':
             try:
@@ -48,8 +51,6 @@ async def receive(this_websocket):
                 pass
 
         await this_websocket.close()
-        
-# TODO(JMY): Hash encoding for better password restoration
 
 async def process(this_websocket: websockets.server.WebSocketServerProtocol, original_message: str):
     try:
@@ -58,11 +59,12 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
         print(f'Received message from {this_websocket.remote_address[0]} (port: {this_websocket.remote_address[1]}): {message}')
         if message['type'] == 'login':
             login_username = message['login_username']; login_password = message['login_password']
-            print(f'The user {login_username} try to login with the password: {login_password}.')
+            login_password_hash = global_matter.get_md5(login_password)
+            print(f'The user {login_username} try to login with hash: {login_password_hash}.')
             global_matter.database_cursor.execute(f'SELECT password FROM users WHERE username = \'{login_username}\';')
             tmp = global_matter.database_cursor.fetchone()
             try:
-                real_password = tmp[0]
+                real_password_hash = tmp[0]
             except Exception as e:
                 print(f'The user {login_username} failed to login.')
                 response = {
@@ -71,7 +73,7 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 }
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
 
-            if real_password != None and real_password == login_password:
+            if real_password_hash != None and real_password_hash == login_password_hash:
                 new_session_token = generate_session_token(random.randint(1000000000000000, 10000000000000000))
                 response = {'type': 'session_token', 'content': new_session_token}
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
@@ -92,12 +94,13 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
 
         elif message['type'] == 'register':
             register_username = message['register_username']; register_password = message['register_password']
-            print(f'The user {register_username} try to register with the password: {register_password}.')
+            register_password_hash = global_matter.get_md5(register_password)
+            print(f'The user {register_username} try to register with hash: {register_password_hash}.')
             global_matter.database_cursor.execute(f'SELECT password FROM users WHERE username = \'{register_username}\';')
             tmp = global_matter.database_cursor.fetchone()
             if tmp == None:
                 try:
-                    global_matter.database_cursor.execute(f'INSERT INTO users (username, password) VALUES (\'{register_username}\', \'{register_password}\');')
+                    global_matter.database_cursor.execute(f'INSERT INTO users (username, password) VALUES (\'{register_username}\', \'{register_password_hash}\');')
                     global_matter.database.commit()
                     print(f'The user {register_username} registered successfully.')
                 except:
@@ -167,7 +170,7 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
         elif message['type'] == 'chat_message':
             chat_message_user_from = message['from']; chat_message_user_to = message['to']; chat_messages = message['content']; session_token = message['session_token']
             if global_matter.sessions[session_token] == chat_message_user_from:
-                if chat_message_user_to in global_matter.sessions.values: # To whom is online
+                if chat_message_user_to in global_matter.sessions.values(): # To whom is online
                     global_matter.chat_server_message_queue[chat_message_user_to]['message_queue'].append({
                         'from': chat_message_user_from,
                         'chat_messages': chat_messages
@@ -181,6 +184,9 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 response['type'] = 'chat_echo'; response['content'] = [0, 'Bad session token. Please logout and retry.']
                 await this_websocket.send(json.dumps(response)); response.clear(); await asyncio.sleep(0)
     except Exception as e:
+        if type(e) is not websockets.ConnectionClosedOK:
+            logging.exception(e)
+        
         print('Connection closed, session token: {}'.format(this_websocket.session_token))
         if not this_websocket.session_token == '':
             try:
@@ -188,5 +194,5 @@ async def process(this_websocket: websockets.server.WebSocketServerProtocol, ori
                 del global_matter.chat_server_message_queue[session_token[this_websocket.session_token]]
             except:
                 pass
-
+        
         await this_websocket.close()

@@ -9,11 +9,15 @@ async def judge():
         await asyncio.sleep(0)
         for judgment in global_matter.judgment_queue:
             # submission_username = judgment['username']
-            submission_code_path = global_matter.get_submission_code_path(judgment['submission_id'], judgment['language']) # Source code path
-            submission_executable_path = '{}/submit/submission_{}_executable'.format(os.getcwd(), judgment['submission_id']) # Generated executable path
+            submission_id = judgment['submission_id']
+            submission_language = judgment['language']
             submission_problem_number = judgment['problem_number'] # Problem number
+            submission_code_path = global_matter.get_submission_code_path(submission_id, submission_language) # Source code path
+            submission_executable_path = global_matter.get_executable_path(submission_id, submission_language) # Generated executable path
+            submission_executable_run_command = global_matter.get_executable_run_command(submission_id, submission_language) # Command to run executable
+            submission_compile_command = global_matter.get_compile_command(submission_code_path, submission_executable_path, submission_language) # Command to compile executable 
             # Compile Part
-            global_matter.execute_command('g++ {} -o {}'.format(submission_code_path, submission_executable_path))
+            global_matter.execute_command(submission_compile_command) # Compile
 
             # Judging Part
             try:
@@ -29,7 +33,7 @@ async def judge():
                     testcase_input_path = '{}/problem/{}/input/{}'.format(os.getcwd(), submission_problem_number, testcase['input']) # Input file path 
                     testcase_answer_path = '{}/problem/{}/answer/{}'.format(os.getcwd(), submission_problem_number, testcase['answer']) # Answer file path
                     testcase_output_path = '{}/problem/{}/output/{}'.format(os.getcwd(), submission_problem_number, 'output{}.txt'.format(testcase_number)) # Output file path
-                    global_matter.execute_command('{} < \"{}\" > \"{}\"'.format(submission_executable_path, testcase_input_path, testcase_output_path))
+                    global_matter.execute_command('{} < \"{}\" > \"{}\"'.format(submission_executable_run_command, testcase_input_path, testcase_output_path))
                     testcase_AC_flag = True
                     with open(testcase_output_path, 'r') as testcase_output:
                         with open(testcase_answer_path, 'r') as testcase_answer:
@@ -70,5 +74,5 @@ async def judge():
                 print('Problem {} is not configured correctly. Please configure it.'.format(submission_problem_number))
                 
             await asyncio.sleep(0)
-                
+            
         global_matter.judgment_queue.clear()
