@@ -176,7 +176,12 @@ def input_processing(exit_event, self):
                     continue
                 
                 is_processing = True
-                message = {'type': 'chat_message', 'from': login_username, 'to': command[1], 'content': chat_messages, 'session_token': session_token}
+                message = {
+                    'type': 'chat_short', 
+                    'content': {
+                        'from': login_username, 'to': command[1], 'messages': chat_messages, 'session_token': session_token
+                    }
+                }
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%debug': # Toggle debug mode

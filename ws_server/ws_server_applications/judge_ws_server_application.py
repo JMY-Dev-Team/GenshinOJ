@@ -1,4 +1,4 @@
-import asyncio, websockets, sys
+import websockets
 
 from .. import ws_server
 

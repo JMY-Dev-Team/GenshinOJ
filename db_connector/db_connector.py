@@ -1,7 +1,15 @@
-import pymysql
+import gc, pymysql
+
+import server
+
+# gc.disable()
 
 class db_connector:
-    def __init__(self, server_instance):
+    def __init__(self, server_instance: server.server) -> None:
+        # Necessary Initialization
+        self.server_instance = server_instance
+        self.server_instance.working_loads['db_connector']['instance'] = self
+        
         self.DatabaseConnection()
     
     def DatabaseConnection(self, DATABASE_USER = 'root', DATABASE_PASSWORD = '123456', DATABASE_PORT = 3306): # Database Connection

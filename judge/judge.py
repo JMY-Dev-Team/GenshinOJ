@@ -1,12 +1,17 @@
-import os, sys, json
+import os, gc, sys, json
+
 import asyncio, logging
 
-sys.path.append('../')
 import server
+
+# gc.disable()
 
 class judge:
     def __init__(self, server_instance: server.server) -> None:
+        # Necessary Initialization
         self.server_instance = server_instance
+        self.server_instance.working_loads['judge']['instance'] = self
+        
         self.judgment_queue = []
         self.now_submission_id = 0
 
@@ -66,7 +71,6 @@ class judge:
                     await judgment['websocket-protocol'].send(json.dumps(response)); response.clear(); 
                     del judgment_result
                     print('Judged one.')
-                    await asyncio.sleep(0)
                 except Exception as e:
                     logging.exception(e)
                     print('Problem {} is not configured correctly. Please configure it.'.format(submission_problem_number))

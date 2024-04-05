@@ -1,8 +1,10 @@
-import gc, os, abc, json, enum, random, typing, importlib
+import os, gc, abc, json, enum, random, typing, importlib
+
 import asyncio, websockets.server
+
 import server
 
-gc.disable()
+# gc.disable()
 
 sessions = dict()
 
@@ -34,7 +36,10 @@ def generate_session_token(session_token_seed: int) -> str:
 WS_SERVER_CONFIG_JSON_PATH = os.getcwd() + '/ws_server/ws_server_config.json'
 class ws_server:
     def __init__(self, server_instance: server.server, server_host = '0.0.0.0', server_port = 9982) -> None:
+        # Necessary Initialization
         self.server_instance = server_instance
+        self.server_instance.working_loads['ws_server']['instance'] = self
+        
         self.sessions = dict()
         with open(WS_SERVER_CONFIG_JSON_PATH, 'r') as ws_server_config_json_file:
             self.ws_server_config = json.load(ws_server_config_json_file)

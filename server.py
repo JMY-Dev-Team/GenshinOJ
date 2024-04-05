@@ -1,25 +1,24 @@
-import gc, os, sys, json, importlib
+import gc, os, json, importlib
 
-gc.disable()
+# gc.disable()
 
 try:
     import pymysql, asyncio, nest_asyncio, websockets
 except:
-    os.system('pip3 install pymysql asyncio nest_asyncio websockets')
-    import pymysql, asyncio, websockets
+    os.system('pip3 install pymysql asyncio websockets')
+    import pymysql, asyncio, nest_asyncio, websockets
 
 nest_asyncio.apply()
-
 class server:
-    def __init__(self):
-        asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+    def __init__(self) -> None:
         self.working_loads = dict()
-        self.module_config_json_path = os.getcwd() + '/module_config.json'
+        self.MODULE_CONFIG_JSON_PATH = os.getcwd() + '/module_config.json'
+        asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
         asyncio.run(self.async_main())
 
     async def async_main(self):
         print('Server started.')
-        with open(self.module_config_json_path, 'r') as self.module_config_json_file:
+        with open(self.MODULE_CONFIG_JSON_PATH, 'r') as self.module_config_json_file:
             self.module_config = json.load(self.module_config_json_file)
         
         self.working_load_config = self.module_config['working_load']
@@ -41,7 +40,7 @@ class server:
                 # self.get_module_instance('global_message_queue')
                 print('Loaded {} (id: {}).'.format(working_load_item['name'], working_load_item['id']))
                 self.working_loads[working_load_item['id']] = working_load_item
-                self.working_loads[working_load_item['id']]['instance'] = getattr(getattr(importlib.__import__(working_load_item['path']), working_load_item['id']), working_load_item['id'])(self)
+                getattr(getattr(importlib.__import__(working_load_item['path']), working_load_item['id']), working_load_item['id'])(self)
         
         print('Now working loads: {}'.format(self.working_loads))
         asyncio.get_event_loop().run_forever()
@@ -54,6 +53,7 @@ class server:
         main_loop.run_until_complete(self.async_main())
         
     def get_module_instance(self, module_id: str):
+        print('Now working loads: {}'.format(self.working_loads))
         return self.working_loads[module_id]['instance']
 
 if __name__ == '__main__': # Main

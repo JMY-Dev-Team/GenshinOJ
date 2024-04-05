@@ -1,10 +1,14 @@
 import os, gc
+
 import server
 
-gc.disable()
+# gc.disable()
 class global_message_queue:
-    def __init__(self, server_instance) -> None:
+    def __init__(self, server_instance: server.server) -> None:
+        # Necessary Initialization
         self.server_instance = server_instance
+        self.server_instance.working_loads['global_message_queue']['instance'] = self
+        
         self.message_queue = dict()
         
     def get_message_of(self, module_id: str) -> list:
