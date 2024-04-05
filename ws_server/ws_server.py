@@ -141,7 +141,7 @@ class ws_server_application_protocol:
             You need to implement this method to do the specific actions you want whenever a user tries to login.
         """
         self.log('{} tries to login with the password: {}'.format(content['username'], content['password']))
-
+    
     @abc.abstractmethod
     async def on_quit(
         self, 
