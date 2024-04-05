@@ -43,14 +43,15 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         content: dict
     ):
         self.ws_server_instance.server_instance.get_module_instance('judge').now_submission_id = self.ws_server_instance.server_instance.get_module_instance('judge').now_submission_id + 1
-        submission_code_path = self.ws_server_instance.server_instance.get_module_instance('global_message_queue').get_submission_code_path(
-            self.ws_server_instance.server_instance.get_module_instance('judge').now_submission_id,
+        submission_code_path = self.ws_server_instance.server_instance.get_module_instance('compilers_manager').get_file_path_by_filename_and_language(
+            'submission_' + str(self.ws_server_instance.server_instance.get_module_instance('judge').now_submission_id),
             content['language']
         ); 
+        print('Opening {}.'.format(submission_code_path))
         open(submission_code_path, 'w').close() # Create 
         submission_code = open(submission_code_path, 'w+'); submission_code.seek(0)
-        content = submission_code.read(); new_content = '' + content
-        submission_code.seek(0); submission_code.write(new_content)
+        file_content = submission_code.read(); new_file_content = '' + file_content
+        submission_code.seek(0); submission_code.write(new_file_content)
         for line in content['code']:
             submission_code.write(line)
 
@@ -59,6 +60,6 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             'submission_id': self.ws_server_instance.server_instance.get_module_instance('judge').now_submission_id, 
             'problem_number': content['problem_number'], 
             'language': content['language'], 
-            'username': self.ws_server_instance.server_instance.get_module_instance('judge').sessions[content['session_token']], 
+            'username': self.ws_server_instance.server_instance.get_module_instance('ws_server').sessions[content['session_token']], 
             'websocket_protocol': websocket_protocol
         });

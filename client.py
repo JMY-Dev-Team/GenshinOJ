@@ -246,7 +246,6 @@ def websocket_session(on_open):
         sys.exit(0)
 
 if __name__ == '__main__':
-    websocket.enableTrace(True)
     try:
         print('欢迎使用 Genshin OJ 的客户端！')
         print('1. 登录')

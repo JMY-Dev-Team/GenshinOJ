@@ -1,4 +1,4 @@
-import os, gc, abc, json, enum, random, typing, importlib
+import os, gc, abc, json, enum, random, typing, logging, importlib
 
 import asyncio, websockets.server
 
@@ -54,21 +54,18 @@ class ws_server:
                 self.ws_server_applications.append(getattr(getattr(getattr(importlib.__import__(ws_server_application_config['path']), 'ws_server_applications'), ws_server_application_config['id']), ws_server_application_config['id'])(self))
         
         self.ws_server = websockets.server.serve(self.receive, server_host, server_port)
-        self.main_loop = asyncio.get_event_loop()
-        self.main_loop.run_until_complete(self.ws_server)
+        self.server_instance.tasks.append(self.ws_server)
 
     def __del__(self) -> None:
-        pass
+        print('Websocket Server unloaded.')
         
     async def receive(self, websocket_protocol: websockets.server.WebSocketServerProtocol):
         try:
             async for original_message in websocket_protocol:
                 message = json.loads(original_message)
-                print("Received: {}".format(message))
                 try:
                     for ws_server_application in self.ws_server_applications:
                         try:
-                            print('Called {}.'.format('on_' + message['type']))
                             await getattr(ws_server_application, format('on_' + message['type']))(websocket_protocol, message['content'])
                             await asyncio.sleep(0)
                         except AttributeError as e:
@@ -253,7 +250,7 @@ class simple_ws_server_application(ws_server_application_protocol):
         response = dict(); response['type'] = 'problem_statement'
         try:
             with open(self.ws_server_instance.server_instance.get_module_instance('global_message_queue').get_problem_statement_json_path(content['problem_number']), 'r') as problem_statement_json_file:
-                response = json.load(problem_statement_json_file)
+                response.update(json.load(problem_statement_json_file))
             
         except Exception as e:
             self.log('problem_statement.json is not found!', ws_server_log_level.LEVEL_ERROR)

@@ -11,8 +11,12 @@ class chat_server:
         self.server_instance.working_loads['chat_server']['instance'] = self
         
         self.message_box = dict()
-        asyncio.run(self.chat_server_main())
         
+        self.server_instance.tasks.append(asyncio.create_task(self.chat_server_main()))
+
+    def __del__(self) -> None:
+        print('Chat Server unloaded.')
+
     async def chat_server_main(self):
         while True:
             for chat_server_user_to in self.message_box.keys():
@@ -27,6 +31,11 @@ class chat_server:
                     }
                     
                     await self.message_box[chat_server_user_to]['websocket_protocol'].send(json.dumps(response));
+                    
+                    response = {
+                        'type': 'chat_echo'
+                    }
+                    await self.message_box[chat_messages['from']]['websocket_protocol'].send(json.dumps(response));
                 
                 self.message_box[chat_server_user_to]['message_queue'].clear()
             
