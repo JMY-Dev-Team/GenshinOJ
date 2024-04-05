@@ -1,22 +1,58 @@
-import os, platform
+import gc, os, json, importlib
+
+# gc.disable()
 
 try:
-    import pymysql, asyncio, websockets
+    import pymysql, asyncio, nest_asyncio, websockets
 except:
-    if platform.system() == "Windows":
-        os.system('pip install pymysql asyncio websockets')
-    elif platform.system() == "Linux":
-        os.system('pip3 install pymysql asyncio websockets')
+    os.system('pip3 install pymysql asyncio websockets')
+    import pymysql, asyncio, nest_asyncio, websockets
+
+nest_asyncio.apply()
+class server:
+    def __init__(self) -> None:
+        self.working_loads: dict = dict()
+        self.MODULE_CONFIG_JSON_PATH: str = os.getcwd() + '/module_config.json'
+        self.tasks: list = []
+        asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+        asyncio.run(self.async_main())
+
+    def __del__(self) -> None:
+        print('Server stopped.')
+
+    async def async_main(self):
+        print('Server started.')
+        with open(self.MODULE_CONFIG_JSON_PATH, 'r') as self.module_config_json_file:
+            self.module_config = json.load(self.module_config_json_file)
         
-    import pymysql, asyncio, websockets
-    
-import receive, global_matter, judge, chat_server
+        self.working_loads_config = self.module_config['working_load']
+        for working_load_config in self.working_loads_config:
+            if working_load_config['enabled']:
+                print('Loading {} (id: {})...'.format(working_load_config['name'], working_load_config['id']))
+                dependencies_satisfied_flag = True
+                for dependency in working_load_config['dependencies']:
+                    print('Checking dependency: {}'.format(dependency))
+                    # print(self.working_loads[dependency])
+                    if not dependency in self.working_loads:
+                        dependencies_satisfied_flag = False
+                        break
+                
+                if not dependencies_satisfied_flag:
+                    print('Module {} (id: {}) do not have all its dependencies, so it will be ignored.'.format(working_load_config['name'], working_load_config['id']))
+                    continue
+                
+                # self.get_module_instance('global_message_queue')
+                print('Loaded {} (id: {}).'.format(working_load_config['name'], working_load_config['id']))
+                self.working_loads[working_load_config['id']] = working_load_config
+                getattr(getattr(importlib.__import__(working_load_config['path']), working_load_config['id']), working_load_config['id'])(self)
+        
+        await asyncio.wait(self.tasks)
+        
+        asyncio.get_event_loop().run_forever()
+
+    def get_module_instance(self, module_id: str):
+        # print('Now working loads: {}'.format(self.working_loads))
+        return self.working_loads[module_id]['instance']
 
 if __name__ == '__main__': # Main
-    policy = asyncio.get_event_loop_policy()
-    policy.get_event_loop().set_debug(True)
-    print('Server started.')
-    global_matter.DatabaseConnection() # Connect to database
-    ws_server = websockets.serve(ws_handler = receive.receive, host = global_matter.SERVER_HOST, port = global_matter.SERVER_PORT) # Start WS server
-    asyncio.get_event_loop().run_until_complete(asyncio.wait([judge.judge(), chat_server.chat_server(), ws_server]))
-    asyncio.get_event_loop().run_forever()
+    server()

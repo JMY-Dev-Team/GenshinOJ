@@ -2,10 +2,7 @@ import os, sys, json, time, logging, platform, threading
 try:
     import websocket, urwid
 except:
-    if platform.system() == "Windows":
-        os.system('pip install websocket-client urwid')
-    elif platform.system() == "Linux":
-        os.system('pip3 install websocket-client urwid')
+    os.system('pip3 install websocket-client urwid')
     import websocket
 
 SERVER_HOST: str = 'ws://127.0.0.1:9982' # Test server address
@@ -119,7 +116,7 @@ def input_processing(exit_event, self):
             if command[0] == '%help':
                 print('使用 %problem_set 来获取题目列表')
                 print('使用 %problem_statement[题目编号] 来获取指定题目信息')
-                print('使用 %submit [题目编号] [源文件名] 来递交代码测评指定题目')
+                print('使用 %submit [题目编号] [源文件名] [代码语言] 来递交指定语言的代码测评指定题目')
                 print('使用 %chat [短讯聊天对象] 来短讯聊天，此命令会使你进入短讯聊天环境，键入 %send 来确认发送，键入 %cancel 来取消发送')
                 print('使用 %online_user 来查询在线用户')
                 print('使用 %debug [on / off] 来开启或关闭调试模式')
@@ -127,26 +124,28 @@ def input_processing(exit_event, self):
 
             elif command[0] == '%problem_set': # Get problem list
                 is_processing = True
-                message = {'type': 'problem_set'}
+                message = {'type': 'problem_set', 'content': {}}
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%problem_statement': # Get statement of a specific problem
                 is_processing = True
                 message = {
                     'type': 'problem_statement',
-                    'problem_number': command[1]
+                    'content': {
+                        'problem_number': command[1]
+                    }
                 }
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%submit': # Submit source code for judgment
                 is_processing = True
                 problem_number = command[1]; file_name = command[2]; language = command[3]
-                message = {'type': 'submission', 'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': language, 'code': []}
+                message = {'type': 'submission', 'content': {'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': language, 'code': []}}
                 try:
                     with open(file_name, 'r') as file:
                         lines = file.readlines()
                         for line in lines:
-                            message['code'].append(line)
+                            message['content']['code'].append(line)
                 except FileNotFoundError:
                     pass
                 
@@ -154,7 +153,7 @@ def input_processing(exit_event, self):
 
             elif command[0] == '%online_user': # Check online users
                 is_processing = True
-                message = {'type': 'online_user'}
+                message = {'type': 'online_user', 'content': {}}
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%chat': # Send short chat message
@@ -165,7 +164,7 @@ def input_processing(exit_event, self):
                 chat_messages: list[str] = []; chat_message: str; confirmed_flag = True
                 while chat_message := input('chat> '):
                     chat_message = chat_message.strip()
-                    if chat_message == '%confirm':
+                    if chat_message == '%send':
                         break
                     if chat_message == '%cancel':
                         confirmed_flag = False
@@ -177,7 +176,12 @@ def input_processing(exit_event, self):
                     continue
                 
                 is_processing = True
-                message = {'type': 'chat_message', 'from': login_username, 'to': command[1], 'content': chat_messages, 'session_token': session_token}
+                message = {
+                    'type': 'chat_short', 
+                    'content': {
+                        'from': login_username, 'to': command[1], 'messages': chat_messages, 'session_token': session_token
+                    }
+                }
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%debug': # Toggle debug mode
@@ -207,12 +211,12 @@ def input_processing(exit_event, self):
 
 def login_session(self):
     is_processing_message = True
-    message = {'type': 'login', 'login_username': login_username, 'login_password': login_password}
+    message = {'type': 'login', 'content': {'username': login_username, 'password': login_password}}
     self.send(json.dumps(message)); message.clear()
     
 def register_session(self):
     is_processing_message = True
-    message = {'type': 'register', 'register_username': register_username, 'register_password': register_password}
+    message = {'type': 'register', 'content': {'username': register_username, 'password': register_password}}
     self.send(json.dumps(message)); message.clear()
     
 def websocket_session_on_close(self, close_status_code, close_msg):
