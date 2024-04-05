@@ -21,7 +21,7 @@
             "id": "ws_server",
             "enabled": true,
             "path": "ws_server.ws_server",
-            "dependencies": ["db_connector"],
+            "dependencies": ["db_connector", "global_message_queue"],
             "unload_timeout": 0
         },
         {
@@ -29,7 +29,7 @@
             "id": "compilers_manager",
             "enabled": true,
             "path": "compilers_manager.compilers_manager",
-            "dependencies": ["ws_server"],
+            "dependencies": [],
             "unload_timeout": 0
         },
         {
@@ -37,7 +37,15 @@
             "id": "judge",
             "enabled": true,
             "path": "judge.judge",
-            "dependencies": ["compilers_manager"],
+            "dependencies": ["ws_server", "compilers_manager"],
+            "unload_timeout": 0
+        },
+        {
+            "name": "Chat Server",
+            "id": "chat_server",
+            "enabled": true,
+            "path": "chat_server.chat_server",
+            "dependencies": ["ws_server"],
             "unload_timeout": 0
         }
     ]

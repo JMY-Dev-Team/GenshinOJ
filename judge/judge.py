@@ -2,8 +2,9 @@ import os, json
 import asyncio, logging
 import global_message_queue.global_message_queue as global_message_queue
 
+judgment_queue = []
 class judge:
-    def __init__(self) -> None:
+    def __init__(self, server_instance) -> None:
         pass
 
     async def judge_loop():

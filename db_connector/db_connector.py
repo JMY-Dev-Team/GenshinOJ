@@ -1,7 +1,7 @@
 import pymysql
 
 class db_connector:
-    def __init__(self):
+    def __init__(self, server_instance):
         self.DatabaseConnection()
     
     def DatabaseConnection(self, DATABASE_USER = 'root', DATABASE_PASSWORD = '123456', DATABASE_PORT = 3306): # Database Connection

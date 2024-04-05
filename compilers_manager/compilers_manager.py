@@ -6,5 +6,5 @@
 # global_message_queue.
 
 class compilers_manager:
-    def __init__(self) -> None:
+    def __init__(self, server_instance) -> None:
         pass
