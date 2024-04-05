@@ -1,16 +1,19 @@
-import os, json
+import os, sys, json
 import asyncio, logging
-import global_message_queue.global_message_queue as global_message_queue
 
-judgment_queue = []
+sys.path.append('../')
+import server
+
 class judge:
-    def __init__(self, server_instance) -> None:
-        pass
+    def __init__(self, server_instance: server.server) -> None:
+        self.server_instance = server_instance
+        self.judgment_queue = []
+        self.now_submission_id = 0
 
-    async def judge_loop():
+    async def judge_loop(self):
         while True:
             await asyncio.sleep(0)
-            for judgment in global_message_queue.judgment_queue:
+            for judgment in self.judgment_queue:
                 # submission_username = judgment['username']
                 submission_id = judgment['submission_id']
                 submission_language = judgment['language']
@@ -18,7 +21,7 @@ class judge:
 
                 # Judging Part
                 try:
-                    with open(global_message_queue.get_problem_testcase_config_json_path(submission_problem_number), 'r') as problem_testcase_config_json_file: # Get the configuration of the problem
+                    with open(self.server_instance.get_problem_testcase_config_json_path(submission_problem_number), 'r') as problem_testcase_config_json_file: # Get the configuration of the problem
                         problem_testcase_config = json.load(problem_testcase_config_json_file)
                         testcases = problem_testcase_config['testcases'] # Testcases
 
@@ -51,7 +54,7 @@ class judge:
                         else:
                             general_AC_flag = False
 
-                        global_message_queue.execute_command('rm -f \"{}\"'.format(testcase_output_path))
+                        self.server_instance.get_module_instance('global_message_queue').execute_command('rm -f \"{}\"'.format(testcase_output_path))
                     
                     judgment_result = dict()
                     if general_AC_flag == True:
@@ -60,7 +63,7 @@ class judge:
                         judgment_result = {'submission_id': judgment['submission_id'], 'result': 'WA', 'reasons': reasons}
 
                     response = judgment_result; response['type'] = 'submission_result'
-                    await judgment['websocket'].send(json.dumps(response)); response.clear(); 
+                    await judgment['websocket-protocol'].send(json.dumps(response)); response.clear(); 
                     del judgment_result
                     print('Judged one.')
                     await asyncio.sleep(0)
@@ -70,4 +73,4 @@ class judge:
                     
                 await asyncio.sleep(0)
                 
-            global_message_queue.judgment_queue.clear()
+            self.server_instance.get_module_instance('global_message_queue').judgment_queue.clear()

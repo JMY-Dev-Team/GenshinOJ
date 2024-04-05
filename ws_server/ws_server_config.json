@@ -16,6 +16,14 @@
             "path": "ws_server.ws_server_applications.judge_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
+        },
+        {
+            "name": "Chat Server Application",
+            "id": "chat_ws_server_application",
+            "enabled": true,
+            "path": "ws_server.ws_server_applications.chat_ws_server_application",
+            "dependencies": [],
+            "unload_timeout": 0
         }
     ]
 }

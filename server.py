@@ -12,6 +12,7 @@ nest_asyncio.apply()
 
 class server:
     def __init__(self):
+        asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
         self.working_loads = dict()
         self.module_config_json_path = os.getcwd() + '/module_config.json'
         asyncio.run(self.async_main())
@@ -37,6 +38,7 @@ class server:
                     print('Module {} (id: {}) do not have all its dependencies, so it will be ignored.'.format(working_load_item['name'], working_load_item['id']))
                     continue
                 
+                # self.get_module_instance('global_message_queue')
                 print('Loaded {} (id: {}).'.format(working_load_item['name'], working_load_item['id']))
                 self.working_loads[working_load_item['id']] = working_load_item
                 self.working_loads[working_load_item['id']]['instance'] = getattr(getattr(importlib.__import__(working_load_item['path']), working_load_item['id']), working_load_item['id'])(self)
@@ -55,4 +57,4 @@ class server:
         return self.working_loads[module_id]['instance']
 
 if __name__ == '__main__': # Main
-    server_instance = server()
+    __server_instance = server()

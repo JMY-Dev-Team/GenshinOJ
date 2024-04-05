@@ -124,26 +124,28 @@ def input_processing(exit_event, self):
 
             elif command[0] == '%problem_set': # Get problem list
                 is_processing = True
-                message = {'type': 'problem_set'}
+                message = {'type': 'problem_set', 'content': {}}
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%problem_statement': # Get statement of a specific problem
                 is_processing = True
                 message = {
                     'type': 'problem_statement',
-                    'problem_number': command[1]
+                    'content': {
+                        'problem_number': command[1]
+                    }
                 }
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%submit': # Submit source code for judgment
                 is_processing = True
                 problem_number = command[1]; file_name = command[2]; language = command[3]
-                message = {'type': 'submission', 'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': language, 'code': []}
+                message = {'type': 'submission', 'content': {'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': language, 'code': []}}
                 try:
                     with open(file_name, 'r') as file:
                         lines = file.readlines()
                         for line in lines:
-                            message['code'].append(line)
+                            message['content']['code'].append(line)
                 except FileNotFoundError:
                     pass
                 
@@ -151,7 +153,7 @@ def input_processing(exit_event, self):
 
             elif command[0] == '%online_user': # Check online users
                 is_processing = True
-                message = {'type': 'online_user'}
+                message = {'type': 'online_user', 'content': {}}
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%chat': # Send short chat message
@@ -204,12 +206,12 @@ def input_processing(exit_event, self):
 
 def login_session(self):
     is_processing_message = True
-    message = {'type': 'login', 'login_username': login_username, 'login_password': login_password}
+    message = {'type': 'login', 'content': {'username': login_username, 'password': login_password}}
     self.send(json.dumps(message)); message.clear()
     
 def register_session(self):
     is_processing_message = True
-    message = {'type': 'register', 'register_username': register_username, 'register_password': register_password}
+    message = {'type': 'register', 'content': {'username': register_username, 'password': register_password}}
     self.send(json.dumps(message)); message.clear()
     
 def websocket_session_on_close(self, close_status_code, close_msg):
@@ -239,6 +241,7 @@ def websocket_session(on_open):
         sys.exit(0)
 
 if __name__ == '__main__':
+    websocket.enableTrace(True)
     try:
         print('欢迎使用 Genshin OJ 的客户端！')
         print('1. 登录')
