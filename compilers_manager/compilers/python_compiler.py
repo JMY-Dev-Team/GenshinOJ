@@ -2,6 +2,9 @@ import os
 
 import compilers_manager.compilers.base_compiler
 
+class LanguageNotSupportedException(Exception):
+    pass
+
 #TODO(JMY): Add Python support
 
 class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
@@ -26,7 +29,7 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             
             return True
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
         if language == 'c' or language == 'cpp':
@@ -43,28 +46,28 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             
             return True
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def get_file_appendix(self, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return language
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def get_binary_appendix(self, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return 'o'
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_compile_file_command(self, filename: str, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return 'gcc {}.cpp -o {}.o'.format(filename, filename)
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_binary_execute_command(self, filename: str, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return filename
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))

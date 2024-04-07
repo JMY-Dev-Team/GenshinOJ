@@ -15,6 +15,8 @@ t: threading.Thread
 ws: websocket.WebSocketApp
 exit_event: threading.Event = threading.Event()
 
+websocket.enableTrace(True)
+
 def message_processing(self, original_message):
     global is_processing, is_logged, session_token
     try:
@@ -56,11 +58,11 @@ def message_processing(self, original_message):
 
         elif message['type'] == 'online_user':
             print('Online Users: ', end = '')
-            for online_user in message['content']:
-                if online_user == message['content'][-1]:
-                    print('{}'.format(online_user), end = '')
+            for index in range(0, len(message['content'])):
+                if index == len(message['content']) - 1:
+                    print('{}'.format(message['content'][index]), end = '')
                 else:
-                    print('{}, '.format(online_user), end = '')
+                    print('{}, '.format(message['content'][index]), end = '')
             
             print()
             is_processing = False
@@ -94,7 +96,6 @@ def message_processing(self, original_message):
         logging.exception(e)
         exit_event.set()
         is_processing = False
-        sys.exit(0)
         raise e
 
 def input_processing(exit_event, self):
@@ -149,7 +150,10 @@ def input_processing(exit_event, self):
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%submit': # Submit source code for judgment
-                is_processing = True
+                if len(command) < 4:
+                    print('Bad format.')
+                    continue
+                
                 problem_number = command[1]; file_name = command[2]; language = command[3]
                 message = {'type': 'submission', 'content': {'username': login_username, 'session_token': session_token, 'problem_number': problem_number, 'language': language, 'code': []}}
                 try:
@@ -158,8 +162,10 @@ def input_processing(exit_event, self):
                         for line in lines:
                             message['content']['code'].append(line)
                 except FileNotFoundError:
-                    pass
+                    print('File {} not found.'.format(file_name))
+                    continue
                 
+                is_processing = True
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%online_user': # Check online users
@@ -251,6 +257,7 @@ def websocket_session_on_close(self, close_status_code, close_msg):
     self.send(json.dumps(message)); message.clear()
     exit_event.set()
     time.sleep(1)
+    sys.exit(0)
 
 def websocket_session(on_open):
     global t, ws

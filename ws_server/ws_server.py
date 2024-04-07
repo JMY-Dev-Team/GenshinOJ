@@ -6,8 +6,6 @@ import server
 
 # gc.disable()
 
-sessions = dict()
-
 def generate_session_token(session_token_seed: int) -> str:
     if session_token_seed > 1:
         generated_session_token = ''
@@ -86,16 +84,23 @@ class ws_server:
                 raise e
             
             for ws_server_application in self.ws_server_applications:
-                ws_server_application.on_quit()
-                
+                try:
+                    await ws_server_application.on_close_connection(websocket_protocol)
+                    await asyncio.sleep(0)
+                except AttributeError as e:
+                    pass
+                except Exception as e:
+                    raise e
+            
         await asyncio.sleep(0)
+
         try:
             await websocket_protocol.recv()
         except websockets.exceptions.ConnectionClosedOK:
             try:
                 for ws_server_application in self.ws_server_applications:
                     try:
-                        await getattr(ws_server_application, format('on_close_connection'))(websocket_protocol)
+                        await ws_server_application.on_close_connection(websocket_protocol)
                         await asyncio.sleep(0)
                     except AttributeError as e:
                         pass
@@ -107,7 +112,7 @@ class ws_server:
             try:
                 for ws_server_application in self.ws_server_applications:
                     try:
-                        await getattr(ws_server_application, format('on_close_connection'))(websocket_protocol)
+                        await ws_server_application.on_close_connection(websocket_protocol)
                         await asyncio.sleep(0)
                     except AttributeError as e:
                         pass
@@ -155,23 +160,6 @@ class ws_server_application_protocol:
             print('[WS_SERVER] [WARNING] {}'.format(log))
         if log_level is ws_server_log_level.LEVEL_ERROR:
             print('[WS_SERVER] [ERROR] {}'.format(log))
-    
-    @abc.abstractmethod
-    async def on_login(
-        self, 
-        websocket_protocol: websockets.server.WebSocketServerProtocol, 
-        content: dict
-    ):
-        """
-        Callback method `on_login`
-        Args:
-            websocket_protocol (websockets.server.WebSocketServerProtocol): the protocol of a websocket connection
-            username (str): the login username
-            password (str): the login password
-        Info:
-            You need to implement this method to do the specific actions you want whenever a user tries to login.
-        """
-        self.log('{} tries to login with the password: {}'.format(content['username'], content['password']))
     
     @abc.abstractmethod
     async def on_close_connection(
@@ -241,13 +229,19 @@ class simple_ws_server_application(ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
         content: dict
     ):
-        await websocket_protocol.close()
-        try:
-            self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
+        self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
+        try:    
+            del self.ws_server_instance.sessions[content['session_token']]
         except AttributeError as e:
             logging.exception(e)
         except Exception as e:
             raise e
+        
+        try:
+            await websocket_protocol.close()
+            await self.on_close_connection()
+        except:
+            pass
 
     def get_md5(self, data):
         import hashlib

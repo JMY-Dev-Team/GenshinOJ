@@ -42,7 +42,7 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
         content: dict
     ):
-        super().on_quit()
+        self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
         del self.ws_server_instance.server_instance.get_module_instance('chat_server').message_box[content['username']]
 
     def get_md5(self, data):

@@ -41,9 +41,17 @@ class judge:
                 
                 # Judging Part
                 try:
-                    with open(self.server_instance.get_module_instance('global_message_queue').get_problem_testcase_config_json_path(submission_problem_number), 'r') as problem_testcase_config_json_file: # Get the configuration of the problem
-                        problem_testcase_config = json.load(problem_testcase_config_json_file)
-                        testcases = problem_testcase_config['testcases'] # Testcases
+                    try:
+                        with open(self.server_instance.get_module_instance('global_message_queue').get_problem_testcase_config_json_path(submission_problem_number), 'r') as problem_testcase_config_json_file: # Get the configuration of the problem
+                            problem_testcase_config = json.load(problem_testcase_config_json_file)
+                            testcases = problem_testcase_config['testcases'] # Testcases
+                    except:
+                        judgment_result = {'submission_id': judgment['submission_id'], 'result': 'CE'}
+                        response = judgment_result; response['type'] = 'submission_result'
+                        await judgment['websocket_protocol'].send(json.dumps(response)); response.clear(); 
+                        del judgment_result
+                        print('Judged one.')
+                        break
                     
                     general_score = 0 # General score
                     general_AC_flag = True # General AC flag
@@ -84,9 +92,9 @@ class judge:
                         else:
                             general_AC_flag = False
                         
-                        if platform.platform == 'Linux':
-                            self.server_instance.get_module_instance('global_message_queue').execute_command('rm -f \"{}\"'.format(testcase_output_path))
-                        if platform.platform == 'Windows':
+                        if platform.system() == 'Linux':
+                            self.server_instance.get_module_instance('global_message_queue').execute_command('rm -rf \"{}\"'.format(testcase_output_path))
+                        if platform.system() == 'Windows':
                             self.server_instance.get_module_instance('global_message_queue').execute_command('del \"{}\"'.format(testcase_output_path))
                     
                     judgment_result = dict()
@@ -102,7 +110,36 @@ class judge:
                 except Exception as e:
                     logging.exception(e)
                     print('Problem {} is not configured correctly. Please configure it.'.format(submission_problem_number))
-                    
+                
+                if platform.system() == 'Windows':
+                    self.server_instance.get_module_instance('global_message_queue').execute_command('del \"{}\"'.format(
+                        self.server_instance.get_module_instance('compilers_manager').get_file_path_by_filename_and_language(
+                            'submission_' + str(submission_id),
+                            submission_language
+                        )
+                    ))
+                if platform.system() == 'Linux':
+                    self.server_instance.get_module_instance('global_message_queue').execute_command('rm -rf \"{}\"'.format(
+                        self.server_instance.get_module_instance('compilers_manager').get_file_path_by_filename_and_language(
+                            'submission_' + str(submission_id),
+                            submission_language
+                        )
+                    ))
+                
+                if platform.system() == 'Windows':
+                    self.server_instance.get_module_instance('global_message_queue').execute_command('del \"{}\"'.format(
+                        self.server_instance.get_module_instance('compilers_manager').get_binary_path_by_filename_and_language(
+                            'submission_' + str(submission_id),
+                            submission_language
+                        )
+                    ))
+                if platform.system() == 'Linux':
+                    self.server_instance.get_module_instance('global_message_queue').execute_command('rm -rf \"{}\"'.format(
+                        self.server_instance.get_module_instance('compilers_manager').get_binary_path_by_filename_and_language(
+                            'submission_' + str(submission_id),
+                            submission_language
+                        )
+                    ))
                 await asyncio.sleep(0)
                 
             self.judgment_queue.clear()

@@ -35,12 +35,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
         content: dict
     ):
-        try:
-            self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
-        except AttributeError as e:
-            logging.exception(e)
-        except:
-            pass
+        self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
 
     def get_md5(self, data):
         import hashlib

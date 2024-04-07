@@ -2,6 +2,9 @@ import os
 
 import compilers_manager.compilers.base_compiler
 
+class LanguageNotSupportedException(Exception):
+    pass
+
 class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
     def __init__(self, unload_timeout) -> None:
         print('C / C++ Compiler loaded.')
@@ -25,7 +28,7 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             
             return True
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
         if language == 'c' or language == 'cpp':
@@ -42,19 +45,19 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             
             return True
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def get_file_appendix(self, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return '.' + language
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def get_binary_appendix(self, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return '.o'
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_compile_file_command(self, filename: str, language: str) -> str:
         if language == 'c':
@@ -62,10 +65,10 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         if language == 'cpp':
             return 'g++ {}/submit/{}.cpp -o {}/submit/{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_binary_execute_command(self, filename: str, language: str) -> str:
         if language == 'c' or language == 'cpp':
             return os.getcwd() + '/submit/' + filename + '.o'
         else:
-            raise('The language {} is not supported.'.format(language))
+            raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
