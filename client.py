@@ -1,11 +1,11 @@
 import os, sys, json, time, logging, platform, threading
 try:
-    import websocket, urwid
+    import websocket
 except:
     os.system('pip3 install websocket-client urwid')
     import websocket
 
-SERVER_HOST: str = 'ws://127.0.0.1:9982' # Test server address
+SERVER_HOST: str = 'ws://localhost:9982' # Test server address
 
 session_token: str = ''
 login_username: str = ''; login_password: str = ''
@@ -13,7 +13,7 @@ register_username: str = ''; register_password: str = ''
 is_processing: bool = True; is_logged: bool = False
 t: threading.Thread
 ws: websocket.WebSocketApp
-exit_event: threading.Event
+exit_event: threading.Event = threading.Event()
 
 def message_processing(self, original_message):
     global is_processing, is_logged, session_token
@@ -86,14 +86,16 @@ def message_processing(self, original_message):
             if message['content'] == 'registration_success':
                 print('Registration Success')
             
-            message = {'type': 'close_connection'}
-            self.send(json.dumps(message)); message.clear()
+            exit_event.set()
             is_processing = False
             sys.exit(0)
 
-        
     except Exception as e:
         logging.exception(e)
+        exit_event.set()
+        is_processing = False
+        sys.exit(0)
+        raise e
 
 def input_processing(exit_event, self):
     global login_username, is_processing
@@ -109,7 +111,12 @@ def input_processing(exit_event, self):
                 exit_event.set()
                 break
             
-            command = input('> ').strip().split()
+            try:
+                command = input('> ').strip().split()
+            except EOFError:
+                exit_event.set()
+                sys.exit(0)
+                
             if command == []:
                 continue
 
@@ -128,6 +135,10 @@ def input_processing(exit_event, self):
                 self.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%problem_statement': # Get statement of a specific problem
+                if len(command) < 2:
+                    print('Please specify which problem you want to show.')
+                    continue
+                
                 is_processing = True
                 message = {
                     'type': 'problem_statement',
@@ -200,38 +211,49 @@ def input_processing(exit_event, self):
                 break
 
         except KeyboardInterrupt:
+            print('Quitting...')
+            exit_event.set()
+            break
+        except:
             exit_event.set()
             break
     
     is_processing = True
-    message = {'type': 'quit', 'session_token': session_token}
+    if session_token == '':
+        message = {'type': 'close_connection', 'content': {}}
+    else:
+        message = {'type': 'quit', 'content': {'username': login_username,'session_token': session_token}}
+    
     self.send(json.dumps(message)); message.clear() # Send quit message
     is_processing = False
     sys.exit(0)
 
 def login_session(self):
-    is_processing_message = True
+    global is_processing
+    is_processing = True
     message = {'type': 'login', 'content': {'username': login_username, 'password': login_password}}
     self.send(json.dumps(message)); message.clear()
     
 def register_session(self):
-    is_processing_message = True
+    global is_processing
+    is_processing = True
     message = {'type': 'register', 'content': {'username': register_username, 'password': register_password}}
     self.send(json.dumps(message)); message.clear()
     
 def websocket_session_on_close(self, close_status_code, close_msg):
-    is_processing_message = True
+    global is_processing
+    is_processing = True
     if session_token == '':
-        message = {'type': 'close_connection'}
+        message = {'type': 'close_connection', 'content': {}}
     else:
-        message = {'type': 'quit', 'session_token': session_token}
+        message = {'type': 'quit', 'content': {'username': login_username, 'session_token': session_token}}
         
     self.send(json.dumps(message)); message.clear()
+    exit_event.set()
     time.sleep(1)
 
 def websocket_session(on_open):
     global t, ws
-    exit_event = threading.Event()
     try:
         ws = websocket.WebSocketApp(SERVER_HOST, on_message = message_processing, on_open = on_open, on_close = websocket_session_on_close)
         t = threading.Thread(target = input_processing, args = (exit_event, ws, ), daemon = True); t.start()
@@ -291,4 +313,4 @@ if __name__ == '__main__':
             sys.exit(0)
 
     except:
-        pass
+        sys.exit(0)

@@ -1,4 +1,4 @@
-import os, gc, sys, json
+import os, gc, sys, json, platform
 
 import asyncio, logging
 
@@ -84,7 +84,10 @@ class judge:
                         else:
                             general_AC_flag = False
                         
-                        self.server_instance.get_module_instance('global_message_queue').execute_command('rm -f \"{}\"'.format(testcase_output_path))
+                        if platform.platform == 'Linux':
+                            self.server_instance.get_module_instance('global_message_queue').execute_command('rm -f \"{}\"'.format(testcase_output_path))
+                        if platform.platform == 'Windows':
+                            self.server_instance.get_module_instance('global_message_queue').execute_command('del \"{}\"'.format(testcase_output_path))
                     
                     judgment_result = dict()
                     if general_AC_flag == True:

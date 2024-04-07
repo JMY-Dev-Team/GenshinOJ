@@ -3,19 +3,19 @@ import gc, os, json, importlib
 # gc.disable()
 
 try:
-    import pymysql, asyncio, nest_asyncio, websockets
+    import asyncio, nest_asyncio, websockets
 except:
-    os.system('pip3 install pymysql asyncio websockets')
-    import pymysql, asyncio, nest_asyncio, websockets
+    os.system('pip3 install asyncio nest-asyncio websockets')
+    import asyncio, nest_asyncio, websockets
 
-nest_asyncio.apply()
+# nest_asyncio.apply()
 class server:
     def __init__(self) -> None:
         self.working_loads: dict = dict()
         self.MODULE_CONFIG_JSON_PATH: str = os.getcwd() + '/module_config.json'
         self.tasks: list = []
         asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
-        asyncio.run(self.async_main())
+        asyncio.get_event_loop().run_until_complete(self.async_main())
 
     def __del__(self) -> None:
         print('Server stopped.')
@@ -46,8 +46,7 @@ class server:
                 self.working_loads[working_load_config['id']] = working_load_config
                 getattr(getattr(importlib.__import__(working_load_config['path']), working_load_config['id']), working_load_config['id'])(self)
         
-        await asyncio.wait(self.tasks)
-        
+        await asyncio.gather(*tuple(self.tasks))
         asyncio.get_event_loop().run_forever()
 
     def get_module_instance(self, module_id: str):

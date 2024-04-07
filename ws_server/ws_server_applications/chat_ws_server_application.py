@@ -31,12 +31,18 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
         self.ws_server_instance.server_instance.get_module_instance('chat_server').message_box[content['username']]['message_queue'] = []
         self.ws_server_instance.server_instance.get_module_instance('chat_server').message_box[content['username']]['websocket_protocol'] = websocket_protocol
 
+    async def on_close_connection(
+        self, 
+        websocket_protocol: websockets.server.WebSocketServerProtocol, 
+    ):
+        await super().on_close_connection(websocket_protocol)
+    
     async def on_quit(
         self, 
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
         content: dict
     ):
-        self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
+        super().on_quit()
         del self.ws_server_instance.server_instance.get_module_instance('chat_server').message_box[content['username']]
 
     def get_md5(self, data):

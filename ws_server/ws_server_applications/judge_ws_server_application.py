@@ -1,4 +1,4 @@
-import websockets
+import logging, websockets
 
 from .. import ws_server
 
@@ -23,13 +23,24 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         content: dict
     ):
         self.log('The user {} tries to login with the hash: {}'.format(content['username'], self.get_md5(content['password'])))
+        
+    async def on_close_connection(
+        self, 
+        websocket_protocol: websockets.server.WebSocketServerProtocol, 
+    ):
+        await super().on_close_connection(websocket_protocol)
 
     async def on_quit(
         self, 
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
         content: dict
     ):
-        self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
+        try:
+            self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
+        except AttributeError as e:
+            logging.exception(e)
+        except:
+            pass
 
     def get_md5(self, data):
         import hashlib
