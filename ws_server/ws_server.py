@@ -63,6 +63,11 @@ class ws_server:
         try:
             async for original_message in websocket_protocol:
                 message = json.loads(original_message)
+                if len(original_message) <= 500:
+                    print(message)
+                else:
+                    print('TL; DR')
+                    
                 try:
                     for ws_server_application in self.ws_server_applications:
                         try:
@@ -84,6 +89,32 @@ class ws_server:
                 ws_server_application.on_quit()
                 
         await asyncio.sleep(0)
+        try:
+            await websocket_protocol.recv()
+        except websockets.exceptions.ConnectionClosedOK:
+            try:
+                for ws_server_application in self.ws_server_applications:
+                    try:
+                        await getattr(ws_server_application, format('on_close_connection'))(websocket_protocol)
+                        await asyncio.sleep(0)
+                    except AttributeError as e:
+                        pass
+                    except Exception as e:
+                        raise e
+            except Exception as e:
+                raise e
+        except websockets.exceptions.ConnectionClosedError:
+            try:
+                for ws_server_application in self.ws_server_applications:
+                    try:
+                        await getattr(ws_server_application, format('on_close_connection'))(websocket_protocol)
+                        await asyncio.sleep(0)
+                    except AttributeError as e:
+                        pass
+                    except Exception as e:
+                        raise e
+            except Exception as e:
+                raise e
 
 class ws_server_log_level(enum.Enum):
     LEVEL_INFO = 0
@@ -143,17 +174,16 @@ class ws_server_application_protocol:
         self.log('{} tries to login with the password: {}'.format(content['username'], content['password']))
     
     @abc.abstractmethod
-    async def on_quit(
+    async def on_close_connection(
         self, 
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
-        content: dict
     ):
         """ 
-        Callback method `on_quit`
+        Callback method `on_close_connection`
         Info:
-            You need to implement this method to do the specific actions you want whenever a user tries to quit.
+            You need to implement this method to do the specific actions you want whenever a connection is being closed.
         """
-        self.log('{} quitted with session token: {}'.format(content['username'], content['session_token']))
+        self.log('Closed connection from {}:{}'.format(websocket_protocol.remote_address[0], websocket_protocol.remote_address[1]))
 
 class simple_ws_server_application(ws_server_application_protocol):
     """
@@ -200,14 +230,24 @@ class simple_ws_server_application(ws_server_application_protocol):
             response = {'type': 'quit', 'content': 'authentication_failure'}
             await websocket_protocol.send(json.dumps(response)); response.clear();
 
+    async def on_close_connection(
+        self, 
+        websocket_protocol: websockets.server.WebSocketServerProtocol, 
+    ):
+        await super().on_close_connection(websocket_protocol)
+    
     async def on_quit(
         self, 
         websocket_protocol: websockets.server.WebSocketServerProtocol, 
         content: dict
     ):
-        super().on_quit(self, websocket_protocol, content)
         await websocket_protocol.close()
-        self.log('{} quitted with session token: {}'.format(content['username'], content['session_token']))
+        try:
+            self.log('The user {} quitted with session token: {}'.format(content['username'], content['session_token']))
+        except AttributeError as e:
+            logging.exception(e)
+        except Exception as e:
+            raise e
 
     def get_md5(self, data):
         import hashlib
@@ -251,12 +291,22 @@ class simple_ws_server_application(ws_server_application_protocol):
         try:
             with open(self.ws_server_instance.server_instance.get_module_instance('global_message_queue').get_problem_statement_json_path(content['problem_number']), 'r') as problem_statement_json_file:
                 response.update(json.load(problem_statement_json_file))
-            
-        except Exception as e:
+                
+            await websocket_protocol.send(json.dumps(response)); response.clear();
+        except FileNotFoundError as e:
             self.log('problem_statement.json is not found!', ws_server_log_level.LEVEL_ERROR)
-        
-        await websocket_protocol.send(json.dumps(response)); response.clear();
-        
+            response.update({
+                "problem_number": -1,
+                "difficulty": -1,
+                "problem_name": "Problem Not Found",
+                "problem_statement": [
+                    "You tried to request a problem not existed."
+                ]
+            })
+            await websocket_protocol.send(json.dumps(response)); response.clear();
+        except Exception as e:
+            raise e
+    
     async def on_problem_set(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
