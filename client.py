@@ -1,9 +1,10 @@
-import os, sys, json, time, logging, platform, threading
+import os, sys, json, time, logging, platform
+
 try:
-    import websocket
+    import asyncio, nest_asyncio, websockets, urwid
 except:
-    os.system('pip3 install websocket-client urwid')
-    import websocket
+    os.system('pip install asyncio nest-asyncio websockets urwid')
+    import asyncio, websockets.client, urwid
 
 SERVER_HOST: str = 'ws://localhost:9982' # Test server address
 
@@ -11,112 +12,111 @@ session_token: str = ''
 login_username: str = ''; login_password: str = ''
 register_username: str = ''; register_password: str = ''
 is_processing: bool = True; is_logged: bool = False
-t: threading.Thread
-ws: websocket.WebSocketApp
-exit_event: threading.Event = threading.Event()
+ws: websockets.WebSocketClientProtocol
+background_tasks = set()
 
-websocket.enableTrace(True)
+asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+nest_asyncio.apply()
 
-def message_processing(self, original_message):
+async def message_processing(ws):
     global is_processing, is_logged, session_token
-    try:
-        is_processing = True
-        message = json.loads(original_message)
-        if message['type'] == 'problem_set':
-            print('+ Problem Set')
-            for problem_number in message['problem_set']:
-                print(problem_number, end = '')
-            
-            print(); print('- Problem Set')
-            is_processing = False
+    while True:
+        await asyncio.sleep(0)
+        async for original_message in ws:
+            try:
+                is_processing = True
+                message = json.loads(original_message)
+                print(message)
+                if message['type'] == 'problem_set':
+                    print('+ Problem Set')
+                    for problem_number in message['problem_set']:
+                        print(problem_number, end = '')
+                    
+                    print(); print('- Problem Set')
+                    is_processing = False
 
-        elif message['type'] == 'problem_statement':
-            print('+ Problem Statement')
-            print('Name: {} - {}'.format(message['problem_number'], message['problem_name']))
-            print('Difficulty: {}'.format(message['difficulty']))
-            for line in message['problem_statement']:
-                print(line)
-            
-            print('- Problem Statement')
-            is_processing = False
+                elif message['type'] == 'problem_statement':
+                    print('+ Problem Statement')
+                    print('Name: {} - {}'.format(message['problem_number'], message['problem_name']))
+                    print('Difficulty: {}'.format(message['difficulty']))
+                    for line in message['problem_statement']:
+                        print(line)
+                    
+                    print('- Problem Statement')
+                    is_processing = False
 
-        elif message['type'] == 'submission_result':
-            print('+ Submission Result')
-            print('Result: {}'.format(message['result']))
-            if format(message['result']) == 'WA':
-                for reason in message['reasons']:
-                    print('Reason: {}'.format(reason))
-            
-            print('- Submission Result')
-            is_processing = False
+                elif message['type'] == 'submission_result':
+                    print('+ Submission Result')
+                    print('Result: {}'.format(message['result']))
+                    if format(message['result']) == 'WA':
+                        for reason in message['reasons']:
+                            print('Reason: {}'.format(reason))
+                    
+                    print('- Submission Result')
+                    is_processing = False
 
-        elif message['type'] == 'session_token':
-            session_token = message['content']
-            print('Session Token: {}'.format(session_token))
-            is_logged = True
-            is_processing = False
+                elif message['type'] == 'session_token':
+                    session_token = message['content']
+                    print('Session Token: {}'.format(session_token))
+                    is_logged = True
+                    is_processing = False
 
-        elif message['type'] == 'online_user':
-            print('Online Users: ', end = '')
-            for index in range(0, len(message['content'])):
-                if index == len(message['content']) - 1:
-                    print('{}'.format(message['content'][index]), end = '')
-                else:
-                    print('{}, '.format(message['content'][index]), end = '')
-            
-            print()
-            is_processing = False
+                elif message['type'] == 'online_user':
+                    print('Online Users: ', end = '')
+                    for index in range(0, len(message['content'])):
+                        if index == len(message['content']) - 1:
+                            print('{}'.format(message['content'][index]), end = '')
+                        else:
+                            print('{}, '.format(message['content'][index]), end = '')
+                    
+                    print()
+                    is_processing = False
 
-        elif message['type'] == 'chat_echo':
-            is_processing = False
+                elif message['type'] == 'chat_echo':
+                    is_processing = False
 
-        elif message['type'] == 'chat_message':
-            print('+ Chat Message')
-            print('From: {}'.format(message['from']))
-            chat_messages: list[str] = message['content']
-            for chat_message in chat_messages:
-                print('chat> {}'.format(chat_message))
-            
-            print('- Chat Message')
-            is_processing = False
+                elif message['type'] == 'chat_message':
+                    print('+ Chat Message')
+                    print('From: {}'.format(message['from']))
+                    chat_messages: list[str] = message['content']
+                    for chat_message in chat_messages:
+                        print('chat> {}'.format(chat_message))
+                    
+                    print('- Chat Message')
+                    is_processing = False
 
-        elif message['type'] == 'quit':
-            if message['content'] == 'authentication_failure':
-                print('Authentication Failure')
-            if message['content'] == 'registration_failure':
-                print('Registration Failure')
-            if message['content'] == 'registration_success':
-                print('Registration Success')
-            
-            exit_event.set()
-            is_processing = False
-            sys.exit(0)
+                elif message['type'] == 'quit':
+                    if message['content'] == 'authentication_failure':
+                        print('Authentication Failure')
+                    if message['content'] == 'registration_failure':
+                        print('Registration Failure')
+                    if message['content'] == 'registration_success':
+                        print('Registration Success')
+                    
+                    is_processing = False
+                    sys.exit(0)
 
-    except Exception as e:
-        logging.exception(e)
-        exit_event.set()
-        is_processing = False
-        raise e
+            except Exception as e:
+                logging.exception(e)
+                is_processing = False
+                raise e
+        
+            await asyncio.sleep(0)
 
-def input_processing(exit_event, self):
-    global login_username, is_processing
-    while is_processing == True:
-        pass
-    
-    while not exit_event.is_set():
+async def input_processing(ws):
+    global login_username, is_processing    
+    while True:
+        while is_processing == True:
+            await asyncio.sleep(0)
+        
         try:
-            while (is_processing == True) and (not exit_event.is_set()):
-                pass
-            
-            if exit_event.is_set():
-                exit_event.set()
-                break
+            while is_processing == True:
+                await asyncio.sleep(0)
             
             try:
                 command = input('> ').strip().split()
             except EOFError:
-                exit_event.set()
-                sys.exit(0)
+                break
                 
             if command == []:
                 continue
@@ -133,7 +133,7 @@ def input_processing(exit_event, self):
             elif command[0] == '%problem_set': # Get problem list
                 is_processing = True
                 message = {'type': 'problem_set', 'content': {}}
-                self.send(json.dumps(message)); message.clear()
+                await ws.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%problem_statement': # Get statement of a specific problem
                 if len(command) < 2:
@@ -147,7 +147,7 @@ def input_processing(exit_event, self):
                         'problem_number': command[1]
                     }
                 }
-                self.send(json.dumps(message)); message.clear()
+                await ws.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%submit': # Submit source code for judgment
                 if len(command) < 4:
@@ -166,12 +166,12 @@ def input_processing(exit_event, self):
                     continue
                 
                 is_processing = True
-                self.send(json.dumps(message)); message.clear()
+                await ws.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%online_user': # Check online users
                 is_processing = True
                 message = {'type': 'online_user', 'content': {}}
-                self.send(json.dumps(message)); message.clear()
+                await ws.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%chat': # Send short chat message
                 if len(command) < 2:
@@ -199,7 +199,7 @@ def input_processing(exit_event, self):
                         'from': login_username, 'to': command[1], 'messages': chat_messages, 'session_token': session_token
                     }
                 }
-                self.send(json.dumps(message)); message.clear()
+                await ws.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%debug': # Toggle debug mode
                 if len(command) < 2:
@@ -207,22 +207,21 @@ def input_processing(exit_event, self):
                     continue
                 
                 if command[1] == 'on':
-                    websocket.enableTrace(True)
+                    asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
                 if command[1] == 'off':
-                    websocket.enableTrace(False)
+                    asyncio.get_event_loop_policy().get_event_loop().set_debug(False)
 
             elif command[0] == '%quit' or command[0] == '%exit': # Quit the client program
                 is_processing = True
-                exit_event.set()
                 break
 
         except KeyboardInterrupt:
             print('Quitting...')
-            exit_event.set()
             break
         except:
-            exit_event.set()
             break
+        
+        await asyncio.sleep(0)
     
     is_processing = True
     if session_token == '':
@@ -230,49 +229,66 @@ def input_processing(exit_event, self):
     else:
         message = {'type': 'quit', 'content': {'username': login_username,'session_token': session_token}}
     
-    self.send(json.dumps(message)); message.clear() # Send quit message
+    await ws.send(json.dumps(message)); message.clear() # Send quit message
     is_processing = False
     sys.exit(0)
 
-def login_session(self):
+async def login_session(ws):
     global is_processing
-    is_processing = True
-    message = {'type': 'login', 'content': {'username': login_username, 'password': login_password}}
-    self.send(json.dumps(message)); message.clear()
-    
-def register_session(self):
-    global is_processing
-    is_processing = True
-    message = {'type': 'register', 'content': {'username': register_username, 'password': register_password}}
-    self.send(json.dumps(message)); message.clear()
-    
-def websocket_session_on_close(self, close_status_code, close_msg):
-    global is_processing
-    is_processing = True
-    if session_token == '':
-        message = {'type': 'close_connection', 'content': {}}
-    else:
-        message = {'type': 'quit', 'content': {'username': login_username, 'session_token': session_token}}
-        
-    self.send(json.dumps(message)); message.clear()
-    exit_event.set()
-    time.sleep(1)
-    sys.exit(0)
-
-def websocket_session(on_open):
-    global t, ws
     try:
-        ws = websocket.WebSocketApp(SERVER_HOST, on_message = message_processing, on_open = on_open, on_close = websocket_session_on_close)
-        t = threading.Thread(target = input_processing, args = (exit_event, ws, ), daemon = True); t.start()
-        threading.Thread(target = ws.run_forever).start()
-        exit_event.wait()
-        ws.close(status = websocket.STATUS_GOING_AWAY)
+        is_processing = True
+        message = {'type': 'login', 'content': {'username': login_username, 'password': login_password}}
+        await ws.send(json.dumps(message)); message.clear()
+    except Exception as e:
+        logging.exception(e)
+
+async def register_session(ws):
+    global is_processing
+    try:
+        is_processing = True
+        message = {'type': 'register', 'content': {'username': register_username, 'password': register_password}}
+        await ws.send(json.dumps(message)); message.clear()
+    except Exception as e:
+        logging.exception(e)
+
+async def websocket_session_on_close(ws, close_status_code, close_msg):
+    global is_processing
+    try:
+        is_processing = True
+        if session_token == '':
+            message = {'type': 'close_connection', 'content': {}}
+        else:
+            message = {'type': 'quit', 'content': {'username': login_username, 'session_token': session_token}}
+            
+        await ws.send(json.dumps(message)); message.clear()
+        is_processing = False
         sys.exit(0)
+    except websockets.ConnectionClosed:
+        sys.exit(0)
+    except Exception as e:
+        logging.exception(e)
+
+async def websocket_session(on_open):
+    global t, ws, background_tasks
+    try:
+        async with websockets.connect(uri = SERVER_HOST) as ws:
+            try:
+                await on_open(ws)
+                task_message_processing = asyncio.create_task(message_processing(ws))
+                background_tasks.add(task_message_processing)
+                task_message_processing.add_done_callback(background_tasks.discard)
+                task_input_processing = asyncio.create_task(input_processing(ws))
+                background_tasks.add(task_input_processing)
+                task_input_processing.add_done_callback(background_tasks.discard)
+                await task_message_processing
+                await task_input_processing
+            except Exception as e:
+                raise e
     except KeyboardInterrupt:
         print('Quitting...')
-        exit_event.set()
-        ws.close(status = websocket.STATUS_GOING_AWAY)
-        sys.exit(0)
+        raise KeyboardInterrupt
+    except Exception as e:
+        logging.exception(e)
 
 if __name__ == '__main__':
     try:
@@ -293,7 +309,8 @@ if __name__ == '__main__':
                     print('非法密码！')
                     sys.exit(0)
 
-                websocket_session(login_session)
+                asyncio.get_event_loop().run_until_complete(websocket_session(login_session))
+                asyncio.get_event_loop().run_forever()
                 sys.exit(0)
 
             except KeyboardInterrupt:
@@ -311,7 +328,8 @@ if __name__ == '__main__':
                     print('非法注册密码！')
                     sys.exit(0)
 
-                websocket_session(register_session)
+                asyncio.get_event_loop().run_until_complete(websocket_session(register_session))
+                asyncio.get_event_loop().run_forever()
                 sys.exit(0)
 
             except KeyboardInterrupt:

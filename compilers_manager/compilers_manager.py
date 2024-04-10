@@ -1,4 +1,4 @@
-import os, gc, sys, json, importlib
+import os, gc, sys, json, importlib, platform
 
 import server
 
@@ -6,7 +6,10 @@ import compilers_manager.compilers.base_compiler
 
 # gc.disable()
 
-COMPILERS_CONFIG_JSON_PATH = os.getcwd() + '/compilers_manager/compilers_config.json'
+if platform.system() == 'Windows':
+    COMPILERS_CONFIG_JSON_PATH = os.getcwd() + '\\compilers_manager\\compilers_config.json'
+if platform.system() == 'Linux':
+    COMPILERS_CONFIG_JSON_PATH = os.getcwd() + '/compilers_manager/compilers_config.json'
 
 class compilers_manager:
     def __init__(self, server_instance: server.server) -> None:
@@ -31,7 +34,10 @@ class compilers_manager:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return os.getcwd() + '/submit/' + filename + compiler_instance.get_file_appendix(language)
+                if platform.system() == 'Windows':
+                    return os.getcwd() + '\\submit\\' + filename + compiler_instance.get_file_appendix(language)
+                if platform.system() == 'Linux':
+                    return os.getcwd() + '/submit/' + filename + compiler_instance.get_file_appendix(language)
         
         raise NotImplementedError('Unsupported language.')
 
@@ -39,7 +45,10 @@ class compilers_manager:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return os.getcwd() + '/submit/' + filename + compiler_instance.get_binary_appendix(language)
+                if platform.system() == 'Windows':
+                    return os.getcwd() + '\\submit\\' + filename + compiler_instance.get_binary_appendix(language)
+                if platform.system() == 'Linux':
+                    return os.getcwd() + '/submit/' + filename + compiler_instance.get_file_appendix(language)
         
         raise NotImplementedError('Unsupported language.')
 

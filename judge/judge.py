@@ -58,9 +58,9 @@ class judge:
                     reasons = [] # Reasons
                     for testcase in testcases: # For each testcase
                         testcase_number = testcase['number']
-                        testcase_input_path = '{}/problem/{}/input/{}'.format(os.getcwd(), submission_problem_number, testcase['input']) # Input file path 
-                        testcase_answer_path = '{}/problem/{}/answer/{}'.format(os.getcwd(), submission_problem_number, testcase['answer']) # Answer file path
-                        testcase_output_path = '{}/problem/{}/output/{}'.format(os.getcwd(), submission_problem_number, 'output{}.txt'.format(testcase_number)) # Output file path
+                        testcase_input_path = '{}\\problem\\{}\\input\\{}'.format(os.getcwd(), submission_problem_number, testcase['input']) # Input file path 
+                        testcase_answer_path = '{}\\problem\\{}\\answer\\{}'.format(os.getcwd(), submission_problem_number, testcase['answer']) # Answer file path
+                        testcase_output_path = '{}\\problem\\{}\\output\\{}'.format(os.getcwd(), submission_problem_number, 'output{}.txt'.format(testcase_number)) # Output file path
                         self.server_instance.get_module_instance('global_message_queue').execute_command(
                             '{} < \"{}\" > \"{}\"'.format(
                                 self.server_instance.get_module_instance('compilers_manager').get_binary_execute_command_by_filename_and_language(

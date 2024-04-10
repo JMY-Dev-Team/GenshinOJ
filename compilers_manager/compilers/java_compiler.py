@@ -16,9 +16,9 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         print('Java Compiler unloaded.')
 
     def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
-        if language == 'c' or language == 'cpp':
+        if language == 'java':
             try:
-                os.system('gcc {} -o {}'.format(compile_file_path, compile_binary_path))
+                os.system('javac {}'.format(compile_file_path, compile_binary_path))
             except OSError:
                 pass
             except:
@@ -49,25 +49,25 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def get_file_appendix(self, language: str) -> str:
-        if language == 'c' or language == 'cpp':
+        if language == 'java':
             return language
         else:
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
     
     def get_binary_appendix(self, language: str) -> str:
-        if language == 'c' or language == 'cpp':
+        if language == 'java':
             return 'o'
         else:
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_compile_file_command(self, filename: str, language: str) -> str:
-        if language == 'c' or language == 'cpp':
+        if language == 'java':
             return 'gcc {}.cpp -o {}.o'.format(filename, filename)
         else:
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_binary_execute_command(self, filename: str, language: str) -> str:
-        if language == 'c' or language == 'cpp':
+        if language == 'java':
             return filename
         else:
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
