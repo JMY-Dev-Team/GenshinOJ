@@ -1,15 +1,15 @@
-import os, sys, json, time, logging, platform
+import os, sys, json, logging, platform
 
 try:
-    import asyncio, nest_asyncio, websockets, urwid, aioconsole
+    import asyncio, nest_asyncio, websockets, aioconsole
 except ImportError:
     print('Installing dependencies...')
     if platform.system() == 'Windows':
-        os.system('pip install asyncio nest-asyncio websockets urwid aioconsole')
+        os.system('pip install asyncio nest-asyncio websockets aioconsole')
     if platform.system() == 'Linux':
-        os.system('sudo pip3 install asyncio nest-asyncio websockets urwid aioconsole')
+        os.system('sudo pip3 install asyncio nest-asyncio websockets aioconsole')
     
-    import asyncio, nest_asyncio, websockets, urwid, aioconsole
+    import asyncio, nest_asyncio, websockets, aioconsole
 
 SERVER_HOST: str = 'ws://localhost:9982' # Test server address
 
@@ -289,7 +289,7 @@ async def websocket_session_on_close(ws, close_status_code, close_msg):
     except Exception as e:
         logging.exception(e)
 
-async def websocket_session(on_open):
+async def websocket_session(on_open, tui_enabled = False):
     global t, ws, server_down, background_tasks
     try:
         async with websockets.connect(uri = SERVER_HOST) as ws:
@@ -298,13 +298,14 @@ async def websocket_session(on_open):
                 task_message_processing = asyncio.create_task(message_processing(ws))
                 background_tasks.add(task_message_processing)
                 task_message_processing.add_done_callback(background_tasks.discard)
-                
-                task_input_processing = asyncio.create_task(input_processing(ws))
-                background_tasks.add(task_input_processing)
-                task_input_processing.add_done_callback(background_tasks.discard)
-                
                 await task_message_processing
-                await task_input_processing
+                
+                if tui_enabled:
+                    task_input_processing = asyncio.create_task(input_processing(ws))
+                    background_tasks.add(task_input_processing)
+                    task_input_processing.add_done_callback(background_tasks.discard)
+                
+                    await task_input_processing
             except websockets.exceptions.ConnectionClosedError:
                 server_down = True
                 print('Quitting...')
@@ -317,7 +318,7 @@ async def websocket_session(on_open):
     except Exception as e:
         logging.exception(e)
 
-if __name__ == '__main__':
+def main():
     try:
         print('欢迎使用 Genshin OJ 的客户端！')
         print('1. 登录')
@@ -366,3 +367,6 @@ if __name__ == '__main__':
 
     except:
         sys.exit(0)
+
+if __name__ == '__main__':
+    main()
