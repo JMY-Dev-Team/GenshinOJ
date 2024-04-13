@@ -1,6 +1,8 @@
 import abc
 
+
 class base_compiler:
+
     @abc.abstractmethod
     def __init__(self, unload_timeout) -> None:
         self.unload_timeout = unload_timeout
@@ -10,11 +12,13 @@ class base_compiler:
         pass
 
     @abc.abstractmethod
-    def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    def on_compile(self, language, compile_file_path,
+                   compile_binary_path) -> bool:
         pass
 
     @abc.abstractmethod
-    def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    def on_cleanup(self, language, compile_file_path,
+                   compile_binary_path) -> bool:
         pass
 
     @abc.abstractmethod

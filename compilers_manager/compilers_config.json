@@ -5,7 +5,10 @@
             "id": "c_cpp_compiler",
             "enabled": true,
             "path": "compilers_manager.compilers.c_cpp_compiler",
-            "language_bind": ["c", "cpp"],
+            "language_bind": [
+                "c",
+                "cpp"
+            ],
             "unload_timeout": 0
         },
         {
@@ -13,7 +16,9 @@
             "id": "python_compiler",
             "enabled": true,
             "path": "compilers_manager.compilers.python_compiler",
-            "language_bind": ["py"],
+            "language_bind": [
+                "py"
+            ],
             "unload_timeout": 0
         },
         {
@@ -21,7 +26,9 @@
             "id": "java_compiler",
             "enabled": true,
             "path": "compilers_manager.compilers.java_compiler",
-            "language_bind": ["java"],
+            "language_bind": [
+                "java"
+            ],
             "unload_timeout": 0
         }
     ]
