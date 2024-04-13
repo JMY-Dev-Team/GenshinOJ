@@ -46,9 +46,9 @@ class compilers_manager:
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
                 if platform.system() == 'Windows':
-                    return os.getcwd() + '\\submit\\' + filename + compiler_instance.get_binary_appendix(language)
+                    return os.getcwd() + '\\submit\\' + filename + '.o'
                 if platform.system() == 'Linux':
-                    return os.getcwd() + '/submit/' + filename + compiler_instance.get_file_appendix(language)
+                    return os.getcwd() + '/submit/' + filename + '.o'
         
         raise NotImplementedError('Unsupported language.')
 

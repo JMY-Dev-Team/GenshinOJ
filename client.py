@@ -1,28 +1,40 @@
 import os, sys, json, time, logging, platform
 
 try:
-    import asyncio, nest_asyncio, websockets, urwid
-except:
-    os.system('pip install asyncio nest-asyncio websockets urwid')
-    import asyncio, websockets.client, urwid
+    import asyncio, nest_asyncio, websockets, urwid, aioconsole
+except ImportError:
+    print('Installing dependencies...')
+    if platform.system() == 'Windows':
+        os.system('pip install asyncio nest-asyncio websockets urwid aioconsole')
+    if platform.system() == 'Linux':
+        os.system('sudo pip3 install asyncio nest-asyncio websockets urwid aioconsole')
+    
+    import asyncio, nest_asyncio, websockets, urwid, aioconsole
 
 SERVER_HOST: str = 'ws://localhost:9982' # Test server address
 
-session_token: str = ''
-login_username: str = ''; login_password: str = ''
-register_username: str = ''; register_password: str = ''
-is_processing: bool = True; is_logged: bool = False
+session_token: str = '';
+login_username: str = ''; login_password: str = '';
+register_username: str = ''; register_password: str = '';
+is_processing: bool = True; is_logged: bool = False; 
+chat_env: bool = False;
+server_down: bool = False;
 ws: websockets.WebSocketClientProtocol
 background_tasks = set()
 
 asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
 nest_asyncio.apply()
 
-async def message_processing(ws):
-    global is_processing, is_logged, session_token
+async def message_processing(websocket_protocol: websockets.WebSocketClientProtocol):
+    global \
+        is_logged, \
+        server_down, \
+        is_processing, \
+        session_token
+    
     while True:
         await asyncio.sleep(0)
-        async for original_message in ws:
+        async for original_message in websocket_protocol:
             try:
                 is_processing = True
                 message = json.loads(original_message)
@@ -72,9 +84,6 @@ async def message_processing(ws):
                     print()
                     is_processing = False
 
-                elif message['type'] == 'chat_echo':
-                    is_processing = False
-
                 elif message['type'] == 'chat_message':
                     print('+ Chat Message')
                     print('From: {}'.format(message['from']))
@@ -94,46 +103,47 @@ async def message_processing(ws):
                         print('Registration Success')
                     
                     is_processing = False
+                    await websocket_protocol.close()
                     sys.exit(0)
 
             except Exception as e:
                 logging.exception(e)
                 is_processing = False
+                await websocket_protocol.close()
                 raise e
         
-            await asyncio.sleep(0)
+        await asyncio.sleep(0)
 
-async def input_processing(ws):
-    global login_username, is_processing    
+async def input_processing(websocket_protocol: websockets.WebSocketClientProtocol):
+    global \
+        is_processing, \
+        login_username \
+    
     while True:
-        while is_processing == True:
-            await asyncio.sleep(0)
-        
         try:
-            while is_processing == True:
+            while is_processing:
                 await asyncio.sleep(0)
             
-            try:
-                command = input('> ').strip().split()
-            except EOFError:
-                break
-                
-            if command == []:
+            command = await aioconsole.ainput('> ')
+            command = command.strip().split()
+            if command == []: # Empty command
                 continue
 
-            if command[0] == '%help':
+            if command[0] == '%help': # Check help
+                print('使用 %help 来查看本帮助')
                 print('使用 %problem_set 来获取题目列表')
                 print('使用 %problem_statement[题目编号] 来获取指定题目信息')
                 print('使用 %submit [题目编号] [源文件名] [代码语言] 来递交指定语言的代码测评指定题目')
                 print('使用 %chat [短讯聊天对象] 来短讯聊天，此命令会使你进入短讯聊天环境，键入 %send 来确认发送，键入 %cancel 来取消发送')
                 print('使用 %online_user 来查询在线用户')
+                print('使用 %clear 来清除输出')
                 print('使用 %debug [on / off] 来开启或关闭调试模式')
                 print('使用 %quit 或 %exit 退出')
 
             elif command[0] == '%problem_set': # Get problem list
                 is_processing = True
                 message = {'type': 'problem_set', 'content': {}}
-                await ws.send(json.dumps(message)); message.clear()
+                await websocket_protocol.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%problem_statement': # Get statement of a specific problem
                 if len(command) < 2:
@@ -147,7 +157,7 @@ async def input_processing(ws):
                         'problem_number': command[1]
                     }
                 }
-                await ws.send(json.dumps(message)); message.clear()
+                await websocket_protocol.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%submit': # Submit source code for judgment
                 if len(command) < 4:
@@ -166,40 +176,50 @@ async def input_processing(ws):
                     continue
                 
                 is_processing = True
-                await ws.send(json.dumps(message)); message.clear()
+                await websocket_protocol.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%online_user': # Check online users
                 is_processing = True
                 message = {'type': 'online_user', 'content': {}}
-                await ws.send(json.dumps(message)); message.clear()
+                await websocket_protocol.send(json.dumps(message)); message.clear()
 
             elif command[0] == '%chat': # Send short chat message
                 if len(command) < 2:
                     print('Please specify whom you want to send this message to.')
                     continue
                 
-                chat_messages: list[str] = []; chat_message: str; confirmed_flag = True
-                while chat_message := input('chat> '):
-                    chat_message = chat_message.strip()
-                    if chat_message == '%send':
-                        break
-                    if chat_message == '%cancel':
-                        confirmed_flag = False
-                        break
-                    
-                    chat_messages.append(chat_message)
+                is_processing = True;
+                try:
+                    chat_messages: list[str] = []
+                    while True:
+                        chat_message = await aioconsole.ainput('chat> ')
+                        if chat_message == '%send' or chat_message == '%confirm':
+                            message = {
+                                'type': 'chat_short', 
+                                'content': {
+                                    'from': login_username, 'to': command[1], 'messages': chat_messages, 'session_token': session_token
+                                }
+                            }
+                            await websocket_protocol.send(json.dumps(message)); message.clear()
+                            break
+                        if chat_message == '%cancel':
+                            break
+                        
+                        chat_messages.append(chat_message)
+                        await asyncio.sleep(0)
+                except EOFError:
+                    is_processing = False
+                    break
+                except Exception as e:
+                    logging.exception(e)
                 
-                if not confirmed_flag:
-                    continue
-                
-                is_processing = True
-                message = {
-                    'type': 'chat_short', 
-                    'content': {
-                        'from': login_username, 'to': command[1], 'messages': chat_messages, 'session_token': session_token
-                    }
-                }
-                await ws.send(json.dumps(message)); message.clear()
+                is_processing = False
+
+            elif command[0] == '%clear': # Clear screen
+                if platform.system() == 'Windows':
+                    os.system('cls')
+                if platform.system() == 'Linux':
+                    os.system('clear')
 
             elif command[0] == '%debug': # Toggle debug mode
                 if len(command) < 2:
@@ -218,8 +238,8 @@ async def input_processing(ws):
         except KeyboardInterrupt:
             print('Quitting...')
             break
-        except:
-            break
+        except Exception as e:
+            logging.exception(e)
         
         await asyncio.sleep(0)
     
@@ -229,7 +249,8 @@ async def input_processing(ws):
     else:
         message = {'type': 'quit', 'content': {'username': login_username,'session_token': session_token}}
     
-    await ws.send(json.dumps(message)); message.clear() # Send quit message
+    await websocket_protocol.send(json.dumps(message)); message.clear() # Send quit message
+    await websocket_protocol.close()
     is_processing = False
     sys.exit(0)
 
@@ -269,7 +290,7 @@ async def websocket_session_on_close(ws, close_status_code, close_msg):
         logging.exception(e)
 
 async def websocket_session(on_open):
-    global t, ws, background_tasks
+    global t, ws, server_down, background_tasks
     try:
         async with websockets.connect(uri = SERVER_HOST) as ws:
             try:
@@ -277,11 +298,17 @@ async def websocket_session(on_open):
                 task_message_processing = asyncio.create_task(message_processing(ws))
                 background_tasks.add(task_message_processing)
                 task_message_processing.add_done_callback(background_tasks.discard)
+                
                 task_input_processing = asyncio.create_task(input_processing(ws))
                 background_tasks.add(task_input_processing)
                 task_input_processing.add_done_callback(background_tasks.discard)
+                
                 await task_message_processing
                 await task_input_processing
+            except websockets.exceptions.ConnectionClosedError:
+                server_down = True
+                print('Quitting...')
+                sys.exit()
             except Exception as e:
                 raise e
     except KeyboardInterrupt:

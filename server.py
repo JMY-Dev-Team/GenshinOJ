@@ -1,11 +1,14 @@
-import gc, os, json, importlib
-
-# gc.disable()
+import os, json, platform, importlib
 
 try:
     import asyncio, nest_asyncio, websockets
 except:
-    os.system('pip3 install asyncio nest-asyncio websockets')
+    print('Installing dependencies...')
+    if platform.system() == 'Windows':
+        os.system('pip install asyncio nest-asyncio websockets')
+    if platform.system() == 'Linux':
+        os.system('sudo pip3 install asyncio nest-asyncio websockets')
+        
     import asyncio, nest_asyncio, websockets
 
 # nest_asyncio.apply()

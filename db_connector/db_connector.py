@@ -1,8 +1,16 @@
-import gc, pymysql
+import os, platform
+
+try:
+    import pymysql
+except:
+    print('Installing dependencies...')
+    if platform.system() == 'Windows':
+        os.system('pip install pymysql cryptography')
+    if platform.system() == 'Linux':
+        os.system('sudo pip3 install pymysql cryptography')
+    import pymysql
 
 import server
-
-# gc.disable()
 
 class db_connector:
     def __init__(self, server_instance: server.server) -> None:

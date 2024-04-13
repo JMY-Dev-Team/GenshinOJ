@@ -61,10 +61,13 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
             == 
             self.ws_server_instance.server_instance.get_module_instance('ws_server').sessions[content['session_token']]
         ):
-            self.ws_server_instance.server_instance.get_module_instance('chat_server').message_box[content['to']]['message_queue'].append({
-                'from': content['from'],
-                'messages': content['messages']
-            })
-            self.log('The user {} tried to use session token: {} to send message.'.format(content['from'], content['session_token']))
+            try:
+                self.ws_server_instance.server_instance.get_module_instance('chat_server').message_box[content['to']]['message_queue'].append({
+                    'from': content['from'],
+                    'messages': content['messages']
+                })
+                self.log('The user {} tried to use session token: {} to send message.'.format(content['from'], content['session_token']))
+            except KeyError:
+                self.log('The user {} tried to send a message to whom is not online.'.format(content['from']))
         else:
             self.log('The user {} tried to use a fake session token.'.format(content['from']))

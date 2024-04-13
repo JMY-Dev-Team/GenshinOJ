@@ -78,7 +78,7 @@ class ws_server:
                 except Exception as e:
                     raise e
                 
-                await asyncio.sleep(0)
+            await asyncio.sleep(0)
         except Exception as e:
             if type(e) is not websockets.exceptions.ConnectionClosedOK:
                 raise e
@@ -92,8 +92,8 @@ class ws_server:
                 except Exception as e:
                     raise e
             
-        await asyncio.sleep(0)
-
+            await websocket_protocol.close()
+        
         try:
             await websocket_protocol.recv()
         except websockets.exceptions.ConnectionClosedOK:
@@ -108,6 +108,8 @@ class ws_server:
                         raise e
             except Exception as e:
                 raise e
+            
+            await websocket_protocol.close()
         except websockets.exceptions.ConnectionClosedError:
             try:
                 for ws_server_application in self.ws_server_applications:
@@ -120,6 +122,8 @@ class ws_server:
                         raise e
             except Exception as e:
                 raise e
+            
+            await websocket_protocol.close()
 
 class ws_server_log_level(enum.Enum):
     LEVEL_INFO = 0
@@ -172,6 +176,7 @@ class ws_server_application_protocol:
             You need to implement this method to do the specific actions you want whenever a connection is being closed.
         """
         self.log('Closed connection from {}:{}'.format(websocket_protocol.remote_address[0], websocket_protocol.remote_address[1]))
+        await websocket_protocol.close()
 
 class simple_ws_server_application(ws_server_application_protocol):
     """
@@ -237,11 +242,7 @@ class simple_ws_server_application(ws_server_application_protocol):
         except Exception as e:
             raise e
         
-        try:
-            await websocket_protocol.close()
-            await self.on_close_connection()
-        except:
-            pass
+        await self.on_close_connection()
 
     def get_md5(self, data):
         import hashlib

@@ -31,11 +31,6 @@ class chat_server:
                     }
                     
                     await self.message_box[chat_server_user_to]['websocket_protocol'].send(json.dumps(response));
-                    
-                    response = {
-                        'type': 'chat_echo'
-                    }
-                    await self.message_box[chat_messages['from']]['websocket_protocol'].send(json.dumps(response));
                 
                 self.message_box[chat_server_user_to]['message_queue'].clear()
             

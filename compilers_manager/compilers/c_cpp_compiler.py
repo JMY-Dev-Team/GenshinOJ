@@ -1,4 +1,4 @@
-import os
+import os, platform
 
 import compilers_manager.compilers.base_compiler
 
@@ -61,14 +61,23 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
     def get_compile_file_command(self, filename: str, language: str) -> str:
         if language == 'c':
-            return 'gcc {}/submit/{}.cpp -o {}/submit/{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
+            if platform.system() == 'Windows':
+                return 'gcc {}\\submit\\{}.cpp -o {}\\submit\\{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
+            if platform.system() == 'Linux':
+                return 'gcc {}/submit/{}.cpp -o {}/submit/{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
         if language == 'cpp':
-            return 'g++ {}/submit/{}.cpp -o {}/submit/{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
+            if platform.system() == 'Windows':
+                return 'g++ {}\\submit\\{}.cpp -o {}\\submit\\{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
+            if platform.system() == 'Linux':
+                return 'g++ {}/submit/{}.cpp -o {}/submit/{}.o'.format(os.getcwd(), filename, os.getcwd(), filename)
         else:
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
 
     def get_binary_execute_command(self, filename: str, language: str) -> str:
         if language == 'c' or language == 'cpp':
-            return os.getcwd() + '/submit/' + filename + '.o'
+            if platform.system() == 'Windows':
+                return os.getcwd() + '\\submit\\' + filename + '.o'
+            if platform.system() == 'Linux':
+                return os.getcwd() + '/submit/' + filename + '.o'
         else:
             raise LanguageNotSupportedException('The language {} is not supported.'.format(language))
