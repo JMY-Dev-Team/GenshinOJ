@@ -110,7 +110,7 @@ class judge:
                             testcase_output_path))
 
                         testcase_AC_flag = True
-                        with open(testcase_output_path,
+                        with open(testcase_output_path, 
                                   'r') as testcase_output:
                             with open(testcase_answer_path,
                                       'r') as testcase_answer:
@@ -190,7 +190,7 @@ class judge:
                                 self.server_instance.get_module_instance(
                                     'compilers_manager').
                                 get_file_path_by_filename_and_language(
-                                    'submission_' + str(submission_id),
+                                    'submission_' + str(submission_id), 
                                     submission_language)))
 
                 if platform.system() == 'Windows':

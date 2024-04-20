@@ -234,6 +234,8 @@ class simple_ws_server_application(ws_server_application_protocol):
                     content['username']))
         tmp = self.ws_server_instance.server_instance.get_module_instance(
             'db_connector').database_cursor.fetchone()
+        
+        real_password_hash = None
         try:
             real_password_hash = tmp[0]
         except:
@@ -282,7 +284,7 @@ class simple_ws_server_application(ws_server_application_protocol):
         except Exception as e:
             raise e
 
-        await self.on_close_connection()
+        await self.on_close_connection(websocket_protocol)
 
     def get_md5(self, data):
         import hashlib
