@@ -4,8 +4,6 @@ import asyncio, logging
 
 import server
 
-# gc.disable()
-
 
 class judge:
 
@@ -23,7 +21,7 @@ class judge:
     def __del__(self) -> None:
         print('Judge unloaded.')
 
-    async def judge_loop(self):
+    async def judge_loop(self) -> None:
         await asyncio.sleep(0)
         while True:
             await asyncio.sleep(0)

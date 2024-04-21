@@ -1,7 +1,7 @@
-import os, json, platform, importlib
+import os, json, platform, typing, importlib
 
 try:
-    import asyncio, nest_asyncio, websockets
+    import asyncio, websockets
 except:
     print('Installing dependencies...')
     if platform.system() == 'Windows':
@@ -9,10 +9,9 @@ except:
     if platform.system() == 'Linux':
         os.system('sudo pip3 install asyncio nest-asyncio websockets')
 
-    import asyncio, nest_asyncio, websockets
+    import asyncio, websockets
 
 
-# nest_asyncio.apply()
 class server:
 
     def __init__(self) -> None:
@@ -64,7 +63,7 @@ class server:
         await asyncio.gather(*tuple(self.tasks))
         asyncio.get_event_loop().run_forever()
 
-    def get_module_instance(self, module_id: str):
+    def get_module_instance(self, module_id: str) -> typing.Any:
         # print('Now working loads: {}'.format(self.working_loads))
         return self.working_loads[module_id]['instance']
 

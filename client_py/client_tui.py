@@ -53,7 +53,9 @@ async def message_processing(
             try:
                 is_processing = True
                 message = json.loads(original_message)
-                application.log(message)
+                if len(message) < 200:
+                    application.log(message)
+                
                 if message['type'] == 'problem_set':
                     application.log('+ Problem Set')
                     for problem_number in message['problem_set']:
@@ -114,6 +116,8 @@ async def message_processing(
                     is_processing = False
                     await websocket_protocol.close()
                     break
+                elif message['type'] == 'music_stream_head':
+                    
 
             except Exception as e:
                 logging.exception(e)
@@ -196,12 +200,13 @@ async def websocket_session(on_open):
             except websockets.exceptions.ConnectionClosedError:
                 server_down = True
                 print('Quitting...')
-                sys.exit(0)
+                await GenshinOJClient.exit()
             except Exception as e:
                 logging.exception(e)
                 raise e
     except KeyboardInterrupt:
         print('Quitting...')
+        await GenshinOJClient.exit()
         raise KeyboardInterrupt
     except Exception as e:
         logging.exception(e)
@@ -532,7 +537,7 @@ class GenshinOJClient(textual.app.App):
     def action_toggle_dark(self) -> None:
         self.dark = not self.dark
 
-    async def on_unmount(self, event: textual.events.Unmount):
+    async def on_unmount(self, event: textual.events.Unmount) -> None:
         global ws
         try:
             

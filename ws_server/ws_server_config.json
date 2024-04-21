@@ -24,6 +24,14 @@
             "path": "ws_server.ws_server_applications.chat_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
+        },
+        {
+            "name": "Music Player Server Application",
+            "id": "music_player_ws_server_application",
+            "enabled": true,
+            "path": "ws_server.ws_server_applications.music_player_ws_server_application",
+            "dependencies": [],
+            "unload_timeout": 0
         }
     ]
 }

@@ -47,6 +47,14 @@
             "path": "chat_server.chat_server",
             "dependencies": ["ws_server"],
             "unload_timeout": 0
+        },
+        {
+            "name": "Music Player Server",
+            "id": "music_player_server",
+            "enabled": true,
+            "path": "music_player_server.music_player_server",
+            "dependencies": ["ws_server"],
+            "unload_timeout": 0
         }
     ]
 }
