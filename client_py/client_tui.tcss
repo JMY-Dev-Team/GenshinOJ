@@ -1,0 +1,42 @@
+.success {
+    color: green 60%;
+}
+
+.warning {
+    color: yellow 60%;
+}
+
+.danger {
+    color: red 60%;
+}
+
+.error {
+    color: red 60%;
+}
+
+Container.aligned {
+    align: center middle;
+}
+
+.left {
+    align: left top;
+}
+
+.right {
+    align: right top;
+}
+
+.box {
+    grid-size: 2 1;
+    padding: 1 1;
+    grid-gutter: 3 3
+}
+
+.dialog {
+    padding: 1 1;
+    width: 40%;
+    height: 40%;
+    border: thick $background 80%;
+    background: $surface;
+    content-align: center middle;
+}
