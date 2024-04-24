@@ -47,77 +47,82 @@ async def message_processing(
         is_processing, \
         session_token
 
+    client_log: textual.widgets.Log = application.query_one('#client_log',
+                                        textual.widgets.Log)
     while True:
         await asyncio.sleep(0)
         async for original_message in websocket_protocol:
             try:
                 is_processing = True
                 message = json.loads(original_message)
-                if len(message) < 200:
-                    application.log(message)
+                if len(original_message) < 200:
+                    client_log.write_line(original_message)
+                else:
+                    client_log.write_line('TLDR: {}'.format(type(message)))
                 
                 if message['type'] == 'problem_set':
-                    application.log('+ Problem Set')
+                    client_log.write_line('+ Problem Set')
                     for problem_number in message['problem_set']:
-                        application.log(problem_number, end='')
+                        client_log.write(problem_number)
 
-                    application.log('- Problem Set')
+                    client_log.write_line('- Problem Set')
                     is_processing = False
 
                 elif message['type'] == 'problem_statement':
-                    application.log('+ Problem Statement')
-                    application.log('Name: {} - {}'.format(message['problem_number'],
+                    client_log.write_line('+ Problem Statement')
+                    
+                    client_log.write_line('Name: {} - {}'.format(message['problem_number'],
                                                  message['problem_name']))
-                    application.log('Difficulty: {}'.format(message['difficulty']))
+                    client_log.write_line('Difficulty: {}'.format(message['difficulty']))
                     for line in message['problem_statement']:
-                        application.log(line)
+                        client_log.write(line)
 
-                    application.log('- Problem Statement')
+                    client_log.write_line('- Problem Statement')
                     is_processing = False
 
                 elif message['type'] == 'submission_result':
-                    application.log('+ Submission Result')
-                    application.log('Result: {}'.format(message['result']))
+                    client_log.write_line('+ Submission Result')
+                    client_log.write_line('Result: {}'.format(message['result']))
                     if format(message['result']) == 'WA':
                         for reason in message['reasons']:
-                            application.log('Reason: {}'.format(reason))
+                            client_log.write_line('Reason: {}'.format(reason))
 
-                    application.log('- Submission Result')
+                    client_log.write_line('- Submission Result')
                     is_processing = False
 
                 elif message['type'] == 'session_token':
                     session_token = message['content']
-                    application.log('Session Token: {}'.format(session_token))
+                    client_log.write_line('Session Token: {}'.format(session_token))
                     is_logged = True
                     is_processing = False
 
                 elif message['type'] == 'online_user':
-                    application.log('Online Users: ', message['content'])
+                    client_log.write_line('Online Users: {}'.format(message['content']))
                     is_processing = False
 
                 elif message['type'] == 'chat_message':
-                    application.log('+ Chat Message')
-                    application.log('From: {}'.format(message['from']))
+                    client_log.write_line('+ Chat Message')
+                    client_log.write_line('From: {}'.format(message['from']))
                     chat_messages: list[str] = message['content']
                     for chat_message in chat_messages:
-                        application.log('chat> {}'.format(chat_message))
+                        client_log.write_line('chat> {}'.format(chat_message))
 
-                    application.log('- Chat Message')
+                    client_log.write_line('- Chat Message')
                     is_processing = False
 
                 elif message['type'] == 'quit':
                     if message['content'] == 'authentication_failure':
-                        application.log('Authentication Failure')
+                        client_log.write_line('Authentication Failure')
                     if message['content'] == 'registration_failure':
-                        application.log('Registration Failure')
+                        client_log.write_line('Registration Failure')
                     if message['content'] == 'registration_success':
-                        application.log('Registration Success')
+                        client_log.write_line('Registration Success')
 
                     is_processing = False
                     await websocket_protocol.close()
                     break
                 elif message['type'] == 'music_stream_head':
-                    
+                    pass
 
             except Exception as e:
                 logging.exception(e)
@@ -200,16 +205,19 @@ async def websocket_session(on_open):
             except websockets.exceptions.ConnectionClosedError:
                 server_down = True
                 print('Quitting...')
-                await GenshinOJClient.exit()
+                application.exit()
+                sys.exit(0)
             except Exception as e:
                 logging.exception(e)
                 raise e
     except KeyboardInterrupt:
         print('Quitting...')
-        await GenshinOJClient.exit()
+        application.exit()
+        sys.exit(0)
         raise KeyboardInterrupt
     except Exception as e:
         logging.exception(e)
+        raise e
 
 async def input_processing(
         websocket_protocol: websockets.WebSocketClientProtocol):
@@ -226,7 +234,11 @@ async def input_processing(
                                         textual.widgets.Input).value
         application.query_one('#command_input',
                                         textual.widgets.Input).clear()
+        
         command = command.strip().split()
+        client_log: textual.widgets.Log = application.query_one('#client_log',
+                                        textual.widgets.Log)
+        client_log.write_lines(command)
         if command == []:  # Empty command
             return
 
@@ -384,7 +396,7 @@ async def input_processing(
             is_processing = False
             is_logged = False
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         print('Quitting...')
         is_processing = True
         if session_token == '':
@@ -402,6 +414,7 @@ async def input_processing(
         message.clear()  # Send quit message
         await websocket_protocol.close()
         is_processing = False
+        raise e
     except Exception as e:
         logging.exception(e)
 
@@ -476,6 +489,7 @@ class UserScreen(textual.screen.Screen):
                                    id='command_exit_button'),
             textual.widgets.Button('Confirm', id='command_confirm_button'),
             classes='dialog')
+        yield textual.widgets.Log('Log Here...', id='client_log')
 
     async def on_button_pressed(self,
                                 event: textual.widgets.Button.Pressed) -> None:
@@ -485,6 +499,7 @@ class UserScreen(textual.screen.Screen):
             if not is_logged:
                 self.log('Quitting from login status...')
                 self.app.exit()
+                sys.exit(0)
         
         if event.button.id == "command_exit_button":
             is_logged = False
@@ -606,6 +621,6 @@ if __name__ == '__main__':
         application = GenshinOJClient()
         asyncio.run(main())
         asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         sys.exit(0)
-        pass
+        raise e

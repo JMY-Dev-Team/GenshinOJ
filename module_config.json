@@ -51,7 +51,7 @@
         {
             "name": "Music Player Server",
             "id": "music_player_server",
-            "enabled": true,
+            "enabled": false,
             "path": "music_player_server.music_player_server",
             "dependencies": ["ws_server"],
             "unload_timeout": 0

@@ -72,7 +72,7 @@ class ws_server:
                         ws_server_application_config['id'])(self))
 
         self.ws_server = websockets.server.serve(self.receive, server_host,
-                                                 server_port)
+                                                 server_port, max_size=None)
         self.server_instance.tasks.append(self.ws_server)
 
     def __del__(self) -> None:
@@ -107,6 +107,17 @@ class ws_server:
             await asyncio.sleep(0)
         except Exception as e:
             if type(e) is not websockets.exceptions.ConnectionClosedOK:
+                for ws_server_application in self.ws_server_applications:
+                    try:
+                        await ws_server_application.on_close_connection(
+                            websocket_protocol)
+                        await asyncio.sleep(0)
+                    except AttributeError as e:
+                        pass
+                    except Exception as e:
+                        raise e
+
+                await websocket_protocol.close()
                 raise e
 
             for ws_server_application in self.ws_server_applications:
@@ -122,7 +133,10 @@ class ws_server:
             await websocket_protocol.close()
 
         try:
-            await websocket_protocol.recv()
+            while True:
+                await websocket_protocol.recv()
+                await asyncio.sleep(0)
+
         except websockets.exceptions.ConnectionClosedOK:
             try:
                 for ws_server_application in self.ws_server_applications:
@@ -153,6 +167,23 @@ class ws_server:
                 raise e
 
             await websocket_protocol.close()
+        except ConnectionResetError:
+            try:
+                for ws_server_application in self.ws_server_applications:
+                    try:
+                        await ws_server_application.on_close_connection(
+                            websocket_protocol)
+                        await asyncio.sleep(0)
+                    except AttributeError as e:
+                        pass
+                    except Exception as e:
+                        raise e
+            except Exception as e:
+                raise e
+
+            await websocket_protocol.close()
+        except OSError:
+            pass
 
 
 class ws_server_log_level(enum.Enum):
