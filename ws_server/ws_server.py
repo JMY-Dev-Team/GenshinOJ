@@ -106,18 +106,7 @@ class ws_server:
 
             await asyncio.sleep(0)
         except Exception as e:
-            if type(e) is not websockets.exceptions.ConnectionClosedOK:
-                for ws_server_application in self.ws_server_applications:
-                    try:
-                        await ws_server_application.on_close_connection(
-                            websocket_protocol)
-                        await asyncio.sleep(0)
-                    except AttributeError as e:
-                        pass
-                    except Exception as e:
-                        raise e
-
-                await websocket_protocol.close()
+            if type(e) is not websockets.exceptions.ConnectionClosedOK and type(e) is not websockets.exceptions.ConnectionClosedError:
                 raise e
 
             for ws_server_application in self.ws_server_applications:
@@ -131,6 +120,7 @@ class ws_server:
                     raise e
 
             await websocket_protocol.close()
+            return
 
         try:
             while True:
@@ -167,23 +157,6 @@ class ws_server:
                 raise e
 
             await websocket_protocol.close()
-        except ConnectionResetError:
-            try:
-                for ws_server_application in self.ws_server_applications:
-                    try:
-                        await ws_server_application.on_close_connection(
-                            websocket_protocol)
-                        await asyncio.sleep(0)
-                    except AttributeError as e:
-                        pass
-                    except Exception as e:
-                        raise e
-            except Exception as e:
-                raise e
-
-            await websocket_protocol.close()
-        except OSError:
-            pass
 
 
 class ws_server_log_level(enum.Enum):
@@ -301,6 +274,7 @@ class simple_ws_server_application(ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol,
     ):
         await super().on_close_connection(websocket_protocol)
+        await self.on_quit()
 
     async def on_quit(
             self,
