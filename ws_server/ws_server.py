@@ -1,10 +1,8 @@
-import os, gc, abc, json, enum, random, typing, logging, importlib
+import os, abc, json, enum, random, typing, logging, importlib
 
 import asyncio, websockets.server
 
 import server
-
-# gc.disable()
 
 
 def generate_session_token(session_token_seed: int) -> str:
@@ -229,6 +227,7 @@ class simple_ws_server_application(ws_server_application_protocol):
         """
         Official callback method for login with a authentication plugin.
         """
+        setattr(self, 'is_logged_in', False)
         password_hash = self.get_md5(content['password'])
         self.log('The user {} try to login with the hash: {}.'.format(
             content['username'], password_hash))
@@ -259,6 +258,9 @@ class simple_ws_server_application(ws_server_application_protocol):
             self.ws_server_instance.sessions[new_session_token] = content[
                 'username']
             self.log('The session token: {}'.format(new_session_token))
+            setattr(self, 'is_logged_in', True)
+            setattr(self, 'username', content['username'])
+            setattr(self, 'session_token', new_session_token)
             await websocket_protocol.send(json.dumps(response))
             response.clear()
         else:
@@ -274,22 +276,33 @@ class simple_ws_server_application(ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol,
     ):
         await super().on_close_connection(websocket_protocol)
-        await self.on_quit()
+        if self.is_logged_in:
+            await self.on_quit(websocket_protocol,
+                {
+                    'username': self.username,
+                    'session_token': self.session_token
+                }
+            )
+        else:
+            await self.on_quit(websocket_protocol, None)
 
     async def on_quit(
             self,
             websocket_protocol: websockets.server.WebSocketServerProtocol,
-            content: dict):
-        self.log('The user {} quitted with session token: {}'.format(
-            content['username'], content['session_token']))
-        try:
-            del self.ws_server_instance.sessions[content['session_token']]
-        except AttributeError as e:
-            logging.exception(e)
-        except Exception as e:
-            raise e
+            content: dict | None):
+        if content != None:
+            self.log('The user {} quitted with session token: {}'.format(
+                content['username'], content['session_token']))
+            try:
+                del self.ws_server_instance.sessions[content['session_token']]
+            except KeyError:
+                pass
+            except AttributeError as e:
+                logging.exception(e)
+            except Exception as e:
+                raise e
 
-        await self.on_close_connection(websocket_protocol)
+            await self.on_close_connection(websocket_protocol)
 
     def get_md5(self, data):
         import hashlib

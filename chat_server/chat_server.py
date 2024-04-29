@@ -1,8 +1,7 @@
-import gc, json, asyncio
+import json, asyncio
 
 import server
 
-# gc.disable()
 
 class chat_server:
     def __init__(self, server_instance: server.server) -> None:

@@ -1,4 +1,15 @@
-import os, gc
+import os
+
+try:
+    import asyncio
+except:
+    print('Installing dependencies...')
+    os.system('pip install asyncio')
+    try:
+        import asyncio
+    except:
+        print('Dependencies installation failed.')
+        sys.exit(-1)
 
 import server
 
@@ -33,7 +44,18 @@ class global_message_queue:
 
     def get_compiler_root_path(self):
         return '{}/compiler'.format(os.getcwd())
+    
+    async def execute_command(self, command: str, timeout: int | float | None = None):
+        try:
+            async with asyncio.timeout(timeout):
+                proc = await asyncio.create_subprocess_shell(
+                    command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE)
 
-    def execute_command(self, command: str):
-        os.system(command)
-        print(command)
+                stdout, stderr = await proc.communicate()
+                print(f'[{command!r} exited with {proc.returncode}]')
+        except TimeoutError:
+            raise TimeoutError
+        except Exception as e:
+            raise e

@@ -1,15 +1,15 @@
-import os, json, platform, typing, importlib
+import os, sys, json, platform, typing, importlib
 
 try:
     import asyncio, websockets
 except:
     print('Installing dependencies...')
-    if platform.system() == 'Windows':
-        os.system('pip install asyncio nest-asyncio websockets')
-    if platform.system() == 'Linux':
-        os.system('sudo pip3 install asyncio nest-asyncio websockets')
-
-    import asyncio, websockets
+    os.system('pip install asyncio nest-asyncio websockets')
+    try:
+        import asyncio, websockets
+    except:
+        print('Dependencies installation failed.')
+        sys.exit(-1)
 
 
 class server:
