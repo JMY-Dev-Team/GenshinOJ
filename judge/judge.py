@@ -4,7 +4,6 @@ import asyncio, logging
 
 import server
 
-
 class judge:
 
     def __init__(self, server_instance: server.server) -> None:
@@ -21,6 +20,17 @@ class judge:
     def __del__(self) -> None:
         print('Judge unloaded.')
 
+    def get_problem_testcase_config_json_path(self, problem_number):
+        problem_number = str(problem_number)
+        return '{}/problem/{}/problem_testcase_config.json'.format(os.getcwd(), problem_number)
+
+    def get_problem_statement_json_path(self, problem_number):
+        problem_number = str(problem_number)
+        return '{}/problem/{}/problem_statement.json'.format(os.getcwd(), problem_number)
+
+    def get_problem_set_json_path(self):
+        return os.getcwd() + '/problem/problem_set.json'
+    
     async def judge_loop(self) -> None:
         await asyncio.sleep(0)
         while True:
@@ -46,9 +56,7 @@ class judge:
                 try:
                     try:
                         with open(
-                                self.server_instance.get_module_instance(
-                                    'global_message_queue').
-                                get_problem_testcase_config_json_path(
+                                self.get_problem_testcase_config_json_path(
                                     submission_problem_number), 'r'
                         ) as problem_testcase_config_json_file:  # Get the configuration of the problem
                             problem_testcase_config = json.load(

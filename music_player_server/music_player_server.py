@@ -4,10 +4,12 @@ try:
     import numpy, asyncio, logging, soundfile, websockets
 except ImportError:
     print('Installing dependencies...')
-    if platform.system() == 'Windows':
-        os.system('pip install numpy asyncio logging soundfile websockets')
-    if platform.system() == 'Linux':
-        os.system('sudo pip3 numpy install asyncio logging soundfile websockets')
+    os.system('pip install numpy asyncio logging soundfile websockets')
+    try:
+        import numpy, asyncio, logging, soundfile, websockets
+    except ImportError:
+        print('Dependencies installation failed.')
+        sys.exit(-1)
 
 import server
 

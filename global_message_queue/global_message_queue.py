@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 try:
     import asyncio
@@ -31,17 +31,6 @@ class global_message_queue:
     def push_message(self, to_module_id: str, message: dict) -> bool:
         self.message_queue[to_module_id].append(message)
 
-    def get_problem_testcase_config_json_path(self, problem_number):
-        problem_number = str(problem_number)
-        return '{}/problem/{}/problem_testcase_config.json'.format(os.getcwd(), problem_number)
-
-    def get_problem_statement_json_path(self, problem_number):
-        problem_number = str(problem_number)
-        return '{}/problem/{}/problem_statement.json'.format(os.getcwd(), problem_number)
-
-    def get_problem_set_json_path(self):
-        return os.getcwd() + '/problem/problem_set.json'
-
     def get_compiler_root_path(self):
         return '{}/compiler'.format(os.getcwd())
     
@@ -54,7 +43,7 @@ class global_message_queue:
                     stderr=asyncio.subprocess.PIPE)
 
                 stdout, stderr = await proc.communicate()
-                print(f'[{command!r} exited with {proc.returncode}]')
+                print(f'{command!r} exited with {proc.returncode}, pid={proc.pid}')
         except TimeoutError:
             raise TimeoutError
         except Exception as e:

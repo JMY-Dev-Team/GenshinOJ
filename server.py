@@ -2,12 +2,12 @@ import os, sys, json, platform, typing, importlib
 
 try:
     import asyncio, websockets
-except:
+except ImportError:
     print('Installing dependencies...')
     os.system('pip install asyncio nest-asyncio websockets')
     try:
         import asyncio, websockets
-    except:
+    except ImportError:
         print('Dependencies installation failed.')
         sys.exit(-1)
 
