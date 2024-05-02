@@ -8,6 +8,7 @@ import {
 import NavBar from "./navbar";
 
 import "../css/style.css";
+import React from "react";
 
 export default function Root() {
     return (
