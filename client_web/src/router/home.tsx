@@ -36,7 +36,6 @@ const useStyles = makeStyles({
 
 export default function Home() {
     const navigate = useNavigate();
-    let content;
     const [onlineUsersList, setOnlineUsersList] = useState([]);
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
     useEffect(() => {
@@ -48,23 +47,22 @@ export default function Home() {
             });
         } else setDialogRequireLoginOpenState(true);
     }, []);
-
     return (
         <>
             <div className={useStyles().root}>
                 <Table size="medium">
                     <TableHeader>
                         <TableRow>
-                            <TableHeaderCell>Online Username</TableHeaderCell>
+                            <TableHeaderCell>Online User</TableHeaderCell>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {
                             onlineUsersList.map((username) => (
-                                    <TableRow key={username}>
-                                        <TableCell>{username}</TableCell>
-                                    </TableRow>
-                                )
+                                <TableRow key={username}>
+                                    <TableCell>{username}</TableCell>
+                                </TableRow>
+                            )
                             )
                         }
                     </TableBody>
@@ -81,6 +79,7 @@ export default function Home() {
                                 <DialogTrigger disableButtonEnhancement>
                                     <Button appearance="primary" onClick={
                                         () => {
+                                            setDialogRequireLoginOpenState(false);
                                             navigate("/login");
                                         }
                                     }>Close</Button>

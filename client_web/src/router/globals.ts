@@ -48,7 +48,7 @@ export async function loginSession(
     setMainWebsocketProtocol(
         new syncWebsocket.SyncWebSocket("ws://localhost:9982")
     );
-    const result__ = await getMainWebsocketProtocol().open();
+    await getMainWebsocketProtocol().open();
     await getMainWebsocketProtocol()
         .send(request_key, {
             type: "login",
@@ -75,7 +75,7 @@ export async function registerSession(
     setMainWebsocketProtocol(
         new syncWebsocket.SyncWebSocket("ws://localhost:9982")
     );
-    const result__ = await getMainWebsocketProtocol().open();
+    await getMainWebsocketProtocol().open();
     let result = false;
     await getMainWebsocketProtocol()
         .send(request_key, {

@@ -1,5 +1,5 @@
-import { Divider, Dialog, Button, Label, Avatar, useRestoreFocusTarget, DialogSurface, DialogBody, DialogContent, DialogTrigger, DialogActions } from "@fluentui/react-components";
-import { Link, useNavigate } from "react-router-dom";
+import { Divider, Label, Avatar, useRestoreFocusTarget } from "@fluentui/react-components";
+import { Link } from "react-router-dom";
 
 import "../css/style.css"
 import React from "react";

@@ -28,6 +28,7 @@ background_tasks: list[asyncio.Task] = []
 logging.getLogger("asyncio").setLevel(logging.DEBUG)
 nest_asyncio.apply()
 
+
 async def message_processing(
         websocket_protocol: websockets.WebSocketClientProtocol):
     global \
@@ -36,8 +37,8 @@ async def message_processing(
         is_processing, \
         session_token
 
-    client_log: textual.widgets.Log = application.query_one('#client_log',
-                                        textual.widgets.Log)
+    client_log: textual.widgets.Log = application.query_one(
+        '#client_log', textual.widgets.Log)
     while True:
         await asyncio.sleep(0)
         async for original_message in websocket_protocol:
@@ -48,10 +49,11 @@ async def message_processing(
                     client_log.write_line(original_message)
                 else:
                     client_log.write_line('TLDR: {}'.format(type(message)))
-                
+
                 if message['type'] == 'problem_set':
                     client_log.write_line('+ Problem Set')
-                    for index, problem_number in enumerate(message['problem_set']):
+                    for index, problem_number in enumerate(
+                            message['problem_set']):
                         if index == 0:
                             client_log.write_line(problem_number + ' ')
                         else:
@@ -62,12 +64,13 @@ async def message_processing(
 
                 elif message['type'] == 'problem_statement':
                     client_log.write_line('+ Problem Statement')
-                    
-                    client_log.write_line('Name: {} - {}'.format(message['problem_number'],
-                                                 message['problem_name']))
-                    client_log.write_line('Difficulty: {}'.format(message['difficulty']))
+
+                    client_log.write_line('Name: {} - {}'.format(
+                        message['problem_number'], message['problem_name']))
+                    client_log.write_line('Difficulty: {}'.format(
+                        message['difficulty']))
                     for line in message['problem_statement']:
-                        
+
                         client_log.write_line(line)
 
                     client_log.write_line('- Problem Statement')
@@ -75,7 +78,8 @@ async def message_processing(
 
                 elif message['type'] == 'submission_result':
                     client_log.write_line('+ Submission Result')
-                    client_log.write_line('Result: {}'.format(message['result']))
+                    client_log.write_line('Result: {}'.format(
+                        message['result']))
                     if format(message['result']) == 'WA':
                         for reason in message['reasons']:
                             client_log.write_line('Reason: {}'.format(reason))
@@ -85,12 +89,14 @@ async def message_processing(
 
                 elif message['type'] == 'session_token':
                     session_token = message['content']
-                    client_log.write_line('Session Token: {}'.format(session_token))
+                    client_log.write_line(
+                        'Session Token: {}'.format(session_token))
                     is_logged = True
                     is_processing = False
 
                 elif message['type'] == 'online_user':
-                    client_log.write_line('Online Users: {}'.format(message['content']))
+                    client_log.write_line('Online Users: {}'.format(
+                        message['content']))
                     is_processing = False
 
                 elif message['type'] == 'chat_message':
@@ -125,6 +131,7 @@ async def message_processing(
 
         await asyncio.sleep(0)
 
+
 async def login_session(ws):
     global is_processing
     try:
@@ -142,6 +149,7 @@ async def login_session(ws):
     except Exception as e:
         logging.exception(e)
 
+
 async def register_session(ws):
     global is_processing
     try:
@@ -157,6 +165,7 @@ async def register_session(ws):
         message.clear()
     except Exception as e:
         logging.exception(e)
+
 
 async def websocket_session_on_close(ws, close_status_code, close_msg):
     global is_processing
@@ -182,6 +191,7 @@ async def websocket_session_on_close(ws, close_status_code, close_msg):
     except Exception as e:
         logging.exception(e)
 
+
 async def websocket_session(on_open):
     global t, ws, server_down, background_tasks
     try:
@@ -193,7 +203,7 @@ async def websocket_session(on_open):
                 background_tasks.append(task_message_processing)
                 task_message_processing.add_done_callback(
                     background_tasks.remove)
-                
+
                 await task_message_processing
             except websockets.exceptions.ConnectionClosedError:
                 server_down = True
@@ -212,6 +222,7 @@ async def websocket_session(on_open):
         logging.exception(e)
         raise e
 
+
 async def input_processing(
         websocket_protocol: websockets.WebSocketClientProtocol):
     global \
@@ -225,11 +236,10 @@ async def input_processing(
 
         command = application.query_one('#command_input',
                                         textual.widgets.Input).value
-        application.query_one('#command_input',
-                                        textual.widgets.Input).clear()
-        
-        client_log: textual.widgets.Log = application.query_one('#client_log',
-                                        textual.widgets.Log)
+        application.query_one('#command_input', textual.widgets.Input).clear()
+
+        client_log: textual.widgets.Log = application.query_one(
+            '#client_log', textual.widgets.Log)
         client_log.write_line(command)
         command = command.strip().split()
         if command == []:  # Empty command
@@ -239,7 +249,8 @@ async def input_processing(
             client_log.write_line('使用 %help 来查看本帮助')
             client_log.write_line('使用 %problem_set 来获取题目列表')
             client_log.write_line('使用 %problem_statement[题目编号] 来获取指定题目信息')
-            client_log.write_line('使用 %submit [题目编号] [源文件名] [代码语言] 来递交指定语言的代码测评指定题目')
+            client_log.write_line(
+                '使用 %submit [题目编号] [源文件名] [代码语言] 来递交指定语言的代码测评指定题目')
             client_log.write_line(
                 '使用 %chat [短讯聊天对象] 来短讯聊天，此命令会使你进入短讯聊天环境，键入 %send 来确认发送，键入 %cancel 来取消发送'
             )
@@ -257,7 +268,8 @@ async def input_processing(
         elif command[
                 0] == '%problem_statement':  # Get statement of a specific problem
             if len(command) < 2:
-                client_log.write_line('Please specify which problem you want to show.')
+                client_log.write_line(
+                    'Please specify which problem you want to show.')
                 return
 
             is_processing = True
@@ -411,6 +423,7 @@ async def input_processing(
     except Exception as e:
         logging.exception(e)
 
+
 class LoginScreen(textual.screen.Screen):
 
     def compose(self) -> textual.app.ComposeResult:
@@ -439,6 +452,7 @@ class LoginScreen(textual.screen.Screen):
             self.app.pop_screen()
         if event.button.id == "login_cancel_button":
             self.app.pop_screen()
+
 
 class RegisterScreen(textual.screen.Screen):
 
@@ -493,11 +507,11 @@ class UserScreen(textual.screen.Screen):
                 self.log('Quitting from login status...')
                 self.app.exit()
                 sys.exit(0)
-        
+
         if event.button.id == "command_exit_button":
             is_logged = False
             is_processing = True
-            
+
             try:
                 if session_token == '':
                     message = {'type': 'close_connection', 'content': {}}
@@ -516,9 +530,10 @@ class UserScreen(textual.screen.Screen):
                 self.log('WS Connection Closed')
             except:
                 raise
-            
+
             is_processing = False
             self.app.exit()
+
 
 class GenshinOJClient(textual.app.App):
     CSS_PATH = 'client_tui.tcss'
@@ -548,7 +563,7 @@ class GenshinOJClient(textual.app.App):
     async def on_unmount(self, event: textual.events.Unmount) -> None:
         global ws
         try:
-            
+
             if session_token == '':
                 message = {'type': 'close_connection', 'content': {}}
             else:
@@ -570,7 +585,7 @@ class GenshinOJClient(textual.app.App):
                 pass
             except:
                 raise
-            
+
             for background_task in background_tasks:
                 background_task.cancel()
                 await asyncio.wait([background_task])
@@ -578,12 +593,12 @@ class GenshinOJClient(textual.app.App):
                     await background_task
                 except asyncio.CancelledError:
                     pass
-            
+
             if len(background_tasks) > 0:
                 self.log('Waiting for background tasks.')
         except:
             raise
-        
+
         self.log('Client exited successfully.')
 
     @textual.on(textual.widgets.Button.Pressed, '#login')

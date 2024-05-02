@@ -17,19 +17,23 @@ const router = createBrowserRouter([
     {
         path: "/",
         element: <Root/>,
+        loader: () => document.title = "Genshin OJ Root Page",
         errorElement: <ErrorPage/>,
         children: [
             {
                 path: "/login",
-                element: <Login/>
+                element: <Login/>,
+                loader: () => document.title = "Sign in"
             },
             {
                 path: "/register",
-                element: <Register/>
+                element: <Register/>,
+                loader: () => document.title = "Sign up"
             },
             {
                 path: "/home",
-                element: <Home/>
+                element: <Home/>,
+                loader: () => document.title = "Home Page"
             },
         ]
     }
