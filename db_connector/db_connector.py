@@ -4,11 +4,12 @@ try:
     import pymysql
 except:
     print('Installing dependencies...')
-    if platform.system() == 'Windows':
-        os.system('pip install pymysql cryptography')
-    if platform.system() == 'Linux':
-        os.system('sudo pip3 install pymysql cryptography')
-    import pymysql
+    os.system('pip install pymysql cryptography')
+    try:
+        import pymysql
+    except:
+        print('Dependencies installation failed.')
+        sys.exit(-1)
 
 import server
 

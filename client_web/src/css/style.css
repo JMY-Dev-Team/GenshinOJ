@@ -1,0 +1,9 @@
+nav.navbar {
+    display: inline-block;
+    background-color: whitesmoke;
+    padding: 0.5em;
+}
+
+a {
+    text-decoration: none;
+}

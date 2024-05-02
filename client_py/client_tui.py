@@ -1,26 +1,15 @@
-import textual.events
-import textual.screen
-import textual.widgets
-
-import rich
-
-import typing, sys
-
-import textual.app, textual.widget, textual.containers, asyncio
-
 import os, sys, json, logging, platform
 
 try:
-    import nest_asyncio, websockets, aioconsole
+    import asyncio, nest_asyncio, websockets, textual.app, textual.events, textual.screen, textual.widgets
 except ImportError:
     print('Installing dependencies...')
-    if platform.system() == 'Windows':
-        os.system('pip install asyncio nest-asyncio websockets aioconsole')
-    if platform.system() == 'Linux':
-        os.system(
-            'sudo pip3 install asyncio nest-asyncio websockets aioconsole')
-
-    import nest_asyncio, websockets, aioconsole
+    os.system('pip install asyncio nest-asyncio websockets textual')
+    try:
+        import asyncio, nest_asyncio, websockets, textual.app, textual.events, textual.screen, textual.widgets
+    except ImportError:
+        print('Dependencies installation failed.')
+        sys.exit(-1)
 
 SERVER_HOST: str = 'ws://localhost:9982'  # Test server address
 
@@ -36,7 +25,7 @@ server_down: bool = False
 ws: websockets.WebSocketClientProtocol
 background_tasks: list[asyncio.Task] = []
 
-asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+logging.getLogger("asyncio").setLevel(logging.DEBUG)
 nest_asyncio.apply()
 
 async def message_processing(
@@ -47,77 +36,86 @@ async def message_processing(
         is_processing, \
         session_token
 
+    client_log: textual.widgets.Log = application.query_one('#client_log',
+                                        textual.widgets.Log)
     while True:
         await asyncio.sleep(0)
         async for original_message in websocket_protocol:
             try:
                 is_processing = True
                 message = json.loads(original_message)
-                if len(message) < 200:
-                    application.log(message)
+                if len(original_message) < 200:
+                    client_log.write_line(original_message)
+                else:
+                    client_log.write_line('TLDR: {}'.format(type(message)))
                 
                 if message['type'] == 'problem_set':
-                    application.log('+ Problem Set')
-                    for problem_number in message['problem_set']:
-                        application.log(problem_number, end='')
+                    client_log.write_line('+ Problem Set')
+                    for index, problem_number in enumerate(message['problem_set']):
+                        if index == 0:
+                            client_log.write_line(problem_number + ' ')
+                        else:
+                            client_log.write(problem_number + ' ')
 
-                    application.log('- Problem Set')
+                    client_log.write_line('- Problem Set')
                     is_processing = False
 
                 elif message['type'] == 'problem_statement':
-                    application.log('+ Problem Statement')
-                    application.log('Name: {} - {}'.format(message['problem_number'],
+                    client_log.write_line('+ Problem Statement')
+                    
+                    client_log.write_line('Name: {} - {}'.format(message['problem_number'],
                                                  message['problem_name']))
-                    application.log('Difficulty: {}'.format(message['difficulty']))
+                    client_log.write_line('Difficulty: {}'.format(message['difficulty']))
                     for line in message['problem_statement']:
-                        application.log(line)
+                        
+                        client_log.write_line(line)
 
-                    application.log('- Problem Statement')
+                    client_log.write_line('- Problem Statement')
                     is_processing = False
 
                 elif message['type'] == 'submission_result':
-                    application.log('+ Submission Result')
-                    application.log('Result: {}'.format(message['result']))
+                    client_log.write_line('+ Submission Result')
+                    client_log.write_line('Result: {}'.format(message['result']))
                     if format(message['result']) == 'WA':
                         for reason in message['reasons']:
-                            application.log('Reason: {}'.format(reason))
+                            client_log.write_line('Reason: {}'.format(reason))
 
-                    application.log('- Submission Result')
+                    client_log.write_line('- Submission Result')
                     is_processing = False
 
                 elif message['type'] == 'session_token':
                     session_token = message['content']
-                    application.log('Session Token: {}'.format(session_token))
+                    client_log.write_line('Session Token: {}'.format(session_token))
                     is_logged = True
                     is_processing = False
 
                 elif message['type'] == 'online_user':
-                    application.log('Online Users: ', message['content'])
+                    client_log.write_line('Online Users: {}'.format(message['content']))
                     is_processing = False
 
                 elif message['type'] == 'chat_message':
-                    application.log('+ Chat Message')
-                    application.log('From: {}'.format(message['from']))
+                    client_log.write_line('+ Chat Message')
+                    client_log.write_line('From: {}'.format(message['from']))
                     chat_messages: list[str] = message['content']
                     for chat_message in chat_messages:
-                        application.log('chat> {}'.format(chat_message))
+                        client_log.write_line('chat> {}'.format(chat_message))
 
-                    application.log('- Chat Message')
+                    client_log.write_line('- Chat Message')
                     is_processing = False
 
                 elif message['type'] == 'quit':
                     if message['content'] == 'authentication_failure':
-                        application.log('Authentication Failure')
+                        client_log.write_line('Authentication Failure')
                     if message['content'] == 'registration_failure':
-                        application.log('Registration Failure')
+                        client_log.write_line('Registration Failure')
                     if message['content'] == 'registration_success':
-                        application.log('Registration Success')
+                        client_log.write_line('Registration Success')
 
                     is_processing = False
                     await websocket_protocol.close()
                     break
                 elif message['type'] == 'music_stream_head':
-                    
+                    pass
 
             except Exception as e:
                 logging.exception(e)
@@ -200,16 +198,19 @@ async def websocket_session(on_open):
             except websockets.exceptions.ConnectionClosedError:
                 server_down = True
                 print('Quitting...')
-                await GenshinOJClient.exit()
+                application.exit()
+                sys.exit(0)
             except Exception as e:
                 logging.exception(e)
                 raise e
     except KeyboardInterrupt:
         print('Quitting...')
-        await GenshinOJClient.exit()
+        application.exit()
+        sys.exit(0)
         raise KeyboardInterrupt
     except Exception as e:
         logging.exception(e)
+        raise e
 
 async def input_processing(
         websocket_protocol: websockets.WebSocketClientProtocol):
@@ -226,22 +227,26 @@ async def input_processing(
                                         textual.widgets.Input).value
         application.query_one('#command_input',
                                         textual.widgets.Input).clear()
+        
+        client_log: textual.widgets.Log = application.query_one('#client_log',
+                                        textual.widgets.Log)
+        client_log.write_line(command)
         command = command.strip().split()
         if command == []:  # Empty command
             return
 
         if command[0] == '%help':  # Check help
-            print('使用 %help 来查看本帮助')
-            print('使用 %problem_set 来获取题目列表')
-            print('使用 %problem_statement[题目编号] 来获取指定题目信息')
-            print('使用 %submit [题目编号] [源文件名] [代码语言] 来递交指定语言的代码测评指定题目')
-            print(
+            client_log.write_line('使用 %help 来查看本帮助')
+            client_log.write_line('使用 %problem_set 来获取题目列表')
+            client_log.write_line('使用 %problem_statement[题目编号] 来获取指定题目信息')
+            client_log.write_line('使用 %submit [题目编号] [源文件名] [代码语言] 来递交指定语言的代码测评指定题目')
+            client_log.write_line(
                 '使用 %chat [短讯聊天对象] 来短讯聊天，此命令会使你进入短讯聊天环境，键入 %send 来确认发送，键入 %cancel 来取消发送'
             )
-            print('使用 %online_user 来查询在线用户')
-            print('使用 %clear 来清除输出')
-            print('使用 %debug [on / off] 来开启或关闭调试模式')
-            print('使用 %quit 或 %exit 退出')
+            client_log.write_line('使用 %online_user 来查询在线用户')
+            client_log.write_line('使用 %clear 来清除输出')
+            client_log.write_line('使用 %debug [on / off] 来开启或关闭调试模式')
+            client_log.write_line('使用 %quit 或 %exit 退出')
 
         elif command[0] == '%problem_set':  # Get problem list
             is_processing = True
@@ -252,7 +257,7 @@ async def input_processing(
         elif command[
                 0] == '%problem_statement':  # Get statement of a specific problem
             if len(command) < 2:
-                print('Please specify which problem you want to show.')
+                client_log.write_line('Please specify which problem you want to show.')
                 return
 
             is_processing = True
@@ -267,7 +272,7 @@ async def input_processing(
 
         elif command[0] == '%submit':  # Submit source code for judgment
             if len(command) < 4:
-                print('Bad format.')
+                client_log.write_line('Bad format.')
                 return
 
             problem_number = command[1]
@@ -289,7 +294,7 @@ async def input_processing(
                     for line in lines:
                         message['content']['code'].append(line)
             except FileNotFoundError:
-                print('File {} not found.'.format(file_name))
+                client_log.write_line('File {} not found.'.format(file_name))
                 return
 
             is_processing = True
@@ -384,7 +389,7 @@ async def input_processing(
             is_processing = False
             is_logged = False
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         print('Quitting...')
         is_processing = True
         if session_token == '':
@@ -402,6 +407,7 @@ async def input_processing(
         message.clear()  # Send quit message
         await websocket_protocol.close()
         is_processing = False
+        raise e
     except Exception as e:
         logging.exception(e)
 
@@ -476,6 +482,7 @@ class UserScreen(textual.screen.Screen):
                                    id='command_exit_button'),
             textual.widgets.Button('Confirm', id='command_confirm_button'),
             classes='dialog')
+        yield textual.widgets.Log('Log Here...', id='client_log')
 
     async def on_button_pressed(self,
                                 event: textual.widgets.Button.Pressed) -> None:
@@ -485,6 +492,7 @@ class UserScreen(textual.screen.Screen):
             if not is_logged:
                 self.log('Quitting from login status...')
                 self.app.exit()
+                sys.exit(0)
         
         if event.button.id == "command_exit_button":
             is_logged = False
@@ -606,6 +614,6 @@ if __name__ == '__main__':
         application = GenshinOJClient()
         asyncio.run(main())
         asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         sys.exit(0)
-        pass
+        raise e

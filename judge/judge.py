@@ -1,9 +1,8 @@
-import os, gc, sys, json, platform
+import os, sys, json, platform
 
 import asyncio, logging
 
 import server
-
 
 class judge:
 
@@ -21,6 +20,17 @@ class judge:
     def __del__(self) -> None:
         print('Judge unloaded.')
 
+    def get_problem_testcase_config_json_path(self, problem_number):
+        problem_number = str(problem_number)
+        return '{}/problem/{}/problem_testcase_config.json'.format(os.getcwd(), problem_number)
+
+    def get_problem_statement_json_path(self, problem_number):
+        problem_number = str(problem_number)
+        return '{}/problem/{}/problem_statement.json'.format(os.getcwd(), problem_number)
+
+    def get_problem_set_json_path(self):
+        return os.getcwd() + '/problem/problem_set.json'
+    
     async def judge_loop(self) -> None:
         await asyncio.sleep(0)
         while True:
@@ -34,7 +44,7 @@ class judge:
 
                 # Compile Part
 
-                self.server_instance.get_module_instance(
+                await self.server_instance.get_module_instance(
                     'global_message_queue').execute_command(
                         self.server_instance.get_module_instance(
                             'compilers_manager').
@@ -46,9 +56,7 @@ class judge:
                 try:
                     try:
                         with open(
-                                self.server_instance.get_module_instance(
-                                    'global_message_queue').
-                                get_problem_testcase_config_json_path(
+                                self.get_problem_testcase_config_json_path(
                                     submission_problem_number), 'r'
                         ) as problem_testcase_config_json_file:  # Get the configuration of the problem
                             problem_testcase_config = json.load(
@@ -58,7 +66,7 @@ class judge:
                     except:
                         judgment_result = {
                             'submission_id': judgment['submission_id'],
-                            'result': 'CE'
+                            'result': 'Compile Error'
                         }
                         response = judgment_result
                         response['type'] = 'submission_result'
@@ -97,39 +105,44 @@ class judge:
                                 'output{}.txt'.format(
                                     testcase_number))  # Output file path
 
-                        self.server_instance.get_module_instance(
-                            'global_message_queue'
-                        ).execute_command('{} < \"{}\" > \"{}\"'.format(
-                            self.server_instance.get_module_instance(
-                                'compilers_manager').
-                            get_binary_execute_command_by_filename_and_language(
-                                'submission_' + str(submission_id),
-                                submission_language), testcase_input_path,
-                            testcase_output_path))
-
                         testcase_AC_flag = True
-                        with open(testcase_output_path, 
+                        try:
+                            await self.server_instance.get_module_instance(
+                                'global_message_queue'
+                            ).execute_command('{} < \"{}\" > \"{}\"'.format(
+                                self.server_instance.get_module_instance(
+                                        'compilers_manager').
+                                    get_binary_execute_command_by_filename_and_language(
+                                        'submission_' + str(submission_id),
+                                        submission_language), testcase_input_path,
+                                    testcase_output_path), 1)
+                            with open(testcase_output_path, 
                                   'r') as testcase_output:
-                            with open(testcase_answer_path,
-                                      'r') as testcase_answer:
-                                testcase_output_lines = testcase_output.readlines(
-                                )
-                                testcase_answer_lines = testcase_answer.readlines(
-                                )
-                                if len(testcase_answer_lines) != len(
-                                        testcase_output_lines):
-                                    reasons.append(
-                                        'Your output was too short.')
-                                    testcase_AC_flag = False
-                                else:
-                                    for i in range(0,
-                                                   len(testcase_answer_lines)):
-                                        if testcase_answer_lines[
-                                                i] != testcase_output_lines[i]:
-                                            reasons.append(
-                                                'Your output was wrong.')
-                                            testcase_AC_flag = False
-                                            break
+                                with open(testcase_answer_path,
+                                          'r') as testcase_answer:
+                                    testcase_output_lines = testcase_output.readlines(
+                                    )
+                                    testcase_answer_lines = testcase_answer.readlines(
+                                    )
+                                    if len(testcase_answer_lines) != len(
+                                            testcase_output_lines):
+                                        reasons.append(
+                                            'Your output was too short.')
+                                        testcase_AC_flag = False
+                                    else:
+                                        for i in range(0,
+                                                       len(testcase_answer_lines)):
+                                            if testcase_answer_lines[
+                                                    i] != testcase_output_lines[i]:
+                                                reasons.append(
+                                                    'Your output was wrong.')
+                                                testcase_AC_flag = False
+                                                break
+                        except TimeoutError:
+                            reasons.append('Time limit exceeded.')
+                            testcase_AC_flag = False
+                        except Exception as e:
+                            logging.exception(e)
 
                         if testcase_AC_flag == True:
                             general_score = general_score + testcase['score']
@@ -137,12 +150,12 @@ class judge:
                             general_AC_flag = False
 
                         if platform.system() == 'Linux':
-                            self.server_instance.get_module_instance(
+                            await self.server_instance.get_module_instance(
                                 'global_message_queue').execute_command(
                                     'rm -rf \"{}\"'.format(
                                         testcase_output_path))
                         if platform.system() == 'Windows':
-                            self.server_instance.get_module_instance(
+                            await self.server_instance.get_module_instance(
                                 'global_message_queue').execute_command(
                                     'del \"{}\"'.format(testcase_output_path))
 
@@ -150,12 +163,14 @@ class judge:
                     if general_AC_flag == True:
                         judgment_result = {
                             'submission_id': judgment['submission_id'],
-                            'result': 'AC'
+                            'result': 'Accepted',
+                            'score': general_score
                         }
                     else:
                         judgment_result = {
                             'submission_id': judgment['submission_id'],
-                            'result': 'WA',
+                            'result': 'Unaccepted',
+                            'score': general_score,
                             'reasons': reasons
                         }
 
@@ -173,7 +188,7 @@ class judge:
                         .format(submission_problem_number))
 
                 if platform.system() == 'Windows':
-                    self.server_instance.get_module_instance(
+                    await self.server_instance.get_module_instance(
                         'global_message_queue').execute_command(
                             'del \"{}\"'.format(
                                 self.server_instance.get_module_instance(
@@ -182,7 +197,7 @@ class judge:
                                     'submission_' + str(submission_id),
                                     submission_language)))
                 if platform.system() == 'Linux':
-                    self.server_instance.get_module_instance(
+                    await self.server_instance.get_module_instance(
                         'global_message_queue').execute_command(
                             'rm -rf \"{}\"'.format(
                                 self.server_instance.get_module_instance(
@@ -192,7 +207,7 @@ class judge:
                                     submission_language)))
 
                 if platform.system() == 'Windows':
-                    self.server_instance.get_module_instance(
+                    await self.server_instance.get_module_instance(
                         'global_message_queue').execute_command(
                             'del \"{}\"'.format(
                                 self.server_instance.get_module_instance(
@@ -201,7 +216,7 @@ class judge:
                                     'submission_' + str(submission_id),
                                     submission_language)))
                 if platform.system() == 'Linux':
-                    self.server_instance.get_module_instance(
+                    await self.server_instance.get_module_instance(
                         'global_message_queue').execute_command(
                             'rm -rf \"{}\"'.format(
                                 self.server_instance.get_module_instance(

@@ -1,4 +1,15 @@
-import os, gc
+import os, sys
+
+try:
+    import asyncio
+except:
+    print('Installing dependencies...')
+    os.system('pip install asyncio')
+    try:
+        import asyncio
+    except:
+        print('Dependencies installation failed.')
+        sys.exit(-1)
 
 import server
 
@@ -20,20 +31,20 @@ class global_message_queue:
     def push_message(self, to_module_id: str, message: dict) -> bool:
         self.message_queue[to_module_id].append(message)
 
-    def get_problem_testcase_config_json_path(self, problem_number):
-        problem_number = str(problem_number)
-        return '{}/problem/{}/problem_testcase_config.json'.format(os.getcwd(), problem_number)
-
-    def get_problem_statement_json_path(self, problem_number):
-        problem_number = str(problem_number)
-        return '{}/problem/{}/problem_statement.json'.format(os.getcwd(), problem_number)
-
-    def get_problem_set_json_path(self):
-        return os.getcwd() + '/problem/problem_set.json'
-
     def get_compiler_root_path(self):
         return '{}/compiler'.format(os.getcwd())
+    
+    async def execute_command(self, command: str, timeout: int | float | None = None):
+        try:
+            async with asyncio.timeout(timeout):
+                proc = await asyncio.create_subprocess_shell(
+                    command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE)
 
-    def execute_command(self, command: str):
-        os.system(command)
-        print(command)
+                stdout, stderr = await proc.communicate()
+                print(f'{command!r} exited with {proc.returncode}, pid={proc.pid}')
+        except TimeoutError:
+            raise TimeoutError
+        except Exception as e:
+            raise e
