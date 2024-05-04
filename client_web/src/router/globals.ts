@@ -23,7 +23,7 @@ export function getMainWebsocketProtocol(): syncWebsocket.SyncWebSocket {
 }
 
 export async function getOnlineUsersList() {
-    const request_key = crypto.randomUUID();
+    const request_key = randomUUID();
     let onlineUsers;
     await getMainWebsocketProtocol().send(request_key, {
         type: "online_user",
@@ -31,11 +31,11 @@ export async function getOnlineUsersList() {
             request_key: request_key
         }
     })
-    .then((result_: MessageEvent) => {
-        console.log(result_.data);
-        if(JSON.parse(result_.data)['type'] != "online_user") return;
-        onlineUsers = JSON.parse(result_.data)['content']["online_users"];
-    });
+        .then((result_: MessageEvent) => {
+            console.log(result_.data);
+            if (JSON.parse(result_.data)['type'] != "online_user") return;
+            onlineUsers = JSON.parse(result_.data)['content']["online_users"];
+        });
 
     return onlineUsers;
 }
@@ -44,11 +44,11 @@ export async function loginSession(
     loginUsername: string,
     loginPassword: string
 ) {
-    const request_key = crypto.randomUUID();
+    const request_key = randomUUID();
     setMainWebsocketProtocol(
-        new syncWebsocket.SyncWebSocket("ws://localhost:9982")
+        new syncWebsocket.SyncWebSocket("ws://" + location.host + "/wsapi")
     );
-    const result__ = await getMainWebsocketProtocol().open();
+    await getMainWebsocketProtocol().open();
     await getMainWebsocketProtocol()
         .send(request_key, {
             type: "login",
@@ -59,7 +59,7 @@ export async function loginSession(
             },
         })
         .then((result_: MessageEvent) => {
-            if(JSON.parse(result_.data)["type"] == "session_token")
+            if (JSON.parse(result_.data)["type"] == "session_token")
                 setIsLoggedIn(true);
         });
 
@@ -71,11 +71,11 @@ export async function registerSession(
     registerUsername: string,
     registerPassword: string
 ) {
-    const request_key = crypto.randomUUID();
+    const request_key = randomUUID();
     setMainWebsocketProtocol(
-        new syncWebsocket.SyncWebSocket("ws://localhost:9982")
+        new syncWebsocket.SyncWebSocket("ws://" + location.host + "/wsapi")
     );
-    const result__ = await getMainWebsocketProtocol().open();
+    await getMainWebsocketProtocol().open();
     let result = false;
     await getMainWebsocketProtocol()
         .send(request_key, {
@@ -87,9 +87,17 @@ export async function registerSession(
             },
         })
         .then((result_: MessageEvent) => {
-            if(JSON.parse(result_.data)["type"] == "quit" && JSON.parse(result_.data)["content"]["reason"] == "registration_success")
+            if (JSON.parse(result_.data)["type"] == "quit" && JSON.parse(result_.data)["content"]["reason"] == "registration_success")
                 result = true;
         });
 
     return result;
+}
+
+export function randomUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (Math.random() * 16) | 0,
+            v = c == 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
 }

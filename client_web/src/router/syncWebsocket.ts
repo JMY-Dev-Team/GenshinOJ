@@ -28,7 +28,7 @@ export class SyncWebSocket {
             }
 
             this._websocket.onclose = (e: CloseEvent) => {
-                
+
             };
 
             this._websocket.onmessage = (e: MessageEvent) => {

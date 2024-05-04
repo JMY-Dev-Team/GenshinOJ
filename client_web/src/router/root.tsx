@@ -13,9 +13,9 @@ import React from "react";
 export default function Root() {
     return (
         <FluentProvider theme={webLightTheme}>
-            <NavBar/>
+            <NavBar />
             <div>
-                <Outlet/>
+                <Outlet />
             </div>
         </FluentProvider>
     );

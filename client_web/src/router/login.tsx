@@ -9,7 +9,8 @@ import {
     DialogContent,
     DialogTrigger,
     DialogSurface,
-    DialogActions
+    DialogActions,
+    useRestoreFocusTarget
 } from "@fluentui/react-components";
 
 import {
@@ -39,52 +40,95 @@ export default function Login() {
     const [loginUsername, setLoginUsername] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
     const [dialogLoggedInOpenState, setDialogLoggedInOpenState] = useState(false);
+    const [dialogLoginFailureOpenState, setDialogLoginFailureOpenState] = useState(false);
+    const [dialogLoginSuccessOpenState, setDialogLoginSuccessOpenState] = useState(false);
+    const restoreFocusTargetAttribute = useRestoreFocusTarget();
     const navigate = useNavigate();
     useEffect(() => { if (globals.getIsLoggedIn()) setDialogLoggedInOpenState(true); }, [])
-
     return (
         <>
-            <div className={useStyles().root}>
+            <div className={useStyles().root} {...restoreFocusTargetAttribute}>
                 <form>
                     <Field label="Login Username" required>
                         <Input contentBefore={<PersonRegular />} 
-                        onInput={(props) => { setLoginUsername(props.currentTarget.value); }}/>
+                            onInput={(props) => { setLoginUsername(props.currentTarget.value); }} />
                     </Field>
                     <Field label="Login Password" required>
-                        <Input contentBefore={<PasswordRegular />} type="password" 
-                        onInput={(props) => { setLoginPassword(props.currentTarget.value); }}/>
+                        <Input contentBefore={<PasswordRegular />} type="password"
+                            onInput={(props) => { setLoginPassword(props.currentTarget.value); }} />
                     </Field>
                     <Button appearance="primary" onClick={() => {
                         globals.loginSession(loginUsername, loginPassword).then((result) => {
-                            if (result) {
-                                navigate(-1);
-                            }
+                            if (result) setDialogLoginSuccessOpenState(true);
+                            else setDialogLoginFailureOpenState(true);
                         }).catch((error) => {
                             console.error("Error signing in:", error);
                         });
                     }}>Login</Button>
                 </form>
-            </div>
-            <Dialog modalType="alert" open={dialogLoggedInOpenState} onOpenChange={(event, data) => {
+                <Dialog modalType="alert" open={dialogLoggedInOpenState} onOpenChange={(event, data) => {
                     setDialogLoggedInOpenState(data.open);
                 }}>
-                <DialogSurface>
-                    <DialogBody>
-                        <DialogContent>
-                            You have already logged in.
-                        </DialogContent>
-                        <DialogActions>
-                            <DialogTrigger disableButtonEnhancement>
-                                <Button appearance="primary" onClick={
-                                    () => {
-                                        navigate(-1);
-                                    }
-                                }>Close</Button>
-                            </DialogTrigger>
-                        </DialogActions>
-                    </DialogBody>
-                </DialogSurface>
-            </Dialog>
+                    <DialogSurface>
+                        <DialogBody>
+                            <DialogContent>
+                                You have already logged in.
+                            </DialogContent>
+                            <DialogActions>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Button appearance="primary" onClick={
+                                        () => {
+                                            setDialogLoggedInOpenState(false);
+                                            navigate(-1);
+                                        }
+                                    }>Close</Button>
+                                </DialogTrigger>
+                            </DialogActions>
+                        </DialogBody>
+                    </DialogSurface>
+                </Dialog>
+                <Dialog modalType="alert" open={dialogLoginFailureOpenState} onOpenChange={(event, data) => {
+                    setDialogLoginFailureOpenState(data.open);
+                }}>
+                    <DialogSurface>
+                        <DialogBody>
+                            <DialogContent>
+                                Login failed. Maybe you used a wrong password or username?
+                            </DialogContent>
+                            <DialogActions>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Button appearance="primary" onClick={
+                                        () => {
+                                            setDialogLoginFailureOpenState(false);
+                                        }
+                                    }>Close</Button>
+                                </DialogTrigger>
+                            </DialogActions>
+                        </DialogBody>
+                    </DialogSurface>
+                </Dialog>
+                <Dialog modalType="alert" open={dialogLoginSuccessOpenState} onOpenChange={(event, data) => {
+                    setDialogLoginSuccessOpenState(data.open);
+                }}>
+                    <DialogSurface>
+                        <DialogBody>
+                            <DialogContent>
+                                Login succeeded.
+                            </DialogContent>
+                            <DialogActions>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Button appearance="primary" onClick={
+                                        () => {
+                                            setDialogLoginSuccessOpenState(false);
+                                            navigate(-1);
+                                        }
+                                    }>Close</Button>
+                                </DialogTrigger>
+                            </DialogActions>
+                        </DialogBody>
+                    </DialogSurface>
+                </Dialog>
+            </div>
         </>
     );
 }

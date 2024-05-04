@@ -13,7 +13,8 @@ import {
     DialogSurface,
     DialogActions,
     DialogTrigger,
-    Button
+    Button,
+    useRestoreFocusTarget
 } from "@fluentui/react-components";
 
 import { useNavigate } from "react-router-dom";
@@ -36,9 +37,9 @@ const useStyles = makeStyles({
 
 export default function Home() {
     const navigate = useNavigate();
-    let content;
     const [onlineUsersList, setOnlineUsersList] = useState([]);
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const restoreFocusTargetAttribute = useRestoreFocusTarget();
     useEffect(() => {
         if (globals.getIsLoggedIn()) {
             globals.getOnlineUsersList().then((usersList) => {
@@ -48,23 +49,22 @@ export default function Home() {
             });
         } else setDialogRequireLoginOpenState(true);
     }, []);
-
     return (
         <>
             <div className={useStyles().root}>
-                <Table size="medium">
+                <Table size="medium" {...restoreFocusTargetAttribute}>
                     <TableHeader>
                         <TableRow>
-                            <TableHeaderCell>Online Username</TableHeaderCell>
+                            <TableHeaderCell>Online User</TableHeaderCell>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {
                             onlineUsersList.map((username) => (
-                                    <TableRow key={username}>
-                                        <TableCell>{username}</TableCell>
-                                    </TableRow>
-                                )
+                                <TableRow key={username}>
+                                    <TableCell>{username}</TableCell>
+                                </TableRow>
+                            )
                             )
                         }
                     </TableBody>
@@ -81,6 +81,7 @@ export default function Home() {
                                 <DialogTrigger disableButtonEnhancement>
                                     <Button appearance="primary" onClick={
                                         () => {
+                                            setDialogRequireLoginOpenState(false);
                                             navigate("/login");
                                         }
                                     }>Close</Button>
