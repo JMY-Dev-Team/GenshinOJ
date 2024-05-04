@@ -4,4 +4,14 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    proxy: {
+      '/wsapi': {
+        target: 'ws://localhost:9982',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/wsapi/, '')
+      }
+    }
+  },
 })

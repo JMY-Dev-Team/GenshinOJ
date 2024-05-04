@@ -9,7 +9,8 @@ import {
     DialogBody,
     DialogContent,
     DialogActions,
-    DialogTrigger
+    DialogTrigger,
+    useRestoreFocusTarget
 } from "@fluentui/react-components";
 
 import {
@@ -30,7 +31,7 @@ const useStyles = makeStyles({
     root: {
         display: "flex",
         flexDirection: "column",
-        ...shorthands.gap("4px"),
+        gap: "4px",
         maxWidth: "250px",
     },
 });
@@ -43,11 +44,12 @@ export default function Register() {
     const [dialogPasswordInputAndConfirmNotTheSameOpenState, setDialogPasswordInputAndConfirmNotTheSameOpenState] = useState(false);
     const [dialogRegistrationFailureOpenState, setDialogRegistrationFailureOpenState] = useState(false);
     const [dialogRegistrationSuccessOpenState, setDialogRegistrationSuccessOpenState] = useState(false);
+    const restoreFocusTargetAttribute = useRestoreFocusTarget();
     const navigate = useNavigate();
     useEffect(() => { if (globals.getIsLoggedIn()) setDialogLoggedInOpenState(true); }, [])
     return (
         <>
-            <div className={useStyles().root}>
+            <div className={useStyles().root} {...restoreFocusTargetAttribute}>
                 <form>
                     <Field label="Register Username" required>
                         <Input contentBefore={<PersonRegular />}

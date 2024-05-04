@@ -13,7 +13,8 @@ import {
     DialogSurface,
     DialogActions,
     DialogTrigger,
-    Button
+    Button,
+    useRestoreFocusTarget
 } from "@fluentui/react-components";
 
 import { useNavigate } from "react-router-dom";
@@ -38,6 +39,7 @@ export default function Home() {
     const navigate = useNavigate();
     const [onlineUsersList, setOnlineUsersList] = useState([]);
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const restoreFocusTargetAttribute = useRestoreFocusTarget();
     useEffect(() => {
         if (globals.getIsLoggedIn()) {
             globals.getOnlineUsersList().then((usersList) => {
@@ -50,7 +52,7 @@ export default function Home() {
     return (
         <>
             <div className={useStyles().root}>
-                <Table size="medium">
+                <Table size="medium" {...restoreFocusTargetAttribute}>
                     <TableHeader>
                         <TableRow>
                             <TableHeaderCell>Online User</TableHeaderCell>

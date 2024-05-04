@@ -9,7 +9,8 @@ import {
     DialogContent,
     DialogTrigger,
     DialogSurface,
-    DialogActions
+    DialogActions,
+    useRestoreFocusTarget
 } from "@fluentui/react-components";
 
 import {
@@ -41,14 +42,15 @@ export default function Login() {
     const [dialogLoggedInOpenState, setDialogLoggedInOpenState] = useState(false);
     const [dialogLoginFailureOpenState, setDialogLoginFailureOpenState] = useState(false);
     const [dialogLoginSuccessOpenState, setDialogLoginSuccessOpenState] = useState(false);
+    const restoreFocusTargetAttribute = useRestoreFocusTarget();
     const navigate = useNavigate();
     useEffect(() => { if (globals.getIsLoggedIn()) setDialogLoggedInOpenState(true); }, [])
     return (
         <>
-            <div className={useStyles().root}>
+            <div className={useStyles().root} {...restoreFocusTargetAttribute}>
                 <form>
                     <Field label="Login Username" required>
-                        <Input contentBefore={<PersonRegular />}
+                        <Input contentBefore={<PersonRegular />} 
                             onInput={(props) => { setLoginUsername(props.currentTarget.value); }} />
                     </Field>
                     <Field label="Login Password" required>
