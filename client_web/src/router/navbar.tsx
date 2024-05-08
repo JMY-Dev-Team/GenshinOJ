@@ -20,6 +20,10 @@ export default function NavBar() {
                     </Link>
                     <Label size="large"> | </Label>
                     <Link to={`/register`}><Label size="large">Sign up</Label></Link>
+                    <Label size="large"> | </Label>
+                    <Link to={`/chat`}>
+                        <Label size="large">Chat</Label>
+                    </Link>
                 </nav>
                 <Divider />
             </div>
