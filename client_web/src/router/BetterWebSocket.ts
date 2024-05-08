@@ -1,10 +1,12 @@
-export class SyncWebSocket {
+export class BetterWebSocket {
     url: string;
     promisePool: {};
+    messagePool: Array<Object>;
     private _websocket: WebSocket;
     constructor(url: string) {
         this.url = url;
         this.promisePool = {};
+        this.messagePool = new Array();
     }
 
     /**
@@ -20,25 +22,32 @@ export class SyncWebSocket {
             if (typeof this._websocket === 'undefined') {
                 this._websocket = new WebSocket(this.url);
                 this._websocket.onopen = (e: Event) => {
-                    resolve({ e: Event, ws: SyncWebSocket });
+                    resolve({ e: Event, ws: BetterWebSocket });
                 };
                 this._websocket.onerror = (e: Event) => {
                     reject(e);
                 };
             }
 
-            this._websocket.onclose = (e: CloseEvent) => {
-
-            };
-
+            this._websocket.onclose = (e: CloseEvent) => {};
             this._websocket.onmessage = (e: MessageEvent) => {
-                console.log(e);
                 const encodedData = e.data;
                 const decodedData = JSON.parse(encodedData);
-                const key = decodedData["content"]["request_key"];
-                const req = this.promisePool[key];
-                req.resolve(e);
-                delete this.promisePool[key];
+                if(decodedData["content"]["request_key"])
+                {
+                    console.log("Sync message: ");
+                    console.log(decodedData);
+                    const requestKey = decodedData["content"]["request_key"];
+                    const requestPromise = this.promisePool[requestKey];
+                    requestPromise.resolve(e);
+                    delete this.promisePool[requestKey];
+                }
+                else
+                {
+                    console.log("Async message: ");
+                    console.log(decodedData);
+                    this.messagePool.push(decodedData);
+                }
             };
         });
     }
@@ -64,7 +73,7 @@ export class SyncWebSocket {
      * The resolved value is the response data from the server.
      * @throws An error if the WebSocket connection cannot be opened or if the request cannot be sent.
      */
-    send(request_key: any, content: Record<string, any>): Promise<any> {
+    send_sync(request_key: any, content: Record<string, any>): Promise<any> {
         return new Promise((resolve, reject) => {
             // Store the promise, resolve, reject, and request_key for this request.
             this.promisePool[content["content"]["request_key"]] = {
@@ -80,5 +89,14 @@ export class SyncWebSocket {
             // Send the request to the server.
             this._websocket.send(JSON.stringify(content));
         });
+    }
+
+    get_message_by_type(type: string): Array<Object>{
+        var result = new Array();
+        let message;
+        for (message in this.messagePool) 
+            if(message["type"] == type) result.push(message);
+
+        return result;
     }
 }

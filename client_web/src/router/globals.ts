@@ -1,4 +1,4 @@
-import * as syncWebsocket from "./syncWebsocket";
+import * as BetterWebSocket from "./BetterWebSocket";
 
 var isLoggedIn = false;
 
@@ -10,22 +10,22 @@ export function getIsLoggedIn(): boolean {
     return isLoggedIn;
 }
 
-let mainWebsocketProtocol: syncWebsocket.SyncWebSocket;
+let mainWebsocketProtocol: BetterWebSocket.BetterWebSocket;
 
 export function setMainWebsocketProtocol(
-    __mainWebsocketProtocol: syncWebsocket.SyncWebSocket
+    __mainWebsocketProtocol: BetterWebSocket.BetterWebSocket
 ) {
     mainWebsocketProtocol = __mainWebsocketProtocol;
 }
 
-export function getMainWebsocketProtocol(): syncWebsocket.SyncWebSocket {
+export function getMainWebsocketProtocol(): BetterWebSocket.BetterWebSocket {
     return mainWebsocketProtocol;
 }
 
 export async function getOnlineUsersList() {
     const request_key = randomUUID();
     let onlineUsers;
-    await getMainWebsocketProtocol().send(request_key, {
+    await getMainWebsocketProtocol().send_sync(request_key, {
         type: "online_user",
         content: {
             request_key: request_key
@@ -46,11 +46,11 @@ export async function loginSession(
 ) {
     const request_key = randomUUID();
     setMainWebsocketProtocol(
-        new syncWebsocket.SyncWebSocket("ws://" + location.host + "/wsapi")
+        new BetterWebSocket.BetterWebSocket("ws://" + location.host + "/wsapi")
     );
     await getMainWebsocketProtocol().open();
     await getMainWebsocketProtocol()
-        .send(request_key, {
+        .send_sync(request_key, {
             type: "login",
             content: {
                 username: loginUsername,
@@ -73,12 +73,12 @@ export async function registerSession(
 ) {
     const request_key = randomUUID();
     setMainWebsocketProtocol(
-        new syncWebsocket.SyncWebSocket("ws://" + location.host + "/wsapi")
+        new BetterWebSocket.BetterWebSocket("ws://" + location.host + "/wsapi")
     );
     await getMainWebsocketProtocol().open();
     let result = false;
     await getMainWebsocketProtocol()
-        .send(request_key, {
+        .send_sync(request_key, {
             type: "register",
             content: {
                 username: registerUsername,
