@@ -22,21 +22,22 @@ export function getMainWebsocketProtocol(): BetterWebSocket.BetterWebSocket {
     return mainWebsocketProtocol;
 }
 
-export async function getOnlineUsersList() {
+export async function fetchOnlineUsersList() {
     const request_key = randomUUID();
-    let onlineUsers;
+    let onlineUsers = [];
+    console.log("Fetching online user list...");
     await getMainWebsocketProtocol().send_sync(request_key, {
         type: "online_user",
         content: {
             request_key: request_key
         }
-    })
-        .then((result_: MessageEvent) => {
-            console.log(result_.data);
-            if (JSON.parse(result_.data)['type'] != "online_user") return;
-            onlineUsers = JSON.parse(result_.data)['content']["online_users"];
-        });
+    }).then((result_: MessageEvent) => {
+        console.log(result_.data);
+        if (JSON.parse(result_.data)['type'] != "online_user") return;
+        onlineUsers = JSON.parse(result_.data)['content']["online_users"];
+    });
 
+    console.log("Fetched online user list...");
     return onlineUsers;
 }
 
@@ -100,4 +101,54 @@ export function randomUUID() {
             v = c == 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
     });
+}
+
+export function getProperty(obj: unknown, key: string) {
+    if (typeof obj === 'object' && obj !== null) {
+        return (obj as { [k: string]: any })[key];
+    } else {
+        return undefined;
+    }
+}
+
+let onlineUsersList = []
+export function setOnlineUsersList(__onlineUsersList) {
+    onlineUsersList = __onlineUsersList;
+}
+
+export function getOnlineUsersList() {
+    return onlineUsersList;
+}
+
+export function wrapPromise(promise) {
+    let status = 'pending';
+    let response;
+
+    const suspender = promise.then(
+        res => {
+            status = 'success';
+            response = res;
+        },
+        err => {
+            status = 'error';
+            response = err;
+        },
+    );
+
+    const handler = {
+        pending: () => {
+            throw suspender;
+        },
+        error: () => {
+            throw response;
+        },
+        default: () => response,
+    };
+
+    const read = () => {
+        const result = handler[status] ? handler[status]() : handler.default();
+        return result;
+    };
+
+    return { read };
 }

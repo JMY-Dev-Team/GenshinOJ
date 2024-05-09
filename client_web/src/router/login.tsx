@@ -31,7 +31,7 @@ const useStyles = makeStyles({
     root: {
         display: "flex",
         flexDirection: "column",
-        ...shorthands.gap("4px"),
+        gap: "4px",
         maxWidth: "250px",
     },
 });

@@ -1,4 +1,3 @@
-// import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import {
     createBrowserRouter,
@@ -20,7 +19,7 @@ const router = createBrowserRouter([
         path: "/",
         element: <Root />,
         loader: () => document.title = "Genshin OJ Root Page",
-        errorElement: <ErrorPage />,
+        // errorElement: <ErrorPage />,
         children: [
             {
                 path: "/login",
@@ -40,12 +39,13 @@ const router = createBrowserRouter([
             {
                 path: "/chat",
                 element: <Chat />,
+                loader: () => document.title = "Chat",
                 children: [
                     {
-                        element: <ChatMainUser />,
                         path: "/chat/user/:uid",
+                        element: <ChatMainUser />,
                         loader: async ({ params }) => {
-                            document.title = "Chat";
+                            document.title = "Chat User";
                             return json({ uid: params.uid });
                         },
                     }
