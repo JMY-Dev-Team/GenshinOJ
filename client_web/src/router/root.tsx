@@ -5,10 +5,9 @@ import {
     webLightTheme
 } from "@fluentui/react-components";
 
-import NavBar from "./navbar";
+import NavBar from "./Navbar";
 
 import "../css/style.css";
-import React from "react";
 
 export default function Root() {
     return (

@@ -1,12 +1,11 @@
-import React from "react";
+// TODO: Implement Chat
+
 import {
-    useLoaderData,
     Outlet,
 } from "react-router-dom";
 
 import {
     makeStyles,
-    Label,
     Table,
     TableHeader,
     TableRow,
@@ -20,31 +19,30 @@ import {
     DialogActions,
     DialogTrigger,
     Button,
-    Spinner
+    Skeleton,
 } from "@fluentui/react-components";
 
 import { useNavigate } from "react-router-dom";
 
-import { useRef, useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 
 import "../css/style.css";
 
-import * as globals from "./globals";
+import * as globals from "./Globals";
 
 const useStyles = makeStyles({
     root: {
         display: "flex",
-        flexDirection: "row",
-        gap: "4px 10px",
+        flexDirection: "column",
+        rowGap: "4px",
+        columnGap: "4px",
         maxWidth: "250px",
     },
 });
 
-const dataFetcher = globals.fetchOnlineUsersList();
-
 export function ChatList() {
     const navigate = useNavigate();
-    const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const onlineUsersList = globals.useWrapPromise(globals.fetchData("onlineUsersList@async"));
     return <div>
         <Table size="medium">
             <TableHeader>
@@ -54,18 +52,25 @@ export function ChatList() {
             </TableHeader>
             <TableBody>
                 {
-                    globals.getOnlineUsersList().map((username) => (
+                    onlineUsersList.map((username: string) => (
                         <TableRow key={username}>
-                            <TableCell onClick={ () => { navigate("/chat/user/" + username); } } >{username}</TableCell>
+                            <TableCell onClick={() => navigate("/chat/user/" + username)} >{username}</TableCell>
                         </TableRow>
                     )
                     )
                 }
             </TableBody>
         </Table>
-        <Dialog modalType="alert" open={dialogRequireLoginOpenState} onOpenChange={(event, data) => {
-            setDialogRequireLoginOpenState(data.open);
-        }}>
+    </div>;
+}
+
+export default function Chat() {
+    const navigate = useNavigate();
+    const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    useEffect(() => { if (!globals.fetchData("isLoggedIn")) setDialogRequireLoginOpenState(true); }, []);
+    return <div className={useStyles().root}>
+        {globals.fetchData("isLoggedIn") ? <Suspense fallback={<Skeleton />}><ChatList /></Suspense> : <></>}
+        <Dialog modalType="alert" open={dialogRequireLoginOpenState} onOpenChange={(event, data) => setDialogRequireLoginOpenState(data.open)}>
             <DialogSurface>
                 <DialogBody>
                     <DialogContent>
@@ -84,30 +89,6 @@ export function ChatList() {
                 </DialogBody>
             </DialogSurface>
         </Dialog>
-    </div>;
-}
-
-export function ChatMainUser() {
-    const loaderData = useLoaderData();
-    const [messageList, setMessageList] = useState([]);
-    const addMessagetoMessageList = (_from, _message) => {
-        const newMessage = { from: _from, message: _message };
-        setMessageList([...messageList, newMessage]);
-    };
-
-    return <div>
-        {
-            messageList.map(({from, message}) => {
-                return <Label>message</Label>;
-            })
-        }
-    </div>;
-}
-
-export function Chat() {
-    const navigate = useNavigate();
-    return <div className={useStyles().root}>
-        <ChatList />
         <div>
             <Outlet />
         </div>

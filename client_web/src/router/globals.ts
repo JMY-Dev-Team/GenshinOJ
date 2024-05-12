@@ -1,154 +1,70 @@
-import * as BetterWebSocket from "./BetterWebSocket";
+export let cache = new Map();
 
-var isLoggedIn = false;
-
-export function setIsLoggedIn(__isLoggedIn: boolean) {
-    isLoggedIn = __isLoggedIn;
+export function clearCache(type: string) {
+    if (type == "@all") cache = new Map();
+    else cache.delete(type);
 }
 
-export function getIsLoggedIn(): boolean {
-    return isLoggedIn;
+export function fetchData(type: string) {
+    if (!cache.has(type) || !cache.get(type)) {
+        if (type.includes("@async")) cache.set(type, initDataAsync(type));
+        else cache.set(type, initData(type));
+    }
+
+    console.log(type, cache.get(type));
+    return cache.get(type);
 }
 
-let mainWebsocketProtocol: BetterWebSocket.BetterWebSocket;
-
-export function setMainWebsocketProtocol(
-    __mainWebsocketProtocol: BetterWebSocket.BetterWebSocket
-) {
-    mainWebsocketProtocol = __mainWebsocketProtocol;
+export function setData(type: string, data: unknown) {
+    if (data == undefined) cache.delete(type);
+    cache.set(type, data);
 }
 
-export function getMainWebsocketProtocol(): BetterWebSocket.BetterWebSocket {
-    return mainWebsocketProtocol;
+async function initDataAsync(type: string) {
+    throw Error("Not implemented yet: " + type);
 }
 
-export async function fetchOnlineUsersList() {
-    const request_key = randomUUID();
-    let onlineUsers = [];
-    console.log("Fetching online user list...");
-    await getMainWebsocketProtocol().send_sync(request_key, {
-        type: "online_user",
-        content: {
-            request_key: request_key
-        }
-    }).then((result_: MessageEvent) => {
-        console.log(result_.data);
-        if (JSON.parse(result_.data)['type'] != "online_user") return;
-        onlineUsers = JSON.parse(result_.data)['content']["online_users"];
-    });
-
-    console.log("Fetched online user list...");
-    return onlineUsers;
+function initData(type: string) {
+    if (type === "isLoggedIn") return false;
+    if (type === "loginUsername") return "";
+    throw Error("Not implemented yet: " + type);
 }
 
-export async function loginSession(
-    loginUsername: string,
-    loginPassword: string
-) {
-    const request_key = randomUUID();
-    setMainWebsocketProtocol(
-        new BetterWebSocket.BetterWebSocket("ws://" + location.host + "/wsapi")
-    );
-    await getMainWebsocketProtocol().open();
-    await getMainWebsocketProtocol()
-        .send_sync(request_key, {
-            type: "login",
-            content: {
-                username: loginUsername,
-                password: loginPassword,
-                request_key: request_key,
+export function useWrapPromise(promise: { status: string; value: any; reason: any; then: (arg0: (result: any) => void, arg1: (reason: any) => void) => void; }) {
+    if (promise.status === 'fulfilled') {
+        return promise.value;
+    } else if (promise.status === 'rejected') {
+        throw promise.reason;
+    } else if (promise.status === 'pending') {
+        throw promise;
+    } else {
+        promise.status = 'pending';
+        promise.then(
+            result => {
+                promise.status = 'fulfilled';
+                promise.value = result;
             },
-        })
-        .then((result_: MessageEvent) => {
-            if (JSON.parse(result_.data)["type"] == "session_token")
-                setIsLoggedIn(true);
-        });
-
-    if (getIsLoggedIn()) return true;
-    return false;
-}
-
-export async function registerSession(
-    registerUsername: string,
-    registerPassword: string
-) {
-    const request_key = randomUUID();
-    setMainWebsocketProtocol(
-        new BetterWebSocket.BetterWebSocket("ws://" + location.host + "/wsapi")
-    );
-    await getMainWebsocketProtocol().open();
-    let result = false;
-    await getMainWebsocketProtocol()
-        .send_sync(request_key, {
-            type: "register",
-            content: {
-                username: registerUsername,
-                password: registerPassword,
-                request_key: request_key,
+            reason => {
+                promise.status = 'rejected';
+                promise.reason = reason;
             },
-        })
-        .then((result_: MessageEvent) => {
-            if (JSON.parse(result_.data)["type"] == "quit" && JSON.parse(result_.data)["content"]["reason"] == "registration_success")
-                result = true;
-        });
-
-    return result;
+        );
+        throw promise;
+    }
 }
 
 export function randomUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = (Math.random() * 16) | 0,
-            v = c == 'x' ? r : (r & 0x3) | 0x8;
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0,
+            v = c == "x" ? r : (r & 0x3) | 0x8;
         return v.toString(16);
     });
 }
 
 export function getProperty(obj: unknown, key: string) {
-    if (typeof obj === 'object' && obj !== null) {
-        return (obj as { [k: string]: any })[key];
+    if (typeof obj === "object" && obj !== null) {
+        return (obj as { [k: string]: unknown })[key];
     } else {
         return undefined;
     }
-}
-
-let onlineUsersList = []
-export function setOnlineUsersList(__onlineUsersList) {
-    onlineUsersList = __onlineUsersList;
-}
-
-export function getOnlineUsersList() {
-    return onlineUsersList;
-}
-
-export function wrapPromise(promise) {
-    let status = 'pending';
-    let response;
-
-    const suspender = promise.then(
-        res => {
-            status = 'success';
-            response = res;
-        },
-        err => {
-            status = 'error';
-            response = err;
-        },
-    );
-
-    const handler = {
-        pending: () => {
-            throw suspender;
-        },
-        error: () => {
-            throw response;
-        },
-        default: () => response,
-    };
-
-    const read = () => {
-        const result = handler[status] ? handler[status]() : handler.default();
-        return result;
-    };
-
-    return { read };
 }

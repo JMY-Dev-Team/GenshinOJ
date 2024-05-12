@@ -1,16 +1,8 @@
 import {
     makeStyles,
-    shorthands,
     Input,
     Field,
     Button,
-    Dialog,
-    DialogSurface,
-    DialogBody,
-    DialogContent,
-    DialogActions,
-    DialogTrigger,
-    useRestoreFocusTarget
 } from "@fluentui/react-components";
 
 import {
@@ -18,147 +10,118 @@ import {
     PasswordRegular
 } from "@fluentui/react-icons";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
 import "../css/style.css";
 
-import * as globals from "./globals";
+import * as globals from "./Globals";
 import React from "react";
+import PopupDialog from "./PopupDialog";
+import useWebSocket from "react-use-websocket";
 
 const useStyles = makeStyles({
     root: {
         display: "flex",
         flexDirection: "column",
-        gap: "4px",
+        rowGap: "4px",
+        columnGap: "4px",
         maxWidth: "250px",
     },
 });
 
+function RegisterChecker({ messageHistory, setDialogRegisterSuccessOpenState, setDialogRegisterFailureOpenState }) {
+    useEffect(() => {
+        messageHistory.map((message, index) => {
+            if (message) {
+                console.log(message);
+                if (message.type == "quit" && message.content.reason == "registration_success") {
+                    setDialogRegisterSuccessOpenState(true);
+                    globals.setData("isLoggedIn", false);
+                    delete messageHistory[index];
+                }
+
+                if (message.type == "quit" && message.content.reason == "registration_failure") {
+                    setDialogRegisterFailureOpenState(true);
+                    globals.setData("isLoggedIn", false);
+                    delete messageHistory[index];
+                }
+            }
+        })
+    });
+
+    return <div style={{ display: "none" }}>
+        <ul>
+            {messageHistory.map((message, idx) => (
+                <li key={idx}>{message ? JSON.stringify(message) : null}</li>
+            ))}
+        </ul>
+    </div>;
+}
+
 export default function Register() {
+    const [messageHistory, setMessageHistory] = useState([]);
+    const {
+        sendJsonMessage,
+        lastJsonMessage,
+    } = useWebSocket("ws://" + location.host + "/wsapi", { share: true });
     const [registerUsername, setRegisterUsername] = useState("");
     const [registerPassword, setRegisterPassword] = useState("");
     const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
     const [dialogLoggedInOpenState, setDialogLoggedInOpenState] = useState(false);
     const [dialogPasswordInputAndConfirmNotTheSameOpenState, setDialogPasswordInputAndConfirmNotTheSameOpenState] = useState(false);
-    const [dialogRegistrationFailureOpenState, setDialogRegistrationFailureOpenState] = useState(false);
-    const [dialogRegistrationSuccessOpenState, setDialogRegistrationSuccessOpenState] = useState(false);
-    const restoreFocusTargetAttribute = useRestoreFocusTarget();
+    const [dialogRegisterFailureOpenState, setDialogRegisterFailureOpenState] = useState(false);
+    const [dialogRegisterSuccessOpenState, setDialogRegisterSuccessOpenState] = useState(false);
     const navigate = useNavigate();
-    useEffect(() => { if (globals.getIsLoggedIn()) setDialogLoggedInOpenState(true); }, [])
+
+    const handleClickRegisterSession = useCallback(() => {
+        const request_key = globals.randomUUID();
+        sendJsonMessage({
+            type: "register",
+            content: {
+                username: registerUsername,
+                password: registerPassword,
+                request_key: request_key
+            }
+        })
+    }, [registerUsername, registerPassword, sendJsonMessage]);
+
+    useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
+
+    useEffect(() => {
+        if (lastJsonMessage !== null)
+            setMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+    }, [lastJsonMessage]);
     return (
         <>
-            <div className={useStyles().root} {...restoreFocusTargetAttribute}>
+            <div className={useStyles().root}>
                 <form>
                     <Field label="Register Username" required>
                         <Input contentBefore={<PersonRegular />}
-                            onInput={(props) => { setRegisterUsername(props.currentTarget.value); }} />
+                            onChange={(props) => setRegisterUsername(props.target.value)} />
                     </Field>
                     <Field label="Register Password" required>
                         <Input contentBefore={<PasswordRegular />} type="password"
-                            onInput={(props) => { setRegisterPassword(props.currentTarget.value); }} />
+                            onChange={(props) => setRegisterPassword(props.target.value)} />
                     </Field>
                     <Field label="Confirm Register Password" required>
                         <Input contentBefore={<PasswordRegular />} type="password"
-                            onInput={(props) => { setRegisterPasswordConfirm(props.currentTarget.value); }} />
+                            onChange={(props) => setRegisterPasswordConfirm(props.target.value)} />
                     </Field>
+                    <br />
                     <Button appearance="primary" onClick={() => {
-                        if(registerPassword != registerPasswordConfirm)
+                        if (registerPassword != registerPasswordConfirm)
                             setDialogPasswordInputAndConfirmNotTheSameOpenState(true);
                         else
-                        {
-                            globals.registerSession(registerUsername, registerPassword).then((result) => {
-                                if (result) { setDialogRegistrationSuccessOpenState(true); }
-                                else setDialogRegistrationFailureOpenState(true);
-                            }).catch((error) => {
-                                console.error("Error signing up:", error);
-                            });
-                        }
+                            handleClickRegisterSession();
                     }}>Register</Button>
                 </form>
-                <Dialog modalType="alert" open={dialogLoggedInOpenState} onOpenChange={(event, data) => {
-                    setDialogLoggedInOpenState(data.open);
-                }}>
-                    <DialogSurface>
-                        <DialogBody>
-                            <DialogContent>
-                                You have already logged in.
-                            </DialogContent>
-                            <DialogActions>
-                                <DialogTrigger disableButtonEnhancement>
-                                    <Button appearance="primary" onClick={
-                                        () => {
-                                            setDialogLoggedInOpenState(false);
-                                            navigate("/home");
-                                        }
-                                    }>Close</Button>
-                                </DialogTrigger>
-                            </DialogActions>
-                        </DialogBody>
-                    </DialogSurface>
-                </Dialog>
-                <Dialog modalType="alert" open={dialogPasswordInputAndConfirmNotTheSameOpenState} onOpenChange={(event, data) => {
-                    setDialogPasswordInputAndConfirmNotTheSameOpenState(data.open);
-                }}>
-                    <DialogSurface>
-                        <DialogBody>
-                            <DialogContent>
-                                You input the password which is not the same as confirmed.
-                            </DialogContent>
-                            <DialogActions>
-                                <DialogTrigger disableButtonEnhancement>
-                                    <Button appearance="primary" onClick={
-                                        () => {
-                                            setDialogPasswordInputAndConfirmNotTheSameOpenState(false);
-                                        }
-                                    }>Close</Button>
-                                </DialogTrigger>
-                            </DialogActions>
-                        </DialogBody>
-                    </DialogSurface>
-                </Dialog>
-                <Dialog modalType="alert" open={dialogRegistrationFailureOpenState} onOpenChange={(event, data) => {
-                    setDialogRegistrationFailureOpenState(data.open);
-                }}>
-                    <DialogSurface>
-                        <DialogBody>
-                            <DialogContent>
-                                Registration failed. Maybe you registered an existed username or something went wrong.
-                            </DialogContent>
-                            <DialogActions>
-                                <DialogTrigger disableButtonEnhancement>
-                                    <Button appearance="primary" onClick={
-                                        () => {
-                                            setDialogRegistrationFailureOpenState(false);
-                                        }
-                                    }>Close</Button>
-                                </DialogTrigger>
-                            </DialogActions>
-                        </DialogBody>
-                    </DialogSurface>
-                </Dialog>
-                <Dialog modalType="alert" open={dialogRegistrationSuccessOpenState} onOpenChange={(event, data) => {
-                    setDialogRegistrationSuccessOpenState(data.open);
-                }}>
-                    <DialogSurface>
-                        <DialogBody>
-                            <DialogContent>
-                                Registration succeeded.
-                            </DialogContent>
-                            <DialogActions>
-                                <DialogTrigger disableButtonEnhancement>
-                                    <Button appearance="primary" onClick={
-                                        () => {
-                                            navigate("/login");
-                                            setDialogRegistrationSuccessOpenState(false);
-                                        }
-                                    }>Close</Button>
-                                </DialogTrigger>
-                            </DialogActions>
-                        </DialogBody>
-                    </DialogSurface>
-                </Dialog>
+                <PopupDialog open={dialogLoggedInOpenState && !dialogRegisterSuccessOpenState} setPopupDialogOpenState={setDialogLoggedInOpenState} text="You have already logged in." onClose={() => navigate("/home")} />
+                <PopupDialog open={dialogPasswordInputAndConfirmNotTheSameOpenState} setPopupDialogOpenState={setDialogPasswordInputAndConfirmNotTheSameOpenState} text="You input the password which is not the same as confirmed." onClose={undefined} />
+                <PopupDialog open={dialogRegisterFailureOpenState} setPopupDialogOpenState={setDialogRegisterFailureOpenState} text="Registration failed. Maybe you registered an existed username or something went wrong." onClose={undefined} />
+                <PopupDialog open={dialogRegisterSuccessOpenState} setPopupDialogOpenState={setDialogRegisterSuccessOpenState} text="Registration succeeded." onClose={() => navigate("/login")} />
+                <RegisterChecker messageHistory={messageHistory} setDialogRegisterFailureOpenState={setDialogRegisterFailureOpenState} setDialogRegisterSuccessOpenState={setDialogRegisterSuccessOpenState} />
             </div>
         </>
     );
