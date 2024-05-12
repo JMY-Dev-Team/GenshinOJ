@@ -45,11 +45,11 @@ const router = createBrowserRouter([
                 loader: () => document.title = "Chat",
                 children: [
                     {
-                        path: "/chat/user/:uid",
-                        element: <Suspense fallback={<Skeleton />}><ChatMainUser /></Suspense>,
-                        loader: async ({ params }) => {
+                        path: "/chat/user/:username",
+                        element: <Suspense fallback={<Skeleton />}><ChatMainUser/></Suspense>,
+                        loader: ({ params }) => {
                             document.title = "Chat User";
-                            return json({ uid: params.uid });
+                            return { toUsername: params.username };
                         },
                     }
                 ],

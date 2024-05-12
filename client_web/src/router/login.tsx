@@ -12,12 +12,11 @@ import {
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 
 import "../css/style.css";
 
 import * as globals from "./Globals";
-import useWebSocket from "react-use-websocket";
 import PopupDialog from "./PopupDialog";
 
 const useStyles = makeStyles({
@@ -30,42 +29,34 @@ const useStyles = makeStyles({
     },
 });
 
-function LoginChecker({ messageHistory, setDialogLoginSuccessOpenState, setDialogLoginFailureOpenState }) {
+function LoginChecker({ websocketMessageHistory, setDialogLoginSuccessOpenState, setDialogLoginFailureOpenState, requestKey, loginUsername }) {
     useEffect(() => {
-        messageHistory.map((message, index) => {
+        websocketMessageHistory.map((message, index) => {
             if (message) {
-                console.log(message);
-                if (message.type == "session_token") {
-                    setDialogLoginSuccessOpenState(true);
-                    globals.setData("isLoggedIn", true);
-                    globals.setData("sessionToken", message.content.session_token);
-                    delete messageHistory[index];
-                }
+                if (message.content.request_key === requestKey) {
+                    if (message.type === "quit") {
+                        setDialogLoginFailureOpenState(true);
+                        globals.setData("isLoggedIn", false);
+                    }
+                    if (message.type === "session_token") {
+                        setDialogLoginSuccessOpenState(true);
+                        globals.setData("isLoggedIn", true);
+                        globals.setData("sessionToken", message.content.session_token);
+                        globals.setData("loginUsername", loginUsername);
+                    }
 
-                if (message.type == "quit") {
-                    setDialogLoginFailureOpenState(true);
-                    globals.setData("isLoggedIn", false);
-                    delete messageHistory[index];
+                    delete websocketMessageHistory[index];
                 }
             }
-        })
-    });
+        });
+    }, [websocketMessageHistory, requestKey, loginUsername, setDialogLoginSuccessOpenState, setDialogLoginFailureOpenState]);
 
-    return <div style={{ display: "none" }}>
-        <ul>
-            {messageHistory.map((message, idx) => (
-                <li key={idx}>{message ? JSON.stringify(message) : null}</li>
-            ))}
-        </ul>
-    </div>;
+    return <div></div>;
 }
 
 export default function Login() {
-    const [messageHistory, setMessageHistory] = useState([]);
-    const {
-        sendJsonMessage,
-        lastJsonMessage,
-    } = useWebSocket("ws://" + location.host + "/wsapi", { share: true });
+    const [requestKey, setRequestKey] = useState("");
+    const { sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory } = useOutletContext();
     const [loginUsername, setLoginUsername] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
     const [dialogLoggedInOpenState, setDialogLoggedInOpenState] = useState(false);
@@ -74,23 +65,25 @@ export default function Login() {
     const navigate = useNavigate();
 
     const handleClickLoginSession = useCallback(() => {
-        const request_key = globals.randomUUID();
+        const _requestKey = globals.randomUUID();
         sendJsonMessage({
             type: "login",
             content: {
                 username: loginUsername,
                 password: loginPassword,
-                request_key: request_key
+                request_key: _requestKey
             }
-        })
+        });
+
+        return _requestKey;
     }, [loginUsername, loginPassword, sendJsonMessage]);
 
     useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
 
     useEffect(() => {
         if (lastJsonMessage !== null)
-            setMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
-    }, [lastJsonMessage]);
+            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+    }, [lastJsonMessage, setWebsocketMessageHistory]);
 
     return (
         <>
@@ -105,12 +98,12 @@ export default function Login() {
                             onChange={(props) => setLoginPassword(props.target.value)} />
                     </Field>
                     <br />
-                    <Button appearance="primary" onClick={handleClickLoginSession}>Login</Button>
+                    <Button appearance="primary" onClick={() => { setRequestKey(handleClickLoginSession()); }}>Login</Button>
                 </form>
                 <PopupDialog open={dialogLoggedInOpenState} setPopupDialogOpenState={setDialogLoggedInOpenState} text="You have already logged in." onClose={() => navigate(-1)} />
                 <PopupDialog open={dialogLoginFailureOpenState} setPopupDialogOpenState={setDialogLoginFailureOpenState} text="Login failed. Maybe you used a wrong password or username?" onClose={undefined} />
                 <PopupDialog open={dialogLoginSuccessOpenState} setPopupDialogOpenState={setDialogLoginSuccessOpenState} text="Login successfully." onClose={() => navigate(-1)} />
-                <LoginChecker messageHistory={messageHistory} setDialogLoginFailureOpenState={setDialogLoginFailureOpenState} setDialogLoginSuccessOpenState={setDialogLoginSuccessOpenState} />
+                <LoginChecker websocketMessageHistory={websocketMessageHistory} setDialogLoginFailureOpenState={setDialogLoginFailureOpenState} setDialogLoginSuccessOpenState={setDialogLoginSuccessOpenState} requestKey={requestKey} loginUsername={loginUsername} />
             </div>
         </>
     );

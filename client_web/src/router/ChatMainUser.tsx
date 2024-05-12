@@ -1,24 +1,67 @@
-import useWebSocket from "react-use-websocket";
 import "../css/style.css";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useLoaderData, useOutletContext } from "react-router-dom";
+import * as globals from "./Globals"
+
+function ChatMessageFetcher({ websocketMessageHistory, setWebsocketMessageHistory, chatMessageList, setChatMessageList, fromUsername }) {
+    useEffect(() => {
+        let newChatMessageList = [];
+        const _websocketMessageHistory = websocketMessageHistory;
+        _websocketMessageHistory.map((message, index) => {
+            if (message) {
+                console.log(message);
+                if (message.type === "chat_message" && message.from === fromUsername) {
+                    newChatMessageList.push(message.content);
+                    delete _websocketMessageHistory[index];
+                }
+            }
+        });
+
+        setChatMessageList(chatMessageList.concat(newChatMessageList));
+        if(!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
+    }, [websocketMessageHistory, fromUsername]);
+
+    return <div></div>;
+}
 
 export default function ChatMainUser() {
-    const [messageHistory, setMessageHistory] = useState<MessageEvent<any>[]>([]);
-    const { sendMessage, lastMessage, readyState } = useWebSocket("ws://" + location.host + "/wsapi", { share: true });
-    const [chatMessage, setChatMessage] = useState("");
+    const { toUsername } = useLoaderData();
+    const { sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory } = useOutletContext();
+    const [chatMessageList, setChatMessageList] = useState([]);
+    const [chatMessageToSend, setChatMessageToSend] = useState("");
+
+    const handleClickSendChatMessage = useCallback(() => {
+        const _requestKey = globals.randomUUID();
+        sendJsonMessage({
+            type: "chat_user",
+            content: {
+                from: globals.fetchData("loginUsername"),
+                to: toUsername,
+                messages: chatMessageToSend,
+                session_token: globals.fetchData("sessionToken"),
+                request_key: _requestKey
+            }
+        });
+
+        setChatMessageToSend("")
+        return _requestKey;
+    }, [toUsername, chatMessageToSend, sendJsonMessage]);
+
     useEffect(() => {
-        if (lastMessage !== null) setMessageHistory((previousMessage) => previousMessage.concat(lastMessage)), console.log(lastMessage);
-    }, [lastMessage]);
-    return <div>
+        if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage)), console.log(lastJsonMessage);
+    }, [lastJsonMessage]);
+
+    return <>
+        <ul>
         {
-            messageHistory.map((message, index) => <div key={index}>{message.data}</div>)
+            chatMessageList.map((message, index) => <li key={index}>{message}</li>)
         }
-        <form>
-            <label htmlFor="chat-input">Input to chat</label>
-            <input type="text" id="chat-input" onInput={(props) => setChatMessage(props.currentTarget.value)} />
-            <input type="submit" value="Send" onClick={(e) => {
-                e.preventDefault();
-            }} />
+        </ul>
+        <form style={{ verticalAlign: "bottom" }}>
+            <label htmlFor="chat-input">Input to chat </label>
+            <input type="text" id="chat-input" value={chatMessageToSend} onChange={(props) => setChatMessageToSend(props.target.value)} />
+            <input type="button" value="Send" onClick={handleClickSendChatMessage} />
         </form>
-    </div>;
+        <ChatMessageFetcher websocketMessageHistory={websocketMessageHistory} chatMessageList={chatMessageList} setChatMessageList={setChatMessageList} fromUsername={toUsername} />
+    </>;
 }

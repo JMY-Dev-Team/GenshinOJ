@@ -12,14 +12,12 @@ import {
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 
 import "../css/style.css";
 
 import * as globals from "./Globals";
-import React from "react";
 import PopupDialog from "./PopupDialog";
-import useWebSocket from "react-use-websocket";
 
 const useStyles = makeStyles({
     root: {
@@ -31,41 +29,30 @@ const useStyles = makeStyles({
     },
 });
 
-function RegisterChecker({ messageHistory, setDialogRegisterSuccessOpenState, setDialogRegisterFailureOpenState }) {
+function RegisterChecker({ websocketMessageHistory, setDialogRegisterSuccessOpenState, setDialogRegisterFailureOpenState }) {
     useEffect(() => {
-        messageHistory.map((message, index) => {
+        websocketMessageHistory.map((message, index) => {
             if (message) {
-                console.log(message);
                 if (message.type == "quit" && message.content.reason == "registration_success") {
                     setDialogRegisterSuccessOpenState(true);
                     globals.setData("isLoggedIn", false);
-                    delete messageHistory[index];
+                    delete websocketMessageHistory[index];
                 }
 
                 if (message.type == "quit" && message.content.reason == "registration_failure") {
                     setDialogRegisterFailureOpenState(true);
                     globals.setData("isLoggedIn", false);
-                    delete messageHistory[index];
+                    delete websocketMessageHistory[index];
                 }
             }
-        })
-    });
+        });
+    }, [websocketMessageHistory]);
 
-    return <div style={{ display: "none" }}>
-        <ul>
-            {messageHistory.map((message, idx) => (
-                <li key={idx}>{message ? JSON.stringify(message) : null}</li>
-            ))}
-        </ul>
-    </div>;
+    return <div></div>;
 }
 
 export default function Register() {
-    const [messageHistory, setMessageHistory] = useState([]);
-    const {
-        sendJsonMessage,
-        lastJsonMessage,
-    } = useWebSocket("ws://" + location.host + "/wsapi", { share: true });
+    const {sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory} = useOutletContext();
     const [registerUsername, setRegisterUsername] = useState("");
     const [registerPassword, setRegisterPassword] = useState("");
     const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
@@ -91,7 +78,7 @@ export default function Register() {
 
     useEffect(() => {
         if (lastJsonMessage !== null)
-            setMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
     }, [lastJsonMessage]);
     return (
         <>
@@ -121,7 +108,7 @@ export default function Register() {
                 <PopupDialog open={dialogPasswordInputAndConfirmNotTheSameOpenState} setPopupDialogOpenState={setDialogPasswordInputAndConfirmNotTheSameOpenState} text="You input the password which is not the same as confirmed." onClose={undefined} />
                 <PopupDialog open={dialogRegisterFailureOpenState} setPopupDialogOpenState={setDialogRegisterFailureOpenState} text="Registration failed. Maybe you registered an existed username or something went wrong." onClose={undefined} />
                 <PopupDialog open={dialogRegisterSuccessOpenState} setPopupDialogOpenState={setDialogRegisterSuccessOpenState} text="Registration succeeded." onClose={() => navigate("/login")} />
-                <RegisterChecker messageHistory={messageHistory} setDialogRegisterFailureOpenState={setDialogRegisterFailureOpenState} setDialogRegisterSuccessOpenState={setDialogRegisterSuccessOpenState} />
+                <RegisterChecker websocketMessageHistory={websocketMessageHistory} setDialogRegisterFailureOpenState={setDialogRegisterFailureOpenState} setDialogRegisterSuccessOpenState={setDialogRegisterSuccessOpenState} />
             </div>
         </>
     );
