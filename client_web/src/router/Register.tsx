@@ -10,7 +10,7 @@ import {
     PasswordRegular
 } from "@fluentui/react-icons";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useNavigate, useOutletContext } from "react-router-dom";
 
@@ -29,30 +29,39 @@ const useStyles = makeStyles({
     },
 });
 
-function RegisterChecker({ websocketMessageHistory, setDialogRegisterSuccessOpenState, setDialogRegisterFailureOpenState }) {
+function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterFailureOpenState, requestKey, lastJsonMessage }) {
+	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+	
+	useEffect(() => {
+        if (lastJsonMessage !== null)
+            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+    }, [lastJsonMessage]);
+
     useEffect(() => {
+		const _websocketMessageHistory = websocketMessageHistory;
         websocketMessageHistory.map((message, index) => {
             if (message) {
                 if (message.type == "quit" && message.content.reason == "registration_success") {
                     setDialogRegisterSuccessOpenState(true);
                     globals.setData("isLoggedIn", false);
-                    delete websocketMessageHistory[index];
+                    delete _websocketMessageHistory[index];
                 }
 
                 if (message.type == "quit" && message.content.reason == "registration_failure") {
                     setDialogRegisterFailureOpenState(true);
                     globals.setData("isLoggedIn", false);
-                    delete websocketMessageHistory[index];
+                    delete _websocketMessageHistory[index];
                 }
             }
         });
-    }, [websocketMessageHistory]);
+    }, [websocketMessageHistory, requestKey]);
 
     return <div></div>;
 }
 
 export default function Register() {
-    const {sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory} = useOutletContext();
+	const { sendJsonMessage, lastJsonMessage } = useOutletContext();
+	const [requestKey, setRequestKey] = useState("");
     const [registerUsername, setRegisterUsername] = useState("");
     const [registerPassword, setRegisterPassword] = useState("");
     const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
@@ -62,7 +71,7 @@ export default function Register() {
     const [dialogRegisterSuccessOpenState, setDialogRegisterSuccessOpenState] = useState(false);
     const navigate = useNavigate();
 
-    const handleClickRegisterSession = useCallback(() => {
+    const handleClickRegisterSession = () => {
         const request_key = globals.randomUUID();
         sendJsonMessage({
             type: "register",
@@ -71,15 +80,11 @@ export default function Register() {
                 password: registerPassword,
                 request_key: request_key
             }
-        })
-    }, [registerUsername, registerPassword, sendJsonMessage]);
+        });
+		return request_key;
+    };
 
     useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
-
-    useEffect(() => {
-        if (lastJsonMessage !== null)
-            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
-    }, [lastJsonMessage]);
     return (
         <>
             <div className={useStyles().root}>
@@ -101,14 +106,34 @@ export default function Register() {
                         if (registerPassword != registerPasswordConfirm)
                             setDialogPasswordInputAndConfirmNotTheSameOpenState(true);
                         else
-                            handleClickRegisterSession();
+                            setRequestKey(handleClickRegisterSession());
                     }}>Register</Button>
                 </form>
-                <PopupDialog open={dialogLoggedInOpenState && !dialogRegisterSuccessOpenState} setPopupDialogOpenState={setDialogLoggedInOpenState} text="You have already logged in." onClose={() => navigate("/home")} />
-                <PopupDialog open={dialogPasswordInputAndConfirmNotTheSameOpenState} setPopupDialogOpenState={setDialogPasswordInputAndConfirmNotTheSameOpenState} text="You input the password which is not the same as confirmed." onClose={undefined} />
-                <PopupDialog open={dialogRegisterFailureOpenState} setPopupDialogOpenState={setDialogRegisterFailureOpenState} text="Registration failed. Maybe you registered an existed username or something went wrong." onClose={undefined} />
-                <PopupDialog open={dialogRegisterSuccessOpenState} setPopupDialogOpenState={setDialogRegisterSuccessOpenState} text="Registration succeeded." onClose={() => navigate("/login")} />
-                <RegisterChecker websocketMessageHistory={websocketMessageHistory} setDialogRegisterFailureOpenState={setDialogRegisterFailureOpenState} setDialogRegisterSuccessOpenState={setDialogRegisterSuccessOpenState} />
+                <PopupDialog 
+					open={dialogLoggedInOpenState && !dialogRegisterSuccessOpenState} 
+					setPopupDialogOpenState={setDialogLoggedInOpenState} 
+					text="You have already logged in." 
+					onClose={() => navigate("/home")} />
+                <PopupDialog 
+					open={dialogPasswordInputAndConfirmNotTheSameOpenState} 
+					setPopupDialogOpenState={setDialogPasswordInputAndConfirmNotTheSameOpenState} 
+					text="You input the password which is not the same as confirmed." 
+					onClose={undefined} />
+                <PopupDialog 
+					open={dialogRegisterFailureOpenState} 
+					setPopupDialogOpenState={setDialogRegisterFailureOpenState}
+					text="Registration failed. Maybe you registered an existed username or something went wrong." 
+					onClose={undefined} />
+                <PopupDialog 
+					open={dialogRegisterSuccessOpenState} 
+					setPopupDialogOpenState={setDialogRegisterSuccessOpenState}
+					text="Registration succeeded." 
+					onClose={() => navigate("/login")} />
+                <RegisterChecker 
+					setDialogRegisterFailureOpenState={setDialogRegisterFailureOpenState} 
+					setDialogRegisterSuccessOpenState={setDialogRegisterSuccessOpenState} 
+					requestKey={requestKey} 
+					lastJsonMessage={lastJsonMessage} />
             </div>
         </>
     );

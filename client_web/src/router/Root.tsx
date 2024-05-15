@@ -21,7 +21,7 @@ export default function Root() {
         <FluentProvider theme={webLightTheme}>
             <NavBar />
             <div>
-                <Outlet context={{ sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory }} />
+                <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
             </div>
         </FluentProvider>
     );

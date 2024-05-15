@@ -12,10 +12,14 @@
   "dependencies": {
     "@fluentui/react-components": "^9.50.0",
     "@fluentui/react-icons": "^2.0.239",
+    "@swc/core": "^1.5.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router": "^6.23.1",
     "react-router-dom": "^6.23.1",
-    "react-use-websocket": "^4.8.1"
+    "react-use-websocket": "^4.8.1",
+    "scheduler": "^0.23.2",
+    "vite": "^5.2.11"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

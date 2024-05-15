@@ -21,15 +21,19 @@ export default function NavBar() {
                         <Label size="large">Genshin OJ</Label>
                     </Link>
                     <Label size="large"> | </Label>
+                    <Link to={`/problem`}>
+                        <Label size="large">Problem</Label>
+                    </Link>
+					<Label size="large"> | </Label>
+                    <Link to={`/chat`}>
+                        <Label size="large">Chat</Label>
+                    </Link>
+					<Label size="large"> | </Label>
                     <Link to={`/login`}>
                         <Label size="large">Sign in</Label>
                     </Link>
                     <Label size="large"> | </Label>
                     <Link to={`/register`}><Label size="large">Sign up</Label></Link>
-                    <Label size="large"> | </Label>
-                    <Link to={`/chat`}>
-                        <Label size="large">Chat</Label>
-                    </Link>
                     <Label size="large"> | </Label>
                     <Link to={`/logout`}>
                         <Label size="large">Sign out</Label>

@@ -13,6 +13,8 @@ const Register = React.lazy(() => import("./router/Register"));
 const Home = React.lazy(() => import("./router/Home"));
 const Chat = React.lazy(() => import("./router/Chat"));
 const ChatMainUser = React.lazy(() => import("./router/ChatMainUser"));
+const Problem = React.lazy(() => import("./router/Problem"));
+const ProblemMain = React.lazy(() => import("./router/ProblemMain"));
 import ErrorPage from "./ErrorPage";
 import { Skeleton } from "@fluentui/react-components";
 import Logout from "./router/Logout";
@@ -46,10 +48,25 @@ const router = createBrowserRouter([
                 children: [
                     {
                         path: "/chat/user/:username",
-                        element: <Suspense fallback={<Skeleton />}><ChatMainUser/></Suspense>,
+                        element: <Suspense fallback={<Skeleton />}><ChatMainUser /></Suspense>,
                         loader: ({ params }) => {
                             document.title = "Chat User";
                             return { toUsername: params.username };
+                        },
+                    }
+                ],
+            },
+			{
+                path: "/problem",
+                element: <Suspense fallback={<Skeleton />}><Problem /></Suspense>,
+                loader: () => document.title = "Problem",
+                children: [
+                    {
+                        path: "/problem/:problem_number",
+                        element: <Suspense fallback={<Skeleton />}><ProblemMain /></Suspense>,
+                        loader: ({ params }) => {
+                            document.title = "Problem " + params.problem_number;
+                            return { problemNumber: params.problem_number };
                         },
                     }
                 ],

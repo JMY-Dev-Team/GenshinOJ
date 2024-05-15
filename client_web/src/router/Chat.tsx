@@ -1,5 +1,3 @@
-// TODO: Implement Chat
-
 import {
     Outlet,
     useOutletContext,
@@ -36,30 +34,44 @@ const useStyles = makeStyles({
     },
 });
 
-function OnlineUsersListFetcher({ websocketMessageHistory, setOnlineUsersList, requestKey }) {
+function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessage }) {
+	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+	useEffect(() => {
+        if (lastJsonMessage !== null)
+            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+    }, [lastJsonMessage]);
+	
     useEffect(() => {
-        let newOnlineUsersList = [], changed = false;
-        websocketMessageHistory.map((message, index) => {
-            if (message) {
+		let newOnlineUsersList = [], changed = false;
+		const _websocketMessageHistory = websocketMessageHistory;
+        _websocketMessageHistory.map((message, index) => {
+            if (message && message.content && message.content.online_users && message.content.request_key) {
+				console.log(message);
                 if (message.content.request_key === requestKey) {
-                    changed = true;
+					changed = true;
                     newOnlineUsersList = message.content.online_users;
-                    delete websocketMessageHistory[index];
+                    delete _websocketMessageHistory[index];
                 }
             }
         });
 
-        if (changed) setOnlineUsersList(newOnlineUsersList.filter((element) => element !== globals.fetchData("loginUsername")));
-    }, [websocketMessageHistory]);
+        if(changed) setOnlineUsersList(newOnlineUsersList.filter((element) => element !== globals.fetchData("loginUsername")));
+		if(!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
+    }, [websocketMessageHistory, requestKey]);
 
     return <div></div>;
 }
 
-export function ChatList({ sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory }) {
-
+export function ChatList({ sendJsonMessage, lastJsonMessage }) {
+	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
     const [onlineUsersList, setOnlineUsersList] = useState([]);
     const [requestKey, setRequestKey] = useState("");
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (lastJsonMessage !== null)
+            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+    }, [lastJsonMessage]);
 
     const handleLoadOnlineUsersList = useCallback(() => {
         const _requestKey = globals.randomUUID();
@@ -72,15 +84,10 @@ export function ChatList({ sendJsonMessage, lastJsonMessage, websocketMessageHis
 
         return _requestKey;
     }, []);
-
-    useEffect(() => {
+	
+	useEffect(() => {
         setRequestKey(handleLoadOnlineUsersList());
-    }, []);
-
-    useEffect(() => {
-        if (lastJsonMessage !== null)
-            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
-    }, [lastJsonMessage]);
+    }, [handleLoadOnlineUsersList]);
 
     return <div>
         <Table size="medium">
@@ -92,23 +99,32 @@ export function ChatList({ sendJsonMessage, lastJsonMessage, websocketMessageHis
             <TableBody>
                 {
                     onlineUsersList.map((username: string) => (
-                        <TableRow key={username}>
-                            <TableCell onClick={() => navigate("/chat/user/" + username)} >{username}</TableCell>
-                        </TableRow>
-                    )
+							<TableRow key={username}>
+								<TableCell onClick={() => navigate("/chat/user/" + username)} >{username}</TableCell>
+							</TableRow>
+						)
                     )
                 }
             </TableBody>
         </Table>
-        <OnlineUsersListFetcher websocketMessageHistory={websocketMessageHistory} setOnlineUsersList={setOnlineUsersList} requestKey={requestKey} />
+        <OnlineUsersListFetcher 
+			setOnlineUsersList={setOnlineUsersList} 
+			lastJsonMessage={lastJsonMessage}
+			requestKey={requestKey} />
     </div>;
 }
 
 export default function Chat() {
-    const { sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory } = useOutletContext();
+    const { sendJsonMessage, lastJsonMessage} = useOutletContext();
+	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
     const navigate = useNavigate();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
-    useEffect(() => { if (!globals.fetchData("isLoggedIn")) setDialogRequireLoginOpenState(true); }, []);
+	
+    useEffect(() => { 
+		if (!globals.fetchData("isLoggedIn")) 
+			setDialogRequireLoginOpenState(true); 
+	}, []);
+	
     return <div className={useStyles().root}>
         {
             globals.fetchData("isLoggedIn")
@@ -116,22 +132,25 @@ export default function Chat() {
                 <>
                     <div style={{ flex: 20 }}>
                         <Suspense fallback={<Skeleton />}>
-                            <ChatList sendJsonMessage={sendJsonMessage}
-                                lastJsonMessage={lastJsonMessage}
-                                websocketMessageHistory={websocketMessageHistory}
-                                setWebsocketMessageHistory={setWebsocketMessageHistory} />
+                            <ChatList 
+								sendJsonMessage={sendJsonMessage}
+                                lastJsonMessage={lastJsonMessage} />
                         </Suspense>
                     </div>
                     <div style={{ flex: 1 }}>
                         <Divider vertical style={{ height: "100%" }} />
                     </div>
                     <div style={{ flex: 120 }}>
-                        <Outlet context={{ sendJsonMessage, lastJsonMessage, websocketMessageHistory, setWebsocketMessageHistory }} />
+                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
                     </div>
                 </>
                 :
                 <></>
         }
-        <PopupDialog open={dialogRequireLoginOpenState} setPopupDialogOpenState={setDialogRequireLoginOpenState} text="Please login first." onClose={() => navigate("/login")}></PopupDialog>
+        <PopupDialog 
+			open={dialogRequireLoginOpenState} 
+			setPopupDialogOpenState={setDialogRequireLoginOpenState} 
+			text="Please login first." 
+			onClose={() => navigate("/login")} />
     </div>
 }
