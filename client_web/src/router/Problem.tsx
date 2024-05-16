@@ -45,7 +45,7 @@ function ProblemListFetcher({ setProblemList, requestKey, lastJsonMessage }) {
         let newProblemList = [], changed = false;
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((message, index) => {
-            if (message && message.content && message.content.request_key && message.content.problem_set) {
+            if (message && 'content' in message && 'request_key' in message.content && 'problem_set' in message.content) {
                 console.log(message);
                 if (message.content.request_key === requestKey) {
                     changed = true;

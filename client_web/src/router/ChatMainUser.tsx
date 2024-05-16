@@ -14,7 +14,7 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
         let newChatMessageList = [], changed = false;
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((message, index) => {
-            if (message && message.type && message.from && message.content) {
+            if (message && 'type' in message && 'from' in message && 'content' in message) {
                 console.log(message);
                 if (message.type === "chat_message" && message.from === fromUsername) {
                     changed = true;

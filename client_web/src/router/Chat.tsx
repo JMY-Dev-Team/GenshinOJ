@@ -45,9 +45,9 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
         let newOnlineUsersList = [], changed = false;
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((message, index) => {
-            if (message && message.content && message.content.online_users && message.content.request_key) {
+            if (message && 'content' in message && 'type' in message && 'online_users' in message.content && 'request_key' in message.content) {
                 console.log(message);
-                if (message.content.request_key === requestKey) {
+                if (message.type === 'online_user' && message.content.request_key === requestKey) {
                     changed = true;
                     newOnlineUsersList = message.content.online_users;
                     delete _websocketMessageHistory[index];

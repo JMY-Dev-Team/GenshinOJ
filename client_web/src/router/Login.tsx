@@ -40,7 +40,7 @@ function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpe
     useEffect(() => {
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((message, index) => {
-            if (message) {
+            if (message && 'content' in message && 'type' in message && 'request_key' in message.content) {
                 if (message.content.request_key === requestKey) {
                     if (message.type === "quit") {
                         setDialogLoginFailureOpenState(true);
