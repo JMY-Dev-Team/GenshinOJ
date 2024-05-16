@@ -2,7 +2,6 @@ import * as ReactDOM from "react-dom/client";
 import {
     createBrowserRouter,
     RouterProvider,
-    json,
 } from "react-router-dom";
 
 import React, { Suspense } from "react";
@@ -56,7 +55,7 @@ const router = createBrowserRouter([
                     }
                 ],
             },
-			{
+            {
                 path: "/problem",
                 element: <Suspense fallback={<Skeleton />}><Problem /></Suspense>,
                 loader: () => document.title = "Problem",

@@ -30,15 +30,15 @@ const useStyles = makeStyles({
 });
 
 function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpenState, requestKey, loginUsername, lastJsonMessage }) {
-	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
-	
-	useEffect(() => {
+    const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+
+    useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
     }, [lastJsonMessage]);
-	
+
     useEffect(() => {
-		const _websocketMessageHistory = websocketMessageHistory;
+        const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((message, index) => {
             if (message) {
                 if (message.content.request_key === requestKey) {
@@ -57,15 +57,15 @@ function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpe
                 }
             }
         });
-		
-		if(!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
+
+        if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, loginUsername]);
 
     return <div></div>;
 }
 
 export default function Login() {
-	const { sendJsonMessage, lastJsonMessage } = useOutletContext();
+    const { sendJsonMessage, lastJsonMessage } = useOutletContext();
     const [requestKey, setRequestKey] = useState("");
     const [loginUsername, setLoginUsername] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
@@ -102,30 +102,30 @@ export default function Login() {
                             onChange={(props) => setLoginPassword(props.target.value)} />
                     </Field>
                     <br />
-                    <Button appearance="primary" 
-						onClick={() => { setRequestKey(handleClickLoginSession()); }}>Login</Button>
+                    <Button appearance="primary"
+                        onClick={() => { setRequestKey(handleClickLoginSession()); }}>Login</Button>
                 </form>
-                <PopupDialog 
-					open={dialogLoggedInOpenState} 
-					setPopupDialogOpenState={setDialogLoggedInOpenState} 
-					text="You have already logged in." 
-					onClose={() => navigate(-1)} />
-                <PopupDialog 
-					open={dialogLoginFailureOpenState} 
-					setPopupDialogOpenState={setDialogLoginFailureOpenState} 
-					text="Login failed. Maybe you used a wrong password or username?"
-					onClose={undefined} />
-                <PopupDialog 
-					open={dialogLoginSuccessOpenState} 
-					setPopupDialogOpenState={setDialogLoginSuccessOpenState} 
-					text="Login successfully." 
-					onClose={() => navigate(-1)} />
-                <LoginChecker 
-					setDialogLoginFailureOpenState={setDialogLoginFailureOpenState} 
-					setDialogLoginSuccessOpenState={setDialogLoginSuccessOpenState} 
-					requestKey={requestKey} 
-					loginUsername={loginUsername} 
-					lastJsonMessage={lastJsonMessage} />
+                <PopupDialog
+                    open={dialogLoggedInOpenState}
+                    setPopupDialogOpenState={setDialogLoggedInOpenState}
+                    text="You have already logged in."
+                    onClose={() => navigate(-1)} />
+                <PopupDialog
+                    open={dialogLoginFailureOpenState}
+                    setPopupDialogOpenState={setDialogLoginFailureOpenState}
+                    text="Login failed. Maybe you used a wrong password or username?"
+                    onClose={undefined} />
+                <PopupDialog
+                    open={dialogLoginSuccessOpenState}
+                    setPopupDialogOpenState={setDialogLoginSuccessOpenState}
+                    text="Login successfully."
+                    onClose={() => navigate(-1)} />
+                <LoginChecker
+                    setDialogLoginFailureOpenState={setDialogLoginFailureOpenState}
+                    setDialogLoginSuccessOpenState={setDialogLoginSuccessOpenState}
+                    requestKey={requestKey}
+                    loginUsername={loginUsername}
+                    lastJsonMessage={lastJsonMessage} />
             </div>
         </>
     );

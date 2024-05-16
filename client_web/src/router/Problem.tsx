@@ -35,42 +35,42 @@ const useStyles = makeStyles({
 });
 
 function ProblemListFetcher({ setProblemList, requestKey, lastJsonMessage }) {
-	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
-	useEffect(() => {
+    const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
     }, [lastJsonMessage]);
-	
+
     useEffect(() => {
-		let newProblemList = [], changed = false;
-		const _websocketMessageHistory = websocketMessageHistory;
+        let newProblemList = [], changed = false;
+        const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((message, index) => {
             if (message && message.content && message.content.request_key && message.content.problem_set) {
-				console.log(message);
+                console.log(message);
                 if (message.content.request_key === requestKey) {
-					changed = true;
+                    changed = true;
                     newProblemList = message.content.problem_set;
                     delete _websocketMessageHistory[index];
                 }
             }
         });
 
-        if(changed) setProblemList(newProblemList);
-		if(!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
+        if (changed) setProblemList(newProblemList);
+        if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey]);
 
     return <div></div>;
 }
 
 export function ProblemList({ sendJsonMessage, lastJsonMessage }) {
-	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
-	const [problemList, setProblemList] = useState([]);
+    const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const [problemList, setProblemList] = useState([]);
     const [requestKey, setRequestKey] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
         if (lastJsonMessage !== null)
-		    setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
+            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage));
     }, [lastJsonMessage]);
 
     const handleLoadProblemList = useCallback(() => {
@@ -84,8 +84,8 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }) {
 
         return _requestKey;
     }, []);
-	
-	useEffect(() => {
+
+    useEffect(() => {
         setRequestKey(handleLoadProblemList());
     }, [handleLoadProblemList]);
 
@@ -99,33 +99,31 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }) {
             <TableBody>
                 {
                     problemList.map((problem_number: string) => (
-							<TableRow key={problem_number}>
-								<TableCell onClick={() => navigate("/problem/" + problem_number)} >{problem_number}</TableCell>
-							</TableRow>
-						)
+                        <TableRow key={problem_number}>
+                            <TableCell onClick={() => navigate("/problem/" + problem_number)} >{problem_number}</TableCell>
+                        </TableRow>
+                    )
                     )
                 }
             </TableBody>
         </Table>
-        <ProblemListFetcher 
-			setProblemList={setProblemList} 
-			lastJsonMessage={lastJsonMessage}
-			requestKey={requestKey}
-			setProblemList={setProblemList} />
+        <ProblemListFetcher
+            setProblemList={setProblemList}
+            lastJsonMessage={lastJsonMessage}
+            requestKey={requestKey} />
     </div>;
 }
 
 export default function Problem() {
-    const { sendJsonMessage, lastJsonMessage} = useOutletContext();
-	const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const { sendJsonMessage, lastJsonMessage } = useOutletContext();
     const navigate = useNavigate();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
-	
-    useEffect(() => { 
-		if (!globals.fetchData("isLoggedIn")) 
-			setDialogRequireLoginOpenState(true); 
-	}, []);
-	
+
+    useEffect(() => {
+        if (!globals.fetchData("isLoggedIn"))
+            setDialogRequireLoginOpenState(true);
+    }, []);
+
     return <div className={useStyles().root}>
         {
             globals.fetchData("isLoggedIn")
@@ -133,8 +131,8 @@ export default function Problem() {
                 <>
                     <div style={{ flex: 20 }}>
                         <Suspense fallback={<Skeleton />}>
-                            <ProblemList 
-								sendJsonMessage={sendJsonMessage}
+                            <ProblemList
+                                sendJsonMessage={sendJsonMessage}
                                 lastJsonMessage={lastJsonMessage} />
                         </Suspense>
                     </div>
@@ -148,10 +146,10 @@ export default function Problem() {
                 :
                 <></>
         }
-        <PopupDialog 
-			open={dialogRequireLoginOpenState} 
-			setPopupDialogOpenState={setDialogRequireLoginOpenState} 
-			text="Please login first." 
-			onClose={() => navigate("/login")} />
+        <PopupDialog
+            open={dialogRequireLoginOpenState}
+            setPopupDialogOpenState={setDialogRequireLoginOpenState}
+            text="Please login first."
+            onClose={() => navigate("/login")} />
     </div>
 }

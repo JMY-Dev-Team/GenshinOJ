@@ -8,11 +8,9 @@ import {
 import NavBar from "./Navbar";
 
 import "../css/style.css";
-import { useState } from "react";
 import useWebSocket from "react-use-websocket";
 
 export default function Root() {
-    const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
     const {
         sendJsonMessage,
         lastJsonMessage,

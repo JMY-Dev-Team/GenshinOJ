@@ -8,10 +8,7 @@ import {
     DialogActions,
 } from "@fluentui/react-components";
 
-import { useNavigate } from "react-router-dom";
-
 export default function PopupDialog({ text, open, setPopupDialogOpenState, onClose }) {
-    const navigate = useNavigate();
     return <Dialog modalType="alert" open={open} onOpenChange={(event, data) => setPopupDialogOpenState(data.open)}>
         <DialogSurface>
             <DialogBody>

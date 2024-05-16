@@ -60,11 +60,11 @@ export function getProperty(obj: unknown, key: string) {
     }
 }
 
-function isObject(object) {
+function isObject(object: unknown) {
     return object != null && typeof object === 'object';
 }
 
-function deepEqual(object1, object2) {
+function deepEqual(object1: object, object2: object) {
     const keys1 = Object.keys(object1);
     const keys2 = Object.keys(object2);
 
@@ -86,6 +86,6 @@ function deepEqual(object1, object2) {
 }
 
 
-export function compareArray(a, b) {
+export function compareArray(a: unknown[], b: unknown[]) {
     return a.length === b.length && a.every((v, i) => deepEqual(v, b[i]));
 }

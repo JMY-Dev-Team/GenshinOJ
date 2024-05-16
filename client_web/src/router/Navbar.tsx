@@ -24,11 +24,11 @@ export default function NavBar() {
                     <Link to={`/problem`}>
                         <Label size="large">Problem</Label>
                     </Link>
-					<Label size="large"> | </Label>
+                    <Label size="large"> | </Label>
                     <Link to={`/chat`}>
                         <Label size="large">Chat</Label>
                     </Link>
-					<Label size="large"> | </Label>
+                    <Label size="large"> | </Label>
                     <Link to={`/login`}>
                         <Label size="large">Sign in</Label>
                     </Link>
