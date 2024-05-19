@@ -1,10 +1,11 @@
 import "../css/style.css";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 import Editor from '@monaco-editor/react';
 import * as globals from "./Globals"
-import { Button, Spinner, Text } from "@fluentui/react-components";
+import { Body2, Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps } from "@fluentui/react-components";
 import PopupDialog from "./PopupDialog";
+import { AlignBottomFilled, AlignBottomRegular, AlignStretchHorizontalFilled, AlignStretchHorizontalRegular, AppGenericFilled, AppGenericRegular, AppsAddInRegular, ArrowRoutingRectangleMultipleRegular, DocumentTableTruck20Filled } from "@fluentui/react-icons";
 
 interface ProblemInfoFromLoader {
     problemNumber: string;
@@ -16,6 +17,29 @@ type ProblemInfoFromFetcher = {
     problem_name: string;
     problem_statement: string[];
 }
+
+const options = [
+    {
+        description: "C",
+        codeLanguage: "c",
+        submissionCodeLanguage: "c"
+    },
+    {
+        description: "C++",
+        codeLanguage: "cpp",
+        submissionCodeLanguage: "cpp"
+    },
+    {
+        description: "Java",
+        codeLanguage: "java",
+        submissionCodeLanguage: "java"
+    },
+    {
+        description: "Python",
+        codeLanguage: "python",
+        submissionCodeLanguage: "py"
+    }
+];
 
 function ProblemInfoFetcher({ lastJsonMessage, setProblemInfo, requestKey }: {
     lastJsonMessage: unknown;
@@ -123,14 +147,35 @@ function SubmissionIdFetcher({ lastJsonMessage, requestKey, setSubmissionId, set
     return <div></div>;
 }
 
+function DifficultyShower({ difficulty }: {
+    difficulty: number;
+}) {
+    if (difficulty == 0)
+        return <Tag appearance="outline" icon={<AlignBottomRegular style={{ fontSize: "0.8em" }} />} style={{ color: "#999999" }}>Unknown</Tag>;
+    if (difficulty == 1)
+        return <Tag appearance="outline" icon={<AlignBottomFilled style={{ fontSize: "0.8em" }} />} style={{ color: "#DA3737" }}>Beginner</Tag>;
+    if (difficulty == 2)
+        return <Tag appearance="outline" icon={<AlignStretchHorizontalRegular style={{ fontSize: "0.8em" }} />} style={{ color: "#CC7700" }}>Primary</Tag>;
+    if (difficulty == 3)
+        return <Tag appearance="outline" icon={<AlignStretchHorizontalFilled style={{ fontSize: "0.8em" }} />} style={{ color: "#FDDB10" }}>Junior</Tag>;
+    if (difficulty == 4)
+        return <Tag appearance="outline" icon={<AppGenericRegular style={{ fontSize: "0.8em" }} />} style={{ color: "#3AAF00" }}>Senior</Tag>;
+    if (difficulty == 5)
+        return <Tag appearance="outline" icon={<AppGenericFilled style={{ fontSize: "0.8em" }} />} style={{ color: "#2744C2" }}>Advanced</Tag>;
+    if (difficulty == 6)
+        return <Tag appearance="outline" icon={<AppsAddInRegular style={{ fontSize: "0.8em" }} />} style={{ color: "#773388" }}>Hard</Tag>;
+    if (difficulty == 7)
+        return <Tag appearance="outline" icon={<ArrowRoutingRectangleMultipleRegular style={{ fontSize: "0.8em" }} />} style={{ color: "#1C1C3C" }}>Grand</Tag>;
+}
+
 export default function ProblemMain() {
     const { problemNumber } = (useLoaderData() as ProblemInfoFromLoader);
     const [, setWebsocketMessageHistory] = useState([]);
     const [submissionCode, setSubmissionCode] = useState("");
     const [submissionId, setSubmissionId] = useState(-1);
     // TODO(JackMerryYoung): Add Multi-language support (Add a Dropdown Component provided to select the language of code.)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [submissionCodeLanguage, setSubmissionCodeLanguage] = useState("cpp")
+    const [codeLanguage, setCodeLanguage] = useState("cpp")
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [problemInfo, setProblemInfo] = useState({} as ProblemInfoFromFetcher);
     const [requestKey, setRequestKey] = useState("");
@@ -175,30 +220,48 @@ export default function ProblemMain() {
     }, [handleLoadProblemInfo]);
 
     return <>
-        <h2>Problem Statement</h2>
-        {
-            problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement
-                ?
-                (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement, index) => (
-                    <Text as="p" key={index}>{statement}</Text>
-                )
-                )
-                :
-                <></>
-        }
+        <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
+            {
+                problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement
+                    ?
+                    <>
+                        <Title3>
+                            P{(problemInfo as ProblemInfoFromFetcher).problem_number} - {(problemInfo as ProblemInfoFromFetcher).problem_name}
+                        </Title3>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                        <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
+                        <div style={{ display: "block", marginLeft: "1em" }}>
+                            <Subtitle1>Problem Statement</Subtitle1>
+                            <br />
+                            <div style={{ textIndent: "1em" }}>
+                                {
+                                    (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement, index) => (
+                                        <Body2 key={index}>{statement}</Body2>
+                                    ))
+                                }
+                            </div>
+                            <br />
+                            <Subtitle1>Submit Code</Subtitle1>
+                            <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} />
+                            <br />
+                            <Editor
+                                height="500px"
+                                language={codeLanguage}
+                                onChange={(code,) => { setSubmissionCode((code === undefined) ? "" : code); }}
+                                loading={<Spinner delay={200} />} />
+                            <div style={{ alignItems: "center", justifyContent: "center", display: "flex" }}>
+                                <Button appearance="primary" onClick={() => { setRequestKey(handleClickSubmitCode); }}>Submit</Button>
+                            </div>
+                        </div>
+                    </>
+                    :
+                    <></>
+            }
+        </div>
         <ProblemInfoFetcher
             lastJsonMessage={lastJsonMessage}
             setProblemInfo={setProblemInfo}
             requestKey={requestKey} />
-        <br />
-        <h2>Submit Code</h2>
-        <Suspense fallback={<Spinner />}>
-            <Editor
-                height="70%"
-                defaultLanguage="cpp"
-                onChange={(code,) => { setSubmissionCode((code === undefined) ? "" : code); }} />
-        </Suspense>
-        <Button appearance="primary" onClick={() => { setRequestKey(handleClickSubmitCode); }}>Submit</Button>
         <SubmissionIdFetcher
             lastJsonMessage={lastJsonMessage}
             setSubmissionId={setSubmissionId}
@@ -210,4 +273,27 @@ export default function ProblemMain() {
             text="Submit Successfully. Navigating to your submission..."
             onClose={() => { navigate("/submission/" + submissionId); }} />
     </>;
+}
+
+function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, ...props }: {
+    setCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
+    setSubmissionCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
+    props: Partial<DropdownProps>;
+}) {
+    const [, setSelectedOptions] = useState(["cpp cpp"]);
+    const handleOptionSelect: (typeof props)["onOptionSelect"] = (ev, data) => {
+        setSelectedOptions(data.selectedOptions);
+        setCodeLanguage(data.optionValue?.split(' ')[1]);
+        setSubmissionCodeLanguage(data.optionValue?.split(' ')[0]);
+    };
+
+    return (
+        <div>
+            <Dropdown placeholder="Code Language" onOptionSelect={handleOptionSelect} defaultValue="C++" defaultSelectedOptions={["cpp cpp"]}>
+                {options.map((option) => (
+                    <Option value={option.submissionCodeLanguage + ' ' + option.codeLanguage}>{option.description}</Option>
+                ))}
+            </Dropdown>
+        </div>
+    );
 }

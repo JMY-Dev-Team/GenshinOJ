@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 import * as globals from "./Globals"
 import PopupDialog from "./PopupDialog";
+import { CheckmarkCircleRegular, ErrorCircleRegular } from "@fluentui/react-icons";
+import { Spinner, Tag } from "@fluentui/react-components";
 
 interface SubmissionInfoFromLoader {
     submissionId: string;
@@ -58,7 +60,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
 
 export default function Submission() {
     const { submissionId } = (useLoaderData() as SubmissionInfoFromLoader);
-    const [ submissionResult, setSubmissionResult ] = useState("Pending...");
+    const [submissionResult, setSubmissionResult] = useState("Pending...");
     const [, setWebsocketMessageHistory] = useState([]);
     const { lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
@@ -73,17 +75,36 @@ export default function Submission() {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
     }, [lastJsonMessage]);
 
-    return <div>
-        <p>{submissionResult}</p>
+    return <div style={{ display: "inline", padding: "4px" }}>
+        {
+            submissionResult === "Pending..."
+                ?
+                <Spinner size="tiny" label={submissionResult} />
+                :
+                (
+                    submissionResult === "Accepted"
+                        ?
+                        <Tag appearance="outline" icon={<CheckmarkCircleRegular style={{ fontSize: "1.2em", color: "#3AAF00" }} />}>Accepted</Tag>
+                        :
+                        (
+                            submissionResult === "Compile Error"
+                                ?
+                                <Tag appearance="outline" icon={<ErrorCircleRegular style={{ fontSize: "1.2em", color: "#FDDB10" }} />}>Compile Error</Tag>
+                                :
+                                <Tag appearance="outline" icon={<ErrorCircleRegular style={{ fontSize: "1.2em", color: "#DA3737" }} />}>Wrong Answer</Tag>
+                        )
+
+                )
+        }
         <PopupDialog
             open={dialogRequireLoginOpenState}
             setPopupDialogOpenState={setDialogRequireLoginOpenState}
             text="Please login first."
             onClose={() => navigate("/login")} />
-        <SubmissionStatusFetcher 
+        <SubmissionStatusFetcher
             submissionId={submissionId}
             lastJsonMessage={lastJsonMessage}
             setSubmissionResult={setSubmissionResult}
-            />
+        />
     </div>;
 }
