@@ -174,8 +174,9 @@ class judge:
                             'reasons': reasons
                         }
 
-                    response = judgment_result
+                    response = dict()
                     response['type'] = 'submission_result'
+                    response['content'] = judgment_result
                     await judgment['websocket_protocol'].send(
                         json.dumps(response))
                     response.clear()

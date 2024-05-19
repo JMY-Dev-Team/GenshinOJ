@@ -1,4 +1,6 @@
-import json, asyncio
+import json
+
+import asyncio, websockets
 
 import server
 
@@ -29,7 +31,12 @@ class chat_server:
                         'content': chat_messages['messages'],
                     }
                     
-                    await self.message_box[chat_server_user_to]['websocket_protocol'].send(json.dumps(response));
+                    try:
+                        await self.message_box[chat_server_user_to]['websocket_protocol'].send(json.dumps(response))
+                    except websockets.exceptions.ConnectionClosed:
+                        del self.message_box[chat_server_user_to]
+                    except Exception as e:
+                        raise e
                 
                 self.message_box[chat_server_user_to]['message_queue'].clear()
             

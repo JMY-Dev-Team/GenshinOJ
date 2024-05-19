@@ -3,18 +3,35 @@ import { useCallback, useEffect, useState } from "react";
 import { useLoaderData, useOutletContext } from "react-router-dom";
 import * as globals from "./Globals"
 
-function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername, lastJsonMessage }) {
+function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername, lastJsonMessage }: {
+    chatMessageList: string[];
+    setChatMessageList: React.Dispatch<React.SetStateAction<string[]>>;
+    fromUsername: string;
+    lastJsonMessage: unknown;
+}) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
 
     useEffect(() => {
-        if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage));
+        if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
     }, [lastJsonMessage]);
 
     useEffect(() => {
-        let newChatMessageList = [], changed = false;
+        let changed = false;
+        const newChatMessageList: string[] = [];
         const _websocketMessageHistory = websocketMessageHistory;
-        _websocketMessageHistory.map((message, index) => {
-            if (message && 'type' in message && 'from' in message && 'content' in message) {
+        _websocketMessageHistory.map((_message, index) => {
+            interface ChatMessage {
+                type: string;
+                from: string;
+                content: string;
+            }
+
+            function isChatMessage(x: object) {
+                return 'type' in x && 'from' in x && 'content' in x;
+            }
+
+            if (_message && isChatMessage(_message)) {
+                const message = _message as ChatMessage;
                 console.log(message);
                 if (message.type === "chat_message" && message.from === fromUsername) {
                     changed = true;
@@ -26,20 +43,24 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
 
         if (changed) setChatMessageList(chatMessageList.concat(newChatMessageList));
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, fromUsername]);
+    }, [websocketMessageHistory, fromUsername, chatMessageList, setChatMessageList]);
 
     return <div></div>;
 }
 
+interface ChatInfo {
+    toUsername: string;
+}
+
 export default function ChatMainUser() {
-    const { toUsername } = useLoaderData();
-    const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
-    const { sendJsonMessage, lastJsonMessage } = useOutletContext();
+    const { toUsername } = (useLoaderData() as ChatInfo);
+    const [, setWebsocketMessageHistory] = useState([]);
+    const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [chatMessageList, setChatMessageList] = useState([]);
     const [chatMessageToSend, setChatMessageToSend] = useState("");
 
     useEffect(() => {
-        if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage));
+        if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
     }, [lastJsonMessage]);
 
     const handleClickSendChatMessage = useCallback(() => {
@@ -57,7 +78,7 @@ export default function ChatMainUser() {
 
         setChatMessageToSend("");
         return _requestKey;
-    }, [toUsername, chatMessageToSend]);
+    }, [toUsername, chatMessageToSend, sendJsonMessage]);
 
     return <>
         <ul>
@@ -72,8 +93,8 @@ export default function ChatMainUser() {
         </form>
         <ChatMessageFetcher
             chatMessageList={chatMessageList}
-            setChatMessageList={setChatMessageList}
-            fromUsername={toUsername}
+            setChatMessageList={setChatMessageList as React.Dispatch<React.SetStateAction<string[]>>}
+            fromUsername={toUsername as string}
             lastJsonMessage={lastJsonMessage} />
     </>;
 }
