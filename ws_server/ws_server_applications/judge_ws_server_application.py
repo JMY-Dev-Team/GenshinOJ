@@ -88,6 +88,22 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 'websocket_protocol':
                 websocket_protocol
             })
+        
+        response = {
+            'type': 'submission_id',
+            'content': {
+                'submission_id': self.ws_server_instance.server_instance.get_module_instance(
+                    'judge').now_submission_id,
+                'request_key': content['request_key'],
+            }
+        }
+        
+        try:
+            await websocket_protocol.send(json.dumps(response))
+        except websockets.exceptions.ConnectionClosed:
+            pass
+
+        response.clear()
     
     async def on_problem_statement(
             self,
@@ -95,14 +111,16 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             content: dict):
         response = dict()
         response['type'] = 'problem_statement'
+        response['content'] = dict()
         try:
             with open(
                     self.ws_server_instance.server_instance.
                     get_module_instance('judge').
                     get_problem_statement_json_path(content['problem_number']),
                     'r') as problem_statement_json_file:
-                response.update(json.load(problem_statement_json_file))
+                response['content'].update(json.load(problem_statement_json_file))
 
+            response['content'].update({'request_key': content['request_key']})
             await websocket_protocol.send(json.dumps(response))
             response.clear()
         except FileNotFoundError as e:
@@ -110,15 +128,17 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                     get_module_instance('judge').
                     get_problem_statement_json_path(content['problem_number'])),
                      ws_server.ws_server_log_level.LEVEL_ERROR)
-            response.update({
-                "problem_number":
+            response['content'].update({
+                'problem_number':
                 -1,
-                "difficulty":
+                'difficulty':
                 -1,
-                "problem_name":
-                "Problem Not Found",
-                "problem_statement":
-                ["You tried to request a problem not existed."]
+                'problem_name':
+                'Problem Not Found',
+                'problem_statement':
+                ['You tried to request a problem not existed.'],
+                'request_key':
+                content['request_key']
             })
             await websocket_protocol.send(json.dumps(response))
             response.clear()
@@ -132,14 +152,15 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
 
         response = dict()
         response['type'] = 'problem_set'
-        response['problem_set'] = []
+        response['content'] = dict()
+        response['content']['request_key'] = content['request_key']
         try:
             with open(
                     self.ws_server_instance.server_instance.
                     get_module_instance(
                         'judge').get_problem_set_json_path(),
                     'r') as problem_set_json_file:
-                response['problem_set'] = json.load(
+                response['content']['problem_set'] = json.load(
                     problem_set_json_file)['problem_set']
         except:
             self.log('problem_set.json({}) is not found!'.format(self.ws_server_instance.server_instance.
@@ -149,3 +170,5 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
 
         await websocket_protocol.send(json.dumps(response))
         response.clear()
+    
+    # async def 

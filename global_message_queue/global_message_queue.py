@@ -30,9 +30,6 @@ class global_message_queue:
 
     def push_message(self, to_module_id: str, message: dict) -> bool:
         self.message_queue[to_module_id].append(message)
-
-    def get_compiler_root_path(self):
-        return '{}/compiler'.format(os.getcwd())
     
     async def execute_command(self, command: str, timeout: int | float | None = None):
         try:
@@ -44,6 +41,7 @@ class global_message_queue:
 
                 stdout, stderr = await proc.communicate()
                 print(f'{command!r} exited with {proc.returncode}, pid={proc.pid}')
+                return proc.returncode
         except TimeoutError:
             raise TimeoutError
         except Exception as e:
