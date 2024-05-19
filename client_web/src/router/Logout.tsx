@@ -1,10 +1,24 @@
 import * as globals from "./Globals.ts";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
+import { useOutletContext } from "react-router-dom";
 
 export default function Logout() {
+	const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
+	const handleQuit = useCallback(() => {
+		const request_key = globals.randomUUID();
+		sendJsonMessage({
+            type: "quit",
+            content: {
+                username: globals.fetchData("loginUsername"),
+                session_token: globals.fetchData("sessionToken"),
+                request_key: request_key
+            }
+        });
+		globals.clearCache("@all");
+	}, [sendJsonMessage]);
     useEffect(() => {
-        globals.clearCache("@all");
-    }, [])
+		handleQuit();
+    }, [handleQuit])
 
     return <></>;
 }

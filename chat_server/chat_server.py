@@ -1,4 +1,4 @@
-import json
+import json, logging
 
 import asyncio, websockets
 
@@ -42,11 +42,11 @@ class chat_server:
                     try:
                         self.message_box[chat_server_user_to]['message_queue'].clear()
                     except KeyError as e:
-                        self.log(
+                        logging.warning(
                             'The user {} have been offline already.'
                             .format(chat_server_user_to))
                 except websockets.exceptions.ConnectionClosed:
-                    self.log('The user {} have been offline already.'.format(chat_server_user_to))
+                    logging.warning('The user {} have been offline already.'.format(chat_server_user_to))
                     del self.message_box[chat_server_user_to]
             
             await asyncio.sleep(0)

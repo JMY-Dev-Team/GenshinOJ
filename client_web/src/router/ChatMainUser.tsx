@@ -87,13 +87,15 @@ export default function ChatMainUser() {
         return _requestKey;
     }, [toUsername, chatMessageToSend, sendJsonMessage, chatMessageList]);
 
-    return <>
-        <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
-            {
-                chatMessageList.map((message) => <div style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
-            }
-        </div>
-        <div style={{ display: "flex", flexDirection: "row", width: "fill" }}>
+    return <div style={{ display: "block" }}>
+		<div style={{overflowX: "auto", height: "200px"}}>
+			<div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
+				{
+					chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
+				}
+			</div>
+		</div>
+        <div style={{ display: "flex", flexDirection: "row", width: "fill", alignItems: "end"}}>
             <form>
                 <Field label="Input to chat" style={{ maxWidth: "300px", flex: 3 }}>
                     <Input type="text" id="chat-input" value={chatMessageToSend} onChange={(props) => setChatMessageToSend(props.target.value)} />
@@ -106,7 +108,7 @@ export default function ChatMainUser() {
             setChatMessageList={setChatMessageList as React.Dispatch<React.SetStateAction<ChatMessage[]>>}
             fromUsername={toUsername as string}
             lastJsonMessage={lastJsonMessage} />
-    </>;
+    </div>;
 }
 
 import "../css/chatBubble.css"
