@@ -18,7 +18,7 @@ class server:
         self.working_loads: dict = dict()
         self.MODULE_CONFIG_JSON_PATH: str = os.getcwd() + '/module_config.json'
         self.tasks: list = []
-        asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+        # asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
         asyncio.get_event_loop().run_until_complete(self.async_main())
 
     def __del__(self) -> None:

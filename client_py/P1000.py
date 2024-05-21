@@ -1,1 +1,1 @@
-print('Genshin Impact, launch!')
+print("Genshin Impact, launch!")
