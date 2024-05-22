@@ -18,7 +18,7 @@ class server:
         self.working_loads: dict = dict()
         self.MODULE_CONFIG_JSON_PATH: str = os.getcwd() + '/module_config.json'
         self.tasks: list = []
-        asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+        # asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
         asyncio.get_event_loop().run_until_complete(self.async_main())
 
     def __del__(self) -> None:
@@ -38,7 +38,6 @@ class server:
                 dependencies_satisfied_flag = True
                 for dependency in working_load_config['dependencies']:
                     print('Checking dependency: {}'.format(dependency))
-                    # print(self.working_loads[dependency])
                     if not dependency in self.working_loads:
                         dependencies_satisfied_flag = False
                         break
@@ -50,7 +49,6 @@ class server:
                                 working_load_config['id']))
                     continue
 
-                # self.get_module_instance('global_message_queue')
                 print('Loaded {} (id: {}).'.format(working_load_config['name'],
                                                    working_load_config['id']))
                 self.working_loads[
@@ -64,7 +62,6 @@ class server:
         asyncio.get_event_loop().run_forever()
 
     def get_module_instance(self, module_id: str) -> typing.Any:
-        # print('Now working loads: {}'.format(self.working_loads))
         return self.working_loads[module_id]['instance']
 
 
