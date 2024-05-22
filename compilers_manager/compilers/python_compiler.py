@@ -28,7 +28,7 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
     def __del__(self) -> None:
         print("Python Compiler unloaded.")
 
-    def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
         if language == "py":
             try:
                 py_compile.compile(compile_file_path, compile_binary_path)
@@ -44,7 +44,7 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
         if language == "py":
             try:
                 os.remove(compile_file_path)
@@ -74,6 +74,14 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
     def get_binary_extension(self, language: str) -> str:
         if language == "py":
             return ".pyc"
+        else:
+            raise LanguageNotSupportedException(
+                "The language {} is not supported.".format(language)
+            )
+    
+    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+        if language == "py":
+            return "python {}.pyc".format(compile_file_path)
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)

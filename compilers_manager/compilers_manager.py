@@ -4,7 +4,6 @@ import server
 
 import compilers_manager.compilers.base_compiler
 
-# gc.disable()
 
 if platform.system() == "Windows":
     COMPILERS_CONFIG_JSON_PATH = (
@@ -48,7 +47,7 @@ class compilers_manager:
     def __del__(self) -> None:
         print("Compilers Manger unloaded.")
 
-    def get_file_path_by_compile_file_path_and_language(
+    def get_file_path_by_language_and_compile_file_path(
         self, language: str, compile_file_path: str
     ) -> str:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
@@ -58,9 +57,9 @@ class compilers_manager:
                     language
                 )
 
-        raise NotImplementedError("Unsupported language.")
+        raise NotImplementedError("Unsupported language {}.".format(language))
 
-    def get_binary_path_by_compile_file_path_and_language(
+    def get_binary_path_by_language_and_compile_file_path(
         self, language: str, compile_file_path: str
     ) -> str:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
@@ -70,30 +69,44 @@ class compilers_manager:
                     language
                 )
 
-        raise NotImplementedError("Unsupported language.")
+        raise NotImplementedError("Unsupported language {}.".format(language))
+        
+    def get_execute_binary_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> str:
+        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
+        for compiler_instance in self.compilers_instance:
+            if language in compiler_instance.language_bind:
+                return compiler_instance.get_execute_binary_command_by_language_and_compile_file_path(language, compile_file_path)
 
-    def compile_file_by_compile_file_name_and_language(
-        self, language: str, compile_file_name: str
+        raise NotImplementedError("Unsupported language {}.".format(language))
+
+    async def compile_file_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
     ) -> bool:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return compiler_instance.on_compile(
+                return_code = await compiler_instance.on_compile(
                     language,
-                    compile_file_name
+                    self.get_file_path_by_language_and_compile_file_path(language, compile_file_path),
+                    self.get_binary_path_by_language_and_compile_file_path(language, compile_file_path),
                 )
+                return return_code
 
-        raise NotImplementedError("Unsupported language.")
+        raise NotImplementedError("Unsupported language {}.".format(language))
     
-    def cleanup_file_by_compile_file_name_and_language(
-        self, language: str, compile_file_name: str
+    async def cleanup_file_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
     ) -> bool:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return compiler_instance.on_cleanup(
+                return_code = await compiler_instance.on_cleanup(
                     language,
-                    compile_file_name
+                    self.get_file_path_by_language_and_compile_file_path(language, compile_file_path),
+                    self.get_binary_path_by_language_and_compile_file_path(language, compile_file_path),
                 )
+                return return_code
 
-        raise NotImplementedError("Unsupported language.")
+        raise NotImplementedError("Unsupported language {}.".format(language))

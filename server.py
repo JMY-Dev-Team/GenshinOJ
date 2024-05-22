@@ -38,7 +38,6 @@ class server:
                 dependencies_satisfied_flag = True
                 for dependency in working_load_config['dependencies']:
                     print('Checking dependency: {}'.format(dependency))
-                    # print(self.working_loads[dependency])
                     if not dependency in self.working_loads:
                         dependencies_satisfied_flag = False
                         break
@@ -50,7 +49,6 @@ class server:
                                 working_load_config['id']))
                     continue
 
-                # self.get_module_instance('global_message_queue')
                 print('Loaded {} (id: {}).'.format(working_load_config['name'],
                                                    working_load_config['id']))
                 self.working_loads[
@@ -64,7 +62,6 @@ class server:
         asyncio.get_event_loop().run_forever()
 
     def get_module_instance(self, module_id: str) -> typing.Any:
-        # print('Now working loads: {}'.format(self.working_loads))
         return self.working_loads[module_id]['instance']
 
 

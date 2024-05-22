@@ -322,7 +322,12 @@ class simple_ws_server_application(ws_server_application_protocol):
                 )
             )
             try:
-                del self.ws_server_instance.sessions[content["session_token"]]
+                if content["username"] == self.ws_server_instance.server_instance.get_module_instance(
+                    "ws_server"
+                ).sessions[content["session_token"]]:
+                    del self.ws_server_instance.sessions[content["session_token"]]
+                else:
+                    self.log("The user {} wanted to quit with a fake session token.".format(content["username"]))
             except KeyError as e:
                 logging.exception(e)
             except AttributeError as e:

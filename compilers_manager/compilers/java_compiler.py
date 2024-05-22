@@ -2,8 +2,6 @@ import os
 
 import compilers_manager.compilers.base_compiler
 
-# TODO(JMY): Add Java support
-
 
 class LanguageNotSupportedException(Exception):
     pass
@@ -27,7 +25,7 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
     def __del__(self) -> None:
         print("Java Compiler unloaded.")
 
-    def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
         if language == "java":
             try:
                 os.system("javac {}".format(compile_file_path, compile_binary_path))
@@ -45,8 +43,8 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
-        if language == "c" or language == "cpp":
+    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+        if language == "java":
             try:
                 os.remove(compile_file_path)
                 os.remove(compile_binary_path)
@@ -74,7 +72,15 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
     def get_binary_extension(self, language: str) -> str:
         if language == "java":
-            return ".javac"
+            return ".javaw"
+        else:
+            raise LanguageNotSupportedException(
+                "The language {} is not supported.".format(language)
+            )
+
+    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+        if language == "java":
+            return "java {}.javaw".format(compile_file_path)
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)

@@ -40,11 +40,11 @@ class judge:
         if platform.system() == "Linux":
             return os.getcwd() + "/problem/problem_set.json"
     
-    def get_submission_file_name_with_absolute_path(self, submission_id):
+    def get_submission_file_name_with_absolute_path_by_submission_id(self, submission_id):
         if platform.system() == 'Windows':
-            return os.getcwd() + "\\submit\\submission_" + submission_id
+            return os.getcwd() + "\\submit\\submission_" + str(submission_id)
         if platform.system() == 'Linux':
-            return os.getcwd() + "/submit/submission_" + submission_id
+            return os.getcwd() + "/submit/submission_" + str(submission_id)
 
     async def judge_loop(self) -> None:
         await asyncio.sleep(0)
@@ -55,24 +55,28 @@ class judge:
                     submission_id = judgment["submission_id"]
                     submission_language = judgment["language"]
                     submission_problem_number = judgment["problem_number"]  # Problem number
-
+                    submission_file_name = self.get_submission_file_name_with_absolute_path_by_submission_id(submission_id)
+                    print("Judging Submission {} (language: {}, problem number: {}).".format(submission_id, submission_language, submission_problem_number))
+                    
                     # Compile Part
 
-                    exit_code = self.server_instance.get_module_instance(
+                    exit_code = await self.server_instance.get_module_instance(
                         "compilers_manager"
-                    ).compile_file_by_compile_file_name_and_language(
-                        submission_language, "submission_" + str(submission_id)
+                    ).compile_file_by_language_and_compile_file_path(
+                        submission_language, 
+                        submission_file_name,
                     )
-                    if exit_code != 0:
+                    if exit_code == False:
                         # Delete source code
-                        self.server_instance.get_module_instance(
+                        await self.server_instance.get_module_instance(
                             "compilers_manager"
-                        ).cleanup_file_by_compile_file_name_and_language(
-                            submission_language, "submission_" + str(submission_id)
+                        ).cleanup_file_by_language_and_compile_file_path(
+                            submission_language, 
+                            submission_file_name,
                         )
 
                         judgment_result = {
-                            "submission_id": judgment["submission_id"],
+                            "submission_id": submission_id,
                             "result": "Compile Error",
                             "score": 0,
                         }
@@ -161,9 +165,9 @@ class judge:
                                     '{} < "{}" > "{}"'.format(
                                         self.server_instance.get_module_instance(
                                             "compilers_manager"
-                                        ).get_binary_path_by_compile_file_path_and_language(
-                                            self.get_submission_file_name_with_absolute_path(submission_id),
+                                        ).get_execute_binary_command_by_language_and_compile_file_path(
                                             submission_language,
+                                            submission_file_name,
                                         ),
                                         testcase_input_path,
                                         testcase_output_path,
@@ -240,57 +244,11 @@ class judge:
                             )
                         )
 
-                    # Delete source code
-                    if platform.system() == "Windows":
-                        await self.server_instance.get_module_instance(
-                            "global_message_queue"
-                        ).execute_command(
-                            'del "{}"'.format(
-                                self.server_instance.get_module_instance(
-                                    "compilers_manager"
-                                ).get_file_path_by_filename_and_language(
-                                    "submission_" + str(submission_id), submission_language
-                                )
-                            )
-                        )
-                    if platform.system() == "Linux":
-                        await self.server_instance.get_module_instance(
-                            "global_message_queue"
-                        ).execute_command(
-                            'rm -rf "{}"'.format(
-                                self.server_instance.get_module_instance(
-                                    "compilers_manager"
-                                ).get_file_path_by_filename_and_language(
-                                    "submission_" + str(submission_id), submission_language
-                                )
-                            )
-                        )
-
-                    # Delete binary
-                    if platform.system() == "Windows":
-                        await self.server_instance.get_module_instance(
-                            "global_message_queue"
-                        ).execute_command(
-                            'del "{}"'.format(
-                                self.server_instance.get_module_instance(
-                                    "compilers_manager"
-                                ).get_binary_path_by_filename_and_language(
-                                    "submission_" + str(submission_id), submission_language
-                                )
-                            )
-                        )
-                    if platform.system() == "Linux":
-                        await self.server_instance.get_module_instance(
-                            "global_message_queue"
-                        ).execute_command(
-                            'rm -rf "{}"'.format(
-                                self.server_instance.get_module_instance(
-                                    "compilers_manager"
-                                ).get_binary_path_by_filename_and_language(
-                                    "submission_" + str(submission_id), submission_language
-                                )
-                            )
-                        )
+                    # Clean-up Part
+                    await self.server_instance.get_module_instance("compilers_manager").cleanup_file_by_language_and_compile_file_path(
+                        submission_language,
+                        submission_file_name,
+                    )
                     await asyncio.sleep(0)
             except Exception as e:
                 logging.exception(e)
