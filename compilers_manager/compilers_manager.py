@@ -1,4 +1,4 @@
-import os, gc, sys, json, importlib, platform
+import os, json, importlib, platform
 
 import server
 
@@ -48,58 +48,52 @@ class compilers_manager:
     def __del__(self) -> None:
         print("Compilers Manger unloaded.")
 
-    def get_file_path_by_filename_and_language(
-        self, filename: str, language: str
+    def get_file_path_by_compile_file_path_and_language(
+        self, language: str, compile_file_path: str
     ) -> str:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                if platform.system() == "Windows":
-                    return (
-                        os.getcwd()
-                        + "\\submit\\"
-                        + filename
-                        + compiler_instance.get_file_appendix(language)
-                    )
-                if platform.system() == "Linux":
-                    return (
-                        os.getcwd()
-                        + "/submit/"
-                        + filename
-                        + compiler_instance.get_file_appendix(language)
-                    )
+                return compile_file_path + compiler_instance.get_file_extension(
+                    language
+                )
 
         raise NotImplementedError("Unsupported language.")
 
-    def get_binary_path_by_filename_and_language(
-        self, filename: str, language: str
+    def get_binary_path_by_compile_file_path_and_language(
+        self, language: str, compile_file_path: str
     ) -> str:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                if platform.system() == "Windows":
-                    return os.getcwd() + "\\submit\\" + filename + ".o"
-                if platform.system() == "Linux":
-                    return os.getcwd() + "/submit/" + filename + ".o"
+                return compile_file_path + compiler_instance.get_binary_extension(
+                    language
+                )
 
         raise NotImplementedError("Unsupported language.")
 
-    def get_compile_file_command_by_filename_and_language(
-        self, filename: str, language: str
-    ) -> str:
+    def compile_file_by_compile_file_name_and_language(
+        self, language: str, compile_file_name: str
+    ) -> bool:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return compiler_instance.get_compile_file_command(filename, language)
+                return compiler_instance.on_compile(
+                    language,
+                    compile_file_name
+                )
 
         raise NotImplementedError("Unsupported language.")
-
-    def get_binary_execute_command_by_filename_and_language(
-        self, filename: str, language: str
-    ) -> str:
+    
+    def cleanup_file_by_compile_file_name_and_language(
+        self, language: str, compile_file_name: str
+    ) -> bool:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return compiler_instance.get_binary_execute_command(filename, language)
+                return compiler_instance.on_cleanup(
+                    language,
+                    compile_file_name
+                )
 
         raise NotImplementedError("Unsupported language.")

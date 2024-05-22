@@ -1,4 +1,4 @@
-import os
+import os, py_compile
 
 import compilers_manager.compilers.base_compiler
 
@@ -14,18 +14,25 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
     def __init__(self, unload_timeout) -> None:
         print("Python Compiler loaded.")
+        __slots__ = (
+            "__init__",
+            "__del__",
+            "on_compile",
+            "on_cleanup",
+            "get_file_extension",
+            "get_binary_extension",
+            "language_bind",
+        )
         self.unload_timeout = unload_timeout
 
     def __del__(self) -> None:
         print("Python Compiler unloaded.")
 
     def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
-        if language == "c" or language == "cpp":
+        if language == "py":
             try:
-                os.system("gcc {} -o {}".format(compile_file_path, compile_binary_path))
-            except OSError:
-                pass
-            except:
+                py_compile.compile(compile_file_path, compile_binary_path)
+            except py_compile.PyCompileError:
                 return False
 
             if not os.path.exists(compile_binary_path):
@@ -38,7 +45,7 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             )
 
     def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
-        if language == "c" or language == "cpp":
+        if language == "py":
             try:
                 os.remove(compile_file_path)
                 os.remove(compile_binary_path)
@@ -56,33 +63,17 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    def get_file_appendix(self, language: str) -> str:
-        if language == "c" or language == "cpp":
-            return language
+    def get_file_extension(self, language: str) -> str:
+        if language == "py":
+            return ".py"
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
             )
 
-    def get_binary_appendix(self, language: str) -> str:
-        if language == "c" or language == "cpp":
-            return "o"
-        else:
-            raise LanguageNotSupportedException(
-                "The language {} is not supported.".format(language)
-            )
-
-    def get_compile_file_command(self, filename: str, language: str) -> str:
-        if language == "c" or language == "cpp":
-            return "gcc {}.cpp -o {}.o".format(filename, filename)
-        else:
-            raise LanguageNotSupportedException(
-                "The language {} is not supported.".format(language)
-            )
-
-    def get_binary_execute_command(self, filename: str, language: str) -> str:
-        if language == "c" or language == "cpp":
-            return filename
+    def get_binary_extension(self, language: str) -> str:
+        if language == "py":
+            return ".pyc"
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)

@@ -1,4 +1,4 @@
-import os, platform
+import os
 
 import compilers_manager.compilers.base_compiler
 
@@ -16,8 +16,8 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             "__del__",
             "on_compile",
             "on_cleanup",
-            "get_file_appendix",
-            "get_binary_appendix",
+            "get_file_extension",
+            "get_binary_extension",
             "language_bind",
         )
         self.unload_timeout = unload_timeout
@@ -26,18 +26,10 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         print("C / C++ Compiler unloaded.")
 
     def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
-        if language == "c" or language == "cpp":
-            try:
-                os.system("gcc {} -o {}".format(compile_file_path, compile_binary_path))
-            except OSError:
-                pass
-            except:
-                return False
-
-            if not os.path.exists(compile_binary_path):
-                return False
-
-            return True
+        if language == "c":
+            os.system("gcc {} -o {}".format(compile_file_path, compile_binary_path))
+        elif language == "cpp":
+            os.system("g++ {} -o {}".format(compile_file_path, compile_binary_path))
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
@@ -62,7 +54,7 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    def get_file_appendix(self, language: str) -> str:
+    def get_file_extension(self, language: str) -> str:
         if language == "c" or language == "cpp":
             return "." + language
         else:
@@ -70,44 +62,9 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    def get_binary_appendix(self, language: str) -> str:
+    def get_binary_extension(self, language: str) -> str:
         if language == "c" or language == "cpp":
             return ".o"
-        else:
-            raise LanguageNotSupportedException(
-                "The language {} is not supported.".format(language)
-            )
-
-    def get_compile_file_command(self, filename: str, language: str) -> str:
-        if language == "c":
-            if platform.system() == "Windows":
-                return "gcc {}\\submit\\{}.cpp -o {}\\submit\\{}.o".format(
-                    os.getcwd(), filename, os.getcwd(), filename
-                )
-            if platform.system() == "Linux":
-                return "gcc {}/submit/{}.cpp -o {}/submit/{}.o".format(
-                    os.getcwd(), filename, os.getcwd(), filename
-                )
-        if language == "cpp":
-            if platform.system() == "Windows":
-                return "g++ {}\\submit\\{}.cpp -o {}\\submit\\{}.o".format(
-                    os.getcwd(), filename, os.getcwd(), filename
-                )
-            if platform.system() == "Linux":
-                return "g++ {}/submit/{}.cpp -o {}/submit/{}.o".format(
-                    os.getcwd(), filename, os.getcwd(), filename
-                )
-        else:
-            raise LanguageNotSupportedException(
-                "The language {} is not supported.".format(language)
-            )
-
-    def get_binary_execute_command(self, filename: str, language: str) -> str:
-        if language == "c" or language == "cpp":
-            if platform.system() == "Windows":
-                return os.getcwd() + "\\submit\\" + filename + ".o"
-            if platform.system() == "Linux":
-                return os.getcwd() + "/submit/" + filename + ".o"
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
