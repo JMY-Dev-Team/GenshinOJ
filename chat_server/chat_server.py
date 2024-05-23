@@ -20,7 +20,7 @@ class chat_server:
 
     async def chat_server_main(self):
         while True:
-            for chat_server_user_to in self.message_box.keys():
+            for chat_server_user_to in list(self.message_box.keys()):
                 try:
                     if len(self.message_box[chat_server_user_to]["message_queue"]) > 0:
                         print(
