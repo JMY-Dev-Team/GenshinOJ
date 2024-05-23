@@ -25,7 +25,9 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
     def __del__(self) -> None:
         print("Java Compiler unloaded.")
 
-    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         if language == "java":
             try:
                 os.system("javac {}".format(compile_file_path, compile_binary_path))
@@ -43,7 +45,9 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_cleanup(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         if language == "java":
             try:
                 os.remove(compile_file_path)
@@ -78,7 +82,9 @@ class java_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+    def get_execute_binary_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> str:
         if language == "java":
             return "java {}.javaw".format(compile_file_path)
         else:

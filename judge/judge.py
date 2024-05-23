@@ -39,11 +39,13 @@ class judge:
             return os.getcwd() + "\\problem\\problem_set.json"
         if platform.system() == "Linux":
             return os.getcwd() + "/problem/problem_set.json"
-    
-    def get_submission_file_name_with_absolute_path_by_submission_id(self, submission_id):
-        if platform.system() == 'Windows':
+
+    def get_submission_file_name_with_absolute_path_by_submission_id(
+        self, submission_id
+    ):
+        if platform.system() == "Windows":
             return os.getcwd() + "\\submit\\submission_" + str(submission_id)
-        if platform.system() == 'Linux':
+        if platform.system() == "Linux":
             return os.getcwd() + "/submit/submission_" + str(submission_id)
 
     async def judge_loop(self) -> None:
@@ -54,16 +56,26 @@ class judge:
                 for judgment in self.judgment_queue:
                     submission_id = judgment["submission_id"]
                     submission_language = judgment["language"]
-                    submission_problem_number = judgment["problem_number"]  # Problem number
-                    submission_file_name = self.get_submission_file_name_with_absolute_path_by_submission_id(submission_id)
-                    print("Judging Submission {} (language: {}, problem number: {}).".format(submission_id, submission_language, submission_problem_number))
-                    
+                    submission_problem_number = judgment[
+                        "problem_number"
+                    ]  # Problem number
+                    submission_file_name = self.get_submission_file_name_with_absolute_path_by_submission_id(
+                        submission_id
+                    )
+                    print(
+                        "Judging Submission {} (language: {}, problem number: {}).".format(
+                            submission_id,
+                            submission_language,
+                            submission_problem_number,
+                        )
+                    )
+
                     # Compile Part
 
                     exit_code = await self.server_instance.get_module_instance(
                         "compilers_manager"
                     ).compile_file_by_language_and_compile_file_path(
-                        submission_language, 
+                        submission_language,
                         submission_file_name,
                     )
                     if exit_code == False:
@@ -71,7 +83,7 @@ class judge:
                         await self.server_instance.get_module_instance(
                             "compilers_manager"
                         ).cleanup_file_by_language_and_compile_file_path(
-                            submission_language, 
+                            submission_language,
                             submission_file_name,
                         )
 
@@ -113,7 +125,9 @@ class judge:
                             response = dict()
                             response["content"] = judgment_result
                             response["type"] = "submission_result"
-                            await judgment["websocket_protocol"].send(json.dumps(response))
+                            await judgment["websocket_protocol"].send(
+                                json.dumps(response)
+                            )
                             response.clear()
                             del judgment_result
                             print("Judged one.")
@@ -125,20 +139,26 @@ class judge:
                         for testcase in testcases:  # For each testcase
                             testcase_number = testcase["number"]
                             if platform.system() == "Windows":
-                                testcase_input_path = "{}\\problem\\{}\\input\\{}".format(
-                                    os.getcwd(),
-                                    submission_problem_number,
-                                    testcase["input"],
+                                testcase_input_path = (
+                                    "{}\\problem\\{}\\input\\{}".format(
+                                        os.getcwd(),
+                                        submission_problem_number,
+                                        testcase["input"],
+                                    )
                                 )  # Input file path
-                                testcase_answer_path = "{}\\problem\\{}\\answer\\{}".format(
-                                    os.getcwd(),
-                                    submission_problem_number,
-                                    testcase["answer"],
+                                testcase_answer_path = (
+                                    "{}\\problem\\{}\\answer\\{}".format(
+                                        os.getcwd(),
+                                        submission_problem_number,
+                                        testcase["answer"],
+                                    )
                                 )  # Answer file path
-                                testcase_output_path = "{}\\problem\\{}\\output\\{}".format(
-                                    os.getcwd(),
-                                    submission_problem_number,
-                                    "output{}.txt".format(testcase_number),
+                                testcase_output_path = (
+                                    "{}\\problem\\{}\\output\\{}".format(
+                                        os.getcwd(),
+                                        submission_problem_number,
+                                        "output{}.txt".format(testcase_number),
+                                    )
                                 )  # Output file path
                             if platform.system() == "Linux":
                                 testcase_input_path = "{}/problem/{}/input/{}".format(
@@ -175,21 +195,31 @@ class judge:
                                     1,
                                 )
                                 with open(testcase_output_path, "r") as testcase_output:
-                                    with open(testcase_answer_path, "r") as testcase_answer:
-                                        testcase_output_lines = testcase_output.readlines()
-                                        testcase_answer_lines = testcase_answer.readlines()
+                                    with open(
+                                        testcase_answer_path, "r"
+                                    ) as testcase_answer:
+                                        testcase_output_lines = (
+                                            testcase_output.readlines()
+                                        )
+                                        testcase_answer_lines = (
+                                            testcase_answer.readlines()
+                                        )
                                         if len(testcase_answer_lines) != len(
                                             testcase_output_lines
                                         ):
                                             reasons.append("Your output was too short.")
                                             testcase_AC_flag = False
                                         else:
-                                            for i in range(0, len(testcase_answer_lines)):
+                                            for i in range(
+                                                0, len(testcase_answer_lines)
+                                            ):
                                                 if (
                                                     testcase_answer_lines[i]
                                                     != testcase_output_lines[i]
                                                 ):
-                                                    reasons.append("Your output was wrong.")
+                                                    reasons.append(
+                                                        "Your output was wrong."
+                                                    )
                                                     testcase_AC_flag = False
                                                     break
                             except TimeoutError:
@@ -212,7 +242,9 @@ class judge:
                             if platform.system() == "Windows":
                                 await self.server_instance.get_module_instance(
                                     "global_message_queue"
-                                ).execute_command('del "{}"'.format(testcase_output_path))
+                                ).execute_command(
+                                    'del "{}"'.format(testcase_output_path)
+                                )
 
                         judgment_result = dict()
                         if general_AC_flag == True:
@@ -245,13 +277,15 @@ class judge:
                         )
 
                     # Clean-up Part
-                    await self.server_instance.get_module_instance("compilers_manager").cleanup_file_by_language_and_compile_file_path(
+                    await self.server_instance.get_module_instance(
+                        "compilers_manager"
+                    ).cleanup_file_by_language_and_compile_file_path(
                         submission_language,
                         submission_file_name,
                     )
                     await asyncio.sleep(0)
             except Exception as e:
                 logging.exception(e)
-            
+
             self.judgment_queue.clear()
             await asyncio.sleep(0)

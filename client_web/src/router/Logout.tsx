@@ -3,10 +3,10 @@ import { useEffect, useCallback } from "react";
 import { useOutletContext } from "react-router-dom";
 
 export default function Logout() {
-	const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
-	const handleQuit = useCallback(() => {
-		const request_key = globals.randomUUID();
-		sendJsonMessage({
+    const { sendJsonMessage } = useOutletContext<globals.WebSocketHook>();
+    const handleQuit = useCallback(() => {
+        const request_key = globals.randomUUID();
+        sendJsonMessage({
             type: "quit",
             content: {
                 username: globals.fetchData("loginUsername"),
@@ -14,10 +14,10 @@ export default function Logout() {
                 request_key: request_key
             }
         });
-		globals.clearCache("@all");
-	}, [sendJsonMessage]);
+        globals.clearCache("@all");
+    }, [sendJsonMessage]);
     useEffect(() => {
-		handleQuit();
+        handleQuit();
     }, [handleQuit])
 
     return <></>;

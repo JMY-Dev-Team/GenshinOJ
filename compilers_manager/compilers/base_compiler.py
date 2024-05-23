@@ -12,11 +12,15 @@ class base_compiler:
         pass
 
     @abc.abstractmethod
-    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         pass
 
     @abc.abstractmethod
-    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_cleanup(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         pass
 
     @abc.abstractmethod
@@ -32,5 +36,7 @@ class base_compiler:
         pass
 
     @abc.abstractmethod
-    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+    def get_execute_binary_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> str:
         pass

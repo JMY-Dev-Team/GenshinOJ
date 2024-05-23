@@ -8,6 +8,7 @@ import compilers_manager.compilers.base_compiler
 class LanguageNotSupportedException(Exception):
     pass
 
+
 async def execute_command(command: str, timeout: int | float | None = None):
     proc = await asyncio.create_subprocess_shell(
         command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -23,6 +24,7 @@ async def execute_command(command: str, timeout: int | float | None = None):
     except Exception as e:
         proc.terminate()
         raise e
+
 
 class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
@@ -42,25 +44,33 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
     def __del__(self) -> None:
         print("C / C++ Compiler unloaded.")
 
-    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         if language == "c":
             try:
-                await execute_command("gcc {} -o {}".format(compile_file_path, compile_binary_path), 30)
+                await execute_command(
+                    "gcc {} -o {}".format(compile_file_path, compile_binary_path), 30
+                )
             except:
                 return False
         elif language == "cpp":
             try:
-                await execute_command("g++ {} -o {}".format(compile_file_path, compile_binary_path), 30)
+                await execute_command(
+                    "g++ {} -o {}".format(compile_file_path, compile_binary_path), 30
+                )
             except:
                 return False
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
             )
-        
+
         return True
 
-    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_cleanup(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         if language == "c" or language == "cpp":
             try:
                 os.remove(compile_file_path)
@@ -94,8 +104,10 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
             )
-    
-    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+
+    def get_execute_binary_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> str:
         if language == "c" or language == "cpp":
             return "{}.o".format(compile_file_path)
         else:
