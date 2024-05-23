@@ -113,15 +113,14 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             }
         )
 
-        response = {
-            "type": "submission_id",
-            "content": {
-                "submission_id": now_submission_id,
-                "request_key": content["request_key"],
-            },
-        }
-
         try:
+            response = {
+                "type": "submission_id",
+                "content": {
+                    "submission_id": now_submission_id,
+                    "request_key": content["request_key"],
+                },
+            }
             await websocket_protocol.send(json.dumps(response))
         except websockets.exceptions.ConnectionClosed:
             pass

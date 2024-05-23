@@ -53,7 +53,7 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
                 type: string;
                 content: {
                     online_users: string[],
-                    request_key: string
+                    request_key: string,
                 };
             }
 

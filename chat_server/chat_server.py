@@ -30,29 +30,44 @@ class chat_server:
                     for chat_messages in self.message_box[chat_server_user_to][
                         "message_queue"
                     ]:
-                        response = {
-                            "type": "chat_message",
-                            "from": chat_messages["from"],
-                            "content": chat_messages["messages"],
-                        }
-
                         try:
+                            response = {
+                                "type": "chat_message",
+                                "from": chat_messages["from"],
+                                "content": chat_messages["messages"],
+                            }
                             await self.message_box[chat_server_user_to][
                                 "websocket_protocol"
                             ].send(json.dumps(response))
-                        except websockets.exceptions.ConnectionClosed as e:
-                            raise e
+                        except websockets.exceptions.ConnectionClosed:
+                            logging.warning(
+                                "The user {} have been offline already.".format(
+                                    chat_server_user_to
+                                )
+                            )
+                        except KeyError:
+                            logging.warning(
+                                "The user {} have been offline already.".format(
+                                    chat_server_user_to
+                                )
+                            )
                         except Exception as e:
                             raise e
 
                     try:
                         self.message_box[chat_server_user_to]["message_queue"].clear()
-                    except KeyError as e:
+                    except KeyError:
                         logging.warning(
                             "The user {} have been offline already.".format(
                                 chat_server_user_to
                             )
                         )
+                except KeyError:
+                    logging.warning(
+                        "The user {} have been offline already.".format(
+                            chat_server_user_to
+                        )
+                    )
                 except websockets.exceptions.ConnectionClosed:
                     logging.warning(
                         "The user {} have been offline already.".format(

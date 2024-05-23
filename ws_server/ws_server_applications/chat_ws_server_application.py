@@ -1,4 +1,4 @@
-import logging
+import json, logging
 import warnings
 
 import websockets
@@ -135,18 +135,53 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
                             content["from"], content["session_token"]
                         )
                     )
+                    
+                    try:
+                        response = {
+                            "type": "chat_echo",
+                            "content": {
+                                "status": 1,
+                                "messages": content["messages"],
+                            },
+                        }
+                        await websocket_protocol.send(json.dumps(response))
+                    except websockets.exceptions.ConnectionClosed:
+                        pass
+
                 except KeyError:
                     self.log(
                         "The user {} tried to send a message to whom is not online.".format(
                             content["from"]
                         )
                     )
+                    try:
+                        response = {
+                            "type": "chat_echo",
+                            "content": {
+                                "status": 0,
+                                "reason": "offline",
+                            },
+                        }
+                        await websocket_protocol.send(json.dumps(response))
+                    except websockets.exceptions.ConnectionClosed:
+                        pass
             else:
                 self.log(
                     "The user {} tried to use a fake session token.".format(
                         content["from"]
                     )
                 )
+                try:
+                    response = {
+                        "type": "chat_echo",
+                        "content": {
+                            "status": 0,
+                            "reason": "fake_token",
+                        },
+                    }
+                    await websocket_protocol.send(json.dumps(response))
+                except websockets.exceptions.ConnectionClosed:
+                    pass
         except KeyError:
             self.log(
                 "The user {} tried to use a fake session token.".format(content["from"])
