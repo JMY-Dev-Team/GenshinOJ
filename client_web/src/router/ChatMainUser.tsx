@@ -17,6 +17,7 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
     lastJsonMessage: unknown;
     chatMessageLoaded: boolean;
     setChatMessageLoaded: React.Dispatch<React.SetStateAction<boolean>>;
+    setDialogChatMessageSendFailureOpenState: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
     const [localStorageChatMessageList, setLocalStorageChatMessageList] = useState<ChatMessage[]>([]);
@@ -39,76 +40,77 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
             function isChatMessageFromFetch(x: object) {
                 return 'type' in x && 'from' in x && 'content' in x;
             }
-			
-			interface ChatMessageFromEchoSuccess {
+
+            interface ChatMessageFromEchoSuccess {
                 type: string;
                 content: {
-					status: number,
-					messages: string,
-				};
+                    status: number,
+                    messages: string,
+                };
             }
-			
-			function isChatMessageFromEchoSuccess(x: object) {
-                return "type" in x && "content" in x && typeof x.content === "object" && "status" in x.content && "messages" in x.content;
+
+            function isChatMessageFromEchoSuccess(x: object) {
+                return "type" in x && "content" in x && typeof x.content === "object" && x.content !== null && "status" in x.content && "messages" in x.content;
             }
-			
-			interface ChatMessageFromEchoFailure {
+
+            interface ChatMessageFromEchoFailure {
                 type: string;
                 content: {
-					status: number,
-					reason: string,
-				};
+                    status: number,
+                    reason: string,
+                };
             }
 
             function isChatMessageFromEchoFailure(x: object) {
-                return "type" in x && "content" in x && typeof x.content === "object" && "status" in x.content && "reason" in x.content;
+                return "type" in x && "content" in x && typeof x.content === "object" && x.content !== null && "status" in x.content && "reason" in x.content;
             }
 
             if (_message) {
-				if(isChatMessageFromFetch(_message))
-				{
-					const message = _message as ChatMessageFromFetch;
-					console.log(message);
-					if (message.type === "chat_message" && message.from === fromUsername) {
-						changed = true;
-						newChatMessageList.push(({ message: (message.content as string), fromMe: false } as ChatMessage));
-						delete _websocketMessageHistory[index];
-					}
-				}
-				
-				if(isChatMessageFromEchoFailure(_message))
-				{
-					const message = _message as ChatMessageFromEchoFailure;
-					console.log(message);
-					if (message.type === "chat_echo" && message.content.status === 0) {
-						changed = true;
-						setDialogChatMessageSendFailureOpenState(true);
-						delete _websocketMessageHistory[index];
-					}
-				}
-				
-				if(isChatMessageFromEchoSuccess(_message))
-				{
-					const message = _message as ChatMessageFromEchoSuccess;
-					console.log(message);
-					if (message.type === "chat_echo" && message.content.status === 1) {
-						changed = true;
-						newChatMessageList.push(({ message: (message.content.messages as string), fromMe: true } as ChatMessage));
-						delete _websocketMessageHistory[index];
-					}
-				}
+                if (isChatMessageFromFetch(_message)) {
+                    const message = _message as ChatMessageFromFetch;
+                    console.log(message);
+                    if (message.type === "chat_message" && message.from === fromUsername) {
+                        changed = true;
+                        newChatMessageList.push(({ message: (message.content as string), fromMe: false } as ChatMessage));
+                        delete _websocketMessageHistory[index];
+                    }
+                }
+
+                if (isChatMessageFromEchoFailure(_message)) {
+                    const message = _message as ChatMessageFromEchoFailure;
+                    console.log(message);
+                    if (message.type === "chat_echo" && message.content.status === 0) {
+                        changed = true;
+                        setDialogChatMessageSendFailureOpenState(true);
+                        delete _websocketMessageHistory[index];
+                    }
+                }
+
+                if (isChatMessageFromEchoSuccess(_message)) {
+                    const message = _message as ChatMessageFromEchoSuccess;
+                    console.log(message);
+                    if (message.type === "chat_echo" && message.content.status === 1) {
+                        changed = true;
+                        newChatMessageList.push(({ message: (message.content.messages as string), fromMe: true } as ChatMessage));
+                        delete _websocketMessageHistory[index];
+                    }
+                }
             }
         });
 
         if (changed) setChatMessageList(chatMessageList.concat(newChatMessageList));
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, fromUsername, chatMessageList, setChatMessageList]);
+    }, [websocketMessageHistory, fromUsername, chatMessageList, setChatMessageList, setDialogChatMessageSendFailureOpenState]);
 
     useEffect(() => {
-        if(!chatMessageLoaded)
-        {
+        if (!chatMessageLoaded) {
             console.log("Loading local storage (%s)...", "chatMessageTo" + fromUsername);
-            setLocalStorageChatMessageList(JSON.parse(localStorage.getItem("chatMessageTo" + fromUsername) == null ? "[]" : localStorage.getItem("chatMessageTo" + fromUsername)));
+            const tmp = localStorage.getItem("chatMessageTo" + fromUsername);
+            if (tmp !== null)
+                setLocalStorageChatMessageList(JSON.parse(tmp));
+            else
+                setLocalStorageChatMessageList([]);
+
             setChatMessageLoaded(true);
             console.log("Loaded local storage (%s)...", "chatMessageTo" + fromUsername);
         }
@@ -136,7 +138,7 @@ export default function ChatMainUser() {
     const [chatMessageList, setChatMessageList] = useState<ChatMessage[]>([]);
     const [chatMessageToSend, setChatMessageToSend] = useState("");
     const [chatMessageLoaded, setChatMessageLoaded] = useState(false);
-	const [dialogChatMessageSendFailureOpenState, setDialogChatMessageSendFailureOpenState] = useState(false);
+    const [dialogChatMessageSendFailureOpenState, setDialogChatMessageSendFailureOpenState] = useState(false);
 
     useEffect(() => {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
@@ -162,17 +164,17 @@ export default function ChatMainUser() {
 
         setChatMessageToSend("");
         return _requestKey;
-    }, [toUsername, chatMessageToSend, sendJsonMessage, chatMessageList]);
+    }, [toUsername, chatMessageToSend, sendJsonMessage]);
 
     return <div style={{ display: "block" }}>
         <div style={{ overflowX: "auto", height: "200px" }}>
             <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
                 {
-					chatMessageList == null 
-					?
-					<></>
-					:
-                    chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
+                    chatMessageList == null
+                        ?
+                        <></>
+                        :
+                        chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
                 }
             </div>
         </div>
@@ -185,7 +187,7 @@ export default function ChatMainUser() {
             </form>
         </div>
         <Button onClick={handleCliCkClearLocalStorageChatMessageList}>Clear Chat Message</Button>
-		<PopupDialog
+        <PopupDialog
             open={dialogChatMessageSendFailureOpenState}
             setPopupDialogOpenState={setDialogChatMessageSendFailureOpenState}
             text="Chat message send failed." />
@@ -196,7 +198,7 @@ export default function ChatMainUser() {
             lastJsonMessage={lastJsonMessage}
             chatMessageLoaded={chatMessageLoaded}
             setChatMessageLoaded={setChatMessageLoaded}
-			setDialogChatMessageSendFailureOpenState={setDialogChatMessageSendFailureOpenState} />
+            setDialogChatMessageSendFailureOpenState={setDialogChatMessageSendFailureOpenState} />
     </div>;
 }
 

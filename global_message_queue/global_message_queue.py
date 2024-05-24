@@ -31,7 +31,7 @@ class global_message_queue:
     def push_message(self, to_module_id: str, message: dict) -> bool:
         self.message_queue[to_module_id].append(message)
 
-    async def execute_command(self, command: str, timeout: int | float | None = None):
+    async def execute_command(self, command: str, timeout: float | None = None):
         proc = await asyncio.create_subprocess_shell(
             command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )

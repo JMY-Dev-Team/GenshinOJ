@@ -125,9 +125,13 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
                 ).sessions[content["session_token"]]
             ):
                 try:
-                    print(list(self.ws_server_instance.server_instance.get_module_instance(
-                        "chat_server"
-                    ).message_box.keys()))
+                    print(
+                        list(
+                            self.ws_server_instance.server_instance.get_module_instance(
+                                "chat_server"
+                            ).message_box.keys()
+                        )
+                    )
                     self.ws_server_instance.server_instance.get_module_instance(
                         "chat_server"
                     ).message_box[content["to"]]["message_queue"].append(
@@ -138,7 +142,7 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
                             content["from"], content["session_token"]
                         )
                     )
-                    
+
                     try:
                         response = {
                             "type": "chat_echo",

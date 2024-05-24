@@ -28,7 +28,7 @@ async def execute_command(command: str, timeout: int | float | None = None):
 
 class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
-    def __init__(self, unload_timeout) -> None:
+    def __init__(self, unload_timeout: int) -> None:
         print("C / C++ Compiler loaded.")
         __slots__ = (
             "__init__",
@@ -45,20 +45,28 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         print("C / C++ Compiler unloaded.")
 
     async def on_compile(
-        self, language, compile_file_path, compile_binary_path
+        self, language: str, compile_file_path: str, compile_binary_path: str
     ) -> bool:
         if language == "c":
             try:
-                await execute_command(
-                    "gcc {} -o {}".format(compile_file_path, compile_binary_path), 30
+                exit_code = await execute_command(
+                    "gcc {} -o {}".format(compile_file_path, compile_binary_path)
                 )
+                if exit_code != 0:
+                    return False
+                else:
+                    return True
             except:
                 return False
         elif language == "cpp":
             try:
-                await execute_command(
-                    "g++ {} -o {}".format(compile_file_path, compile_binary_path), 30
+                exit_code = await execute_command(
+                    "g++ {} -o {}".format(compile_file_path, compile_binary_path)
                 )
+                if exit_code != 0:
+                    return False
+                else:
+                    return True
             except:
                 return False
         else:
@@ -66,10 +74,8 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-        return True
-
     async def on_cleanup(
-        self, language, compile_file_path, compile_binary_path
+        self, language: str, compile_file_path: str, compile_binary_path: str
     ) -> bool:
         if language == "c" or language == "cpp":
             try:

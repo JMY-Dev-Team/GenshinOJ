@@ -7,9 +7,6 @@ class LanguageNotSupportedException(Exception):
     pass
 
 
-# TODO(JMY): Add Python support
-
-
 class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
     def __init__(self, unload_timeout) -> None:

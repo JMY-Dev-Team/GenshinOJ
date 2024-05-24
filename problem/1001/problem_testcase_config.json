@@ -1,0 +1,14 @@
+{
+	"testcases": [
+		{"number": 1, "score": 10, "input": "input1.txt", "answer": "answer1.txt", "time_limit": 1.0},
+        {"number": 2, "score": 10, "input": "input2.txt", "answer": "answer2.txt", "time_limit": 1.0},
+        {"number": 3, "score": 10, "input": "input3.txt", "answer": "answer3.txt", "time_limit": 1.0},
+        {"number": 4, "score": 10, "input": "input4.txt", "answer": "answer4.txt", "time_limit": 1.0},
+        {"number": 5, "score": 10, "input": "input5.txt", "answer": "answer5.txt", "time_limit": 1.0},
+        {"number": 6, "score": 10, "input": "input6.txt", "answer": "answer6.txt", "time_limit": 1.0},
+        {"number": 7, "score": 10, "input": "input7.txt", "answer": "answer7.txt", "time_limit": 1.0},
+        {"number": 8, "score": 10, "input": "input8.txt", "answer": "answer8.txt", "time_limit": 1.0},
+        {"number": 9, "score": 10, "input": "input9.txt", "answer": "answer9.txt", "time_limit": 1.0},
+        {"number": 10, "score": 10, "input": "input10.txt", "answer": "answer10.txt", "time_limit": 1.0}
+	]
+}

@@ -14,14 +14,14 @@ export default function Root() {
     const {
         sendJsonMessage,
         lastJsonMessage,
-		readyState
-    } = useWebSocket("ws://" + location.host + "/wsapi", { 
-		share: true, 
-		shouldReconnect: (closeEvent) => true,
-		reconnectAttempts: 10,
-		reconnectInterval: 3000
-	});
-	
+        readyState
+    } = useWebSocket("ws://" + location.host + "/wsapi", {
+        share: true,
+        shouldReconnect: () => true,
+        reconnectAttempts: 10,
+        reconnectInterval: 3000
+    });
+
     return (
         <FluentProvider theme={webLightTheme}>
             <NavBar />

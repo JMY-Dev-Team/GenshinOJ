@@ -69,22 +69,24 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             ).now_submission_id
             + 1
         )
-        
+
         now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
             "judge"
         ).now_submission_id
-        
+
         self.log("Processing Submission {}".format(now_submission_id))
 
-        submission_code_path = self.ws_server_instance.server_instance.get_module_instance(
-            "compilers_manager"
-        ).get_file_path_by_language_and_compile_file_path(
-            content["language"],
+        submission_code_path = (
             self.ws_server_instance.server_instance.get_module_instance(
-                "judge"
-            ).get_submission_file_name_with_absolute_path_by_submission_id(
-                now_submission_id
-            ),
+                "compilers_manager"
+            ).get_file_path_by_language_and_compile_file_path(
+                content["language"],
+                self.ws_server_instance.server_instance.get_module_instance(
+                    "judge"
+                ).get_submission_file_name_with_absolute_path_by_submission_id(
+                    now_submission_id
+                ),
+            )
         )
         self.log("Opening {}.".format(submission_code_path))
         open(submission_code_path, "w").close()  # Create

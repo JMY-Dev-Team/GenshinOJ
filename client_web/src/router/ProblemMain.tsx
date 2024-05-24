@@ -3,9 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 import Editor from '@monaco-editor/react';
 import * as globals from "./Globals"
-import { Body2, Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps } from "@fluentui/react-components";
+import { Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps, SelectionEvents, OptionOnSelectData } from "@fluentui/react-components";
 import PopupDialog from "./PopupDialog";
-import { AlignBottomFilled, AlignBottomRegular, AlignStretchHorizontalFilled, AlignStretchHorizontalRegular, AppGenericFilled, AppGenericRegular, AppsAddInRegular, ArrowRoutingRectangleMultipleRegular, DocumentTableTruck20Filled } from "@fluentui/react-icons";
+import { AlignBottomFilled, AlignBottomRegular, AlignStretchHorizontalFilled, AlignStretchHorizontalRegular, AppGenericFilled, AppGenericRegular, AppsAddInRegular, ArrowRoutingRectangleMultipleRegular } from "@fluentui/react-icons";
+import Markdown from "react-markdown";
+import rehypeKatex from 'rehype-katex'
+import remarkMath from 'remark-math'
+import 'katex/dist/katex.min.css'
 
 interface ProblemInfoFromLoader {
     problemNumber: string;
@@ -173,7 +177,6 @@ export default function ProblemMain() {
     const [, setWebsocketMessageHistory] = useState([]);
     const [submissionCode, setSubmissionCode] = useState("");
     const [submissionId, setSubmissionId] = useState(-1);
-    // TODO(JackMerryYoung): Add Multi-language support (Add a Dropdown Component provided to select the language of code.)
     const [submissionCodeLanguage, setSubmissionCodeLanguage] = useState("cpp")
     const [codeLanguage, setCodeLanguage] = useState("cpp")
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
@@ -219,6 +222,18 @@ export default function ProblemMain() {
         setRequestKey(handleLoadProblemInfo());
     }, [handleLoadProblemInfo]);
 
+    const convertStringListToMarkdownRenderString = useCallback(() => {
+        let markdownRenderString: string = "";
+        (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement) => {
+            markdownRenderString = markdownRenderString +
+                `
+${statement}
+`
+        });
+
+        return markdownRenderString;
+    }, [problemInfo]);
+
     return <>
         <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
             {
@@ -234,13 +249,17 @@ export default function ProblemMain() {
                             <Subtitle1>Problem Statement</Subtitle1>
                             <br />
                             <div style={{ textIndent: "1em" }}>
+                                <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                    {convertStringListToMarkdownRenderString()}
+                                </Markdown>
                                 {
+                                    /*
                                     (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement, index) => (
                                         <Body2 key={index}>{statement}</Body2>
                                     ))
+                                    */
                                 }
                             </div>
-                            <br />
                             <Subtitle1>Submit Code</Subtitle1>
                             <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} />
                             <br />
@@ -278,20 +297,23 @@ export default function ProblemMain() {
 function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, ...props }: {
     setCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
     setSubmissionCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
-    props: Partial<DropdownProps>;
-}) {
+} & Partial<{
+    props: DropdownProps;
+}>) {
     const [, setSelectedOptions] = useState(["cpp cpp"]);
-    const handleOptionSelect: (typeof props)["onOptionSelect"] = (ev, data) => {
-        setSelectedOptions(data.selectedOptions);
-        setCodeLanguage(data.optionValue?.split(' ')[1]);
-        setSubmissionCodeLanguage(data.optionValue?.split(' ')[0]);
+    const handleOptionSelect = (_ev: SelectionEvents, data: OptionOnSelectData) => {
+        if (data.optionValue) {
+            setSelectedOptions(data.selectedOptions);
+            setCodeLanguage(data.optionValue.split(' ')[1]);
+            setSubmissionCodeLanguage(data.optionValue.split(' ')[0]);
+        }
     };
 
     return (
         <div>
-            <Dropdown placeholder="Code Language" onOptionSelect={handleOptionSelect} defaultValue="C++" defaultSelectedOptions={["cpp cpp"]}>
+            <Dropdown placeholder="Code Language" onOptionSelect={handleOptionSelect} defaultValue="C++" defaultSelectedOptions={["cpp cpp"]} {...props}>
                 {options.map((option) => (
-                    <Option value={option.submissionCodeLanguage + ' ' + option.codeLanguage}>{option.description}</Option>
+                    <Option value={option.submissionCodeLanguage + ' ' + option.codeLanguage} key={option.submissionCodeLanguage + ' ' + option.codeLanguage}>{option.description}</Option>
                 ))}
             </Dropdown>
         </div>

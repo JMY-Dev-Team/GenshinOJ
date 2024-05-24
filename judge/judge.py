@@ -71,7 +71,6 @@ class judge:
                     )
 
                     # Compile Part
-
                     exit_code = await self.server_instance.get_module_instance(
                         "compilers_manager"
                     ).compile_file_by_language_and_compile_file_path(
@@ -98,6 +97,7 @@ class judge:
                         await judgment["websocket_protocol"].send(json.dumps(response))
                         response.clear()
                         del judgment_result
+                        print("Result: Compile Error.")
                         print("Judged one.")
                         break
 
@@ -192,7 +192,7 @@ class judge:
                                         testcase_input_path,
                                         testcase_output_path,
                                     ),
-                                    1,
+                                    testcase["time_limit"],
                                 )
                                 with open(testcase_output_path, "r") as testcase_output:
                                     with open(
