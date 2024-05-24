@@ -95,7 +95,7 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
                             content["from"], content["session_token"]
                         )
                     )
-                except KeyError as e:
+                except KeyError:
                     self.log(
                         "The user {} tried to send a message to whom is not online.".format(
                             content["from"]
@@ -125,6 +125,9 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
                 ).sessions[content["session_token"]]
             ):
                 try:
+                    print(list(self.ws_server_instance.server_instance.get_module_instance(
+                        "chat_server"
+                    ).message_box.keys()))
                     self.ws_server_instance.server_instance.get_module_instance(
                         "chat_server"
                     ).message_box[content["to"]]["message_queue"].append(

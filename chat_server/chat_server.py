@@ -41,13 +41,14 @@ class chat_server:
                             ].send(json.dumps(response))
                         except websockets.exceptions.ConnectionClosed:
                             logging.warning(
-                                "The user {} have been offline already.".format(
+                                "[ConnectionClosed] The user {} have been offline already.".format(
                                     chat_server_user_to
                                 )
                             )
+                            del self.message_box[chat_server_user_to]
                         except KeyError:
                             logging.warning(
-                                "The user {} have been offline already.".format(
+                                "[KeyError] The user {} have been offline already.".format(
                                     chat_server_user_to
                                 )
                             )
@@ -58,19 +59,19 @@ class chat_server:
                         self.message_box[chat_server_user_to]["message_queue"].clear()
                     except KeyError:
                         logging.warning(
-                            "The user {} have been offline already.".format(
+                            "[KeyError] The user {} have been offline already.".format(
                                 chat_server_user_to
                             )
                         )
                 except KeyError:
                     logging.warning(
-                        "The user {} have been offline already.".format(
+                        "[KeyError] The user {} have been offline already.".format(
                             chat_server_user_to
                         )
                     )
                 except websockets.exceptions.ConnectionClosed:
                     logging.warning(
-                        "The user {} have been offline already.".format(
+                        "[ConnectionClosed] The user {} have been offline already.".format(
                             chat_server_user_to
                         )
                     )

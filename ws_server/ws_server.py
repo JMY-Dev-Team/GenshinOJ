@@ -211,8 +211,6 @@ class simple_ws_server_application(ws_server_application_protocol):
     A simple, official implementation of websocket server application, providing some simple plugins.
     """
 
-    is_logged_in = False
-
     def log(
         self, log: str, log_level: ws_server_log_level = ws_server_log_level.LEVEL_INFO
     ):
@@ -226,7 +224,7 @@ class simple_ws_server_application(ws_server_application_protocol):
         """
         Official callback method for login with a authentication plugin.
         """
-        setattr(self, "is_logged_in", False)
+        setattr(websocket_protocol, "is_logged_in", False)
         password_hash = self.get_md5(content["password"])
         self.log(
             "The user {} try to login with the hash: {}.".format(
@@ -301,8 +299,8 @@ class simple_ws_server_application(ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol,
     ):
         await super().on_close_connection(websocket_protocol)
-        if self.is_logged_in:
-            self.is_logged_in = False
+        if getattr(websocket_protocol, "is_logged_in", False):
+            setattr(websocket_protocol, "is_logged_in", True)
             await self.on_quit(
                 websocket_protocol,
                 {"username": self.username, "session_token": self.session_token},
