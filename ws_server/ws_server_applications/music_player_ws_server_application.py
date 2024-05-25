@@ -8,15 +8,15 @@ class music_player_ws_server_application(ws_server.ws_server_application_protoco
     def log(
         self,
         log: str,
-        log_level: ws_server.ws_server_log_level = ws_server.ws_server_log_level.LEVEL_INFO,
+        log_level: ws_server.simple_ws_server_application_log_level = ws_server.simple_ws_server_application_log_level.LEVEL_INFO,
     ):
-        if log_level is ws_server.ws_server_log_level.LEVEL_INFO:
+        if log_level is ws_server.simple_ws_server_application_log_level.LEVEL_INFO:
             print("[MUSIC_PLAYER_SERVER] [INFO] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_DEBUG:
+        if log_level is ws_server.simple_ws_server_application_log_level.LEVEL_DEBUG:
             print("[MUSIC_PLAYER_SERVER] [DEBUG] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_WARNING:
+        if log_level is ws_server.simple_ws_server_application_log_level.LEVEL_WARNING:
             print("[MUSIC_PLAYER_SERVER] [WARNING] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_ERROR:
+        if log_level is ws_server.simple_ws_server_application_log_level.LEVEL_ERROR:
             print("[MUSIC_PLAYER_SERVER] [ERROR] {}".format(log))
 
     async def on_login(

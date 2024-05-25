@@ -19,7 +19,7 @@ export default function NavBar() {
     };
 
     return (
-        <>
+        <div style={{ padding: "4px 0" }}>
             <div style={{ display: "inline" }}>
                 <Tab onClick={() => onTabSelect("root")} style={{ float: "left" }} value="root" icon={<Avatar size={24} image={{ src: "https://img.atcoder.jp/icons/373e4eb93e4b8e5f441eeeea55e5ac84.jpg" }} />}>
                     Genshin OJ
@@ -39,6 +39,6 @@ export default function NavBar() {
                 {/* </TabList> */}
                 <Divider />
             </div>
-        </>
+        </div>
     );
 }

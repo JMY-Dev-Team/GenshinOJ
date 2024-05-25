@@ -10,10 +10,10 @@ class LanguageNotSupportedException(Exception):
 class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
     def __init__(self, unload_timeout) -> None:
-        print("Python Compiler loaded.")
+        print("\033[1;2m[COMPILERS_MANAGER] [INFO] Python Compiler loaded.\033[0m")
         __slots__ = (
             "__init__",
-            "__del__",
+            "on_unload",
             "on_compile",
             "on_cleanup",
             "get_file_extension",
@@ -22,8 +22,8 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         )
         self.unload_timeout = unload_timeout
 
-    def __del__(self) -> None:
-        print("Python Compiler unloaded.")
+    def on_unload(self) -> None:
+        print("\033[1;2m[COMPILERS_MANAGER] [INFO] Python Compiler unloaded.\033[0m")
 
     async def on_compile(
         self, language, compile_file_path, compile_binary_path

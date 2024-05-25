@@ -31,6 +31,7 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         height: "fill",
+        padding: "4px 0",
     },
 });
 

@@ -25,7 +25,8 @@
     "rehype-katex": "^7.0.0",
     "remark-math": "^6.0.0",
     "scheduler": "^0.23.2",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "vite-plugin-top-level-await": "^1.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

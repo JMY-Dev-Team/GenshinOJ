@@ -1,14 +1,14 @@
 import "../css/style.css";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
-import Editor from '@monaco-editor/react';
+const Editor = React.lazy(() => import("@monaco-editor/react"));
 import * as globals from "./Globals"
 import { Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps, SelectionEvents, OptionOnSelectData } from "@fluentui/react-components";
 import PopupDialog from "./PopupDialog";
 import { AlignBottomFilled, AlignBottomRegular, AlignStretchHorizontalFilled, AlignStretchHorizontalRegular, AppGenericFilled, AppGenericRegular, AppsAddInRegular, ArrowRoutingRectangleMultipleRegular } from "@fluentui/react-icons";
-import Markdown from "react-markdown";
-import rehypeKatex from 'rehype-katex'
-import remarkMath from 'remark-math'
+const Markdown = React.lazy(() => import("react-markdown"));
+const rehypeKatex = (await import("rehype-katex")).default;
+const remarkMath = (await import("remark-math")).default;
 import 'katex/dist/katex.min.css'
 
 interface ProblemInfoFromLoader {

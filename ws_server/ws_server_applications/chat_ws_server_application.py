@@ -1,9 +1,15 @@
-import json, logging
-import warnings
+import sys, json, enum, warnings
 
 import websockets
 
 from .. import ws_server
+
+
+class chat_ws_server_application_log_level(enum.Enum):
+    LEVEL_INFO = 0
+    LEVEL_DEBUG = 1
+    LEVEL_WARNING = 2
+    LEVEL_ERROR = 3
 
 
 class chat_ws_server_application(ws_server.ws_server_application_protocol):
@@ -11,16 +17,45 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
     def log(
         self,
         log: str,
-        log_level: ws_server.ws_server_log_level = ws_server.ws_server_log_level.LEVEL_INFO,
+        log_level: chat_ws_server_application_log_level = chat_ws_server_application_log_level.LEVEL_INFO,
     ):
-        if log_level is ws_server.ws_server_log_level.LEVEL_INFO:
-            print("[CHAT_SERVER] [INFO] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_DEBUG:
-            print("[CHAT_SERVER] [DEBUG] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_WARNING:
-            print("[CHAT_SERVER] [WARNING] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_ERROR:
-            print("[CHAT_SERVER] [ERROR] {}".format(log))
+        call_frame = sys._getframe(1)
+        if log_level is chat_ws_server_application_log_level.LEVEL_INFO:
+            print(
+                "\033[1;2m[WS_SERVER] [CHAT_WS_SERVER_APP] [INFO] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is chat_ws_server_application_log_level.LEVEL_DEBUG:
+            print(
+                "\033[1;34m[WS_SERVER] [CHAT_WS_SERVER_APP] [DEBUG] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is chat_ws_server_application_log_level.LEVEL_WARNING:
+            print(
+                "\033[1;33m[WS_SERVER] [CHAT_WS_SERVER_APP] [WARNING] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is chat_ws_server_application_log_level.LEVEL_ERROR:
+            print(
+                "\033[1;31m[WS_SERVER] [CHAT_WS_SERVER_APP] [ERROR] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
 
     async def on_login(
         self,
@@ -58,9 +93,13 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
                 content["username"], content["session_token"]
             )
         )
-        del self.ws_server_instance.server_instance.get_module_instance(
-            "chat_server"
-        ).message_box[content["username"]]
+
+        try:
+            del self.ws_server_instance.server_instance.get_module_instance(
+                "chat_server"
+            ).message_box[content["username"]]
+        except KeyError:
+            pass
 
     def get_md5(self, data):
         import hashlib

@@ -8,7 +8,7 @@ class base_compiler:
         self.unload_timeout = unload_timeout
 
     @abc.abstractmethod
-    def __del__(self) -> None:
+    def on_unload(self) -> None:
         pass
 
     @abc.abstractmethod

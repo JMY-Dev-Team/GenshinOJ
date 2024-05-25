@@ -1,8 +1,15 @@
-import json, logging
+import sys, enum, json, logging
 
 import asyncio, websockets
 
 import server
+
+
+class chat_server_log_level(enum.Enum):
+    LEVEL_INFO = 0
+    LEVEL_DEBUG = 1
+    LEVEL_WARNING = 2
+    LEVEL_ERROR = 3
 
 
 class chat_server:
@@ -15,8 +22,51 @@ class chat_server:
 
         self.server_instance.tasks.append(asyncio.create_task(self.chat_server_main()))
 
-    def __del__(self) -> None:
-        print("Chat Server unloaded.")
+    def on_unload(self) -> None:
+        self.log("Chat Server unloaded.")
+
+    def log(
+        self,
+        log: str,
+        log_level: chat_server_log_level = chat_server_log_level.LEVEL_INFO,
+    ):
+        call_frame = sys._getframe(1)
+        if log_level is chat_server_log_level.LEVEL_INFO:
+            print(
+                "\033[1;2m[GLOBAL_MSG_QUEUE] [INFO] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is chat_server_log_level.LEVEL_DEBUG:
+            print(
+                "\033[1;34m[GLOBAL_MSG_QUEUE] [DEBUG] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is chat_server_log_level.LEVEL_WARNING:
+            print(
+                "\033[1;33m[GLOBAL_MSG_QUEUE] [WARNING] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is chat_server_log_level.LEVEL_ERROR:
+            print(
+                "\033[1;31m[GLOBAL_MSG_QUEUE] [ERROR] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
 
     async def chat_server_main(self):
         while True:
