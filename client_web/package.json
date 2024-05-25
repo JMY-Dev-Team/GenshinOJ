@@ -17,12 +17,16 @@
     "monaco-editor": "^0.48.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
     "react-router": "^6.23.1",
     "react-router-dom": "^6.23.1",
     "react-syntax-highlighter": "^15.5.0",
     "react-use-websocket": "^4.8.1",
+    "rehype-katex": "^7.0.0",
+    "remark-math": "^6.0.0",
     "scheduler": "^0.23.2",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "vite-plugin-top-level-await": "^1.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

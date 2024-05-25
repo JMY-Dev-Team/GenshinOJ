@@ -3,21 +3,24 @@ import { useEffect, useCallback } from "react";
 import { useOutletContext } from "react-router-dom";
 
 export default function Logout() {
-	const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
-	const handleQuit = useCallback(() => {
-		const request_key = globals.randomUUID();
-		sendJsonMessage({
-            type: "quit",
-            content: {
-                username: globals.fetchData("loginUsername"),
-                session_token: globals.fetchData("sessionToken"),
-                request_key: request_key
-            }
-        });
-		globals.clearCache("@all");
-	}, [sendJsonMessage]);
+    const { sendJsonMessage } = useOutletContext<globals.WebSocketHook>();
+    const handleQuit = useCallback(() => {
+        if (globals.fetchData("isLoggedIn") === true) {
+            sendJsonMessage({
+                type: "quit",
+                content: {
+                    username: globals.fetchData("loginUsername"),
+                    session_token: globals.fetchData("sessionToken"),
+                    request_key: globals.randomUUID(),
+                }
+            });
+            globals.clearCache("@all");
+            globals.setData("isLoggedIn", false);
+        }
+
+    }, [sendJsonMessage]);
     useEffect(() => {
-		handleQuit();
+        handleQuit();
     }, [handleQuit])
 
     return <></>;

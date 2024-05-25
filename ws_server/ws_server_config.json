@@ -10,6 +10,14 @@
             "unload_timeout": 0
         },
         {
+            "name": "Simple Websocket Server Application",
+            "id": "simple_ws_server_application",
+            "enabled": true,
+            "path": "ws_server.ws_server_applications.simple_ws_server_application",
+            "dependencies": [],
+            "unload_timeout": 0
+        },
+        {
             "name": "Judgment Application",
             "id": "judge_ws_server_application",
             "enabled": true,

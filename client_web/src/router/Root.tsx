@@ -9,19 +9,33 @@ import NavBar from "./Navbar";
 
 import "../css/style.css";
 import useWebSocket from "react-use-websocket";
+import * as globals from "./Globals"
 
 export default function Root() {
     const {
         sendJsonMessage,
         lastJsonMessage,
-		readyState
-    } = useWebSocket("ws://" + location.host + "/wsapi", { 
-		share: true, 
-		shouldReconnect: (closeEvent) => true,
-		reconnectAttempts: 10,
-		reconnectInterval: 3000
-	});
-	
+        readyState
+    } = useWebSocket("ws://" + location.host + "/wsapi", {
+        share: true,
+        shouldReconnect: () => true,
+        reconnectAttempts: 10,
+        reconnectInterval: 3000,
+        onClose: () => {
+            if (globals.fetchData("isLoggedIn")) {
+                sendJsonMessage({
+                    type: "quit",
+                    content: {
+                        username: globals.fetchData("loginUsername"),
+                        session_token: globals.fetchData("sessionToken"),
+                        request_key: globals.randomUUID()
+                    }
+                });
+                globals.setData("isLoggedIn", false);
+            }
+        },
+    });
+
     return (
         <FluentProvider theme={webLightTheme}>
             <NavBar />

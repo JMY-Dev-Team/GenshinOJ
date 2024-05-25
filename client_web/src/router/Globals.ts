@@ -18,6 +18,7 @@ export function setData(type: string, data: unknown) {
 function initData(type: string) {
     if (type === "isLoggedIn") return false;
     if (type === "loginUsername") return undefined;
+    if (type === "sessionToken") return undefined;
     throw Error("Not implemented yet: " + type);
 }
 

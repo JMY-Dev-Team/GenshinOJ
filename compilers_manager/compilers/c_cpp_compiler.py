@@ -4,9 +4,12 @@ import asyncio
 
 import compilers_manager.compilers.base_compiler
 
+import compilers_manager.compilers_manager
+
 
 class LanguageNotSupportedException(Exception):
     pass
+
 
 async def execute_command(command: str, timeout: int | float | None = None):
     proc = await asyncio.create_subprocess_shell(
@@ -24,13 +27,14 @@ async def execute_command(command: str, timeout: int | float | None = None):
         proc.terminate()
         raise e
 
+
 class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
-    def __init__(self, unload_timeout) -> None:
-        print("C / C++ Compiler loaded.")
+    def __init__(self, unload_timeout: int) -> None:
+        print("\033[1;2m[COMPILERS_MANAGER] [INFO] C / C++ Compiler loaded.\033[0m")
         __slots__ = (
             "__init__",
-            "__del__",
+            "on_unload",
             "on_compile",
             "on_cleanup",
             "get_file_extension",
@@ -39,28 +43,42 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         )
         self.unload_timeout = unload_timeout
 
-    def __del__(self) -> None:
-        print("C / C++ Compiler unloaded.")
+    def on_unload(self) -> None:
+        print("\033[1;2m[COMPILERS_MANAGER] [INFO] C / C++ Compiler unloaded.\033[0m")
 
-    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(
+        self, language: str, compile_file_path: str, compile_binary_path: str
+    ) -> bool:
         if language == "c":
             try:
-                await execute_command("gcc {} -o {}".format(compile_file_path, compile_binary_path), 30)
+                exit_code = await execute_command(
+                    "gcc {} -o {}".format(compile_file_path, compile_binary_path)
+                )
+                if exit_code != 0:
+                    return False
+                else:
+                    return True
             except:
                 return False
         elif language == "cpp":
             try:
-                await execute_command("g++ {} -o {}".format(compile_file_path, compile_binary_path), 30)
+                exit_code = await execute_command(
+                    "g++ {} -o {}".format(compile_file_path, compile_binary_path)
+                )
+                if exit_code != 0:
+                    return False
+                else:
+                    return True
             except:
                 return False
         else:
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
             )
-        
-        return True
 
-    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_cleanup(
+        self, language: str, compile_file_path: str, compile_binary_path: str
+    ) -> bool:
         if language == "c" or language == "cpp":
             try:
                 os.remove(compile_file_path)
@@ -94,8 +112,10 @@ class c_cpp_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
             )
-    
-    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+
+    def get_execute_binary_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> str:
         if language == "c" or language == "cpp":
             return "{}.o".format(compile_file_path)
         else:

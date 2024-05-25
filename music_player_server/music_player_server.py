@@ -41,7 +41,7 @@ class music_player_server:
             asyncio.create_task(self.music_player_server_loop())
         )  # Add looped task
 
-    def __del__(self) -> None:
+    def on_unload(self) -> None:
         print("Music Player Server unloaded.")
 
     async def music_player_server_loop(self) -> None:

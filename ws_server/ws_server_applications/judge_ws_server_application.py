@@ -1,8 +1,15 @@
-import json
+import sys, json, enum
 
-import logging, websockets
+import websockets
 
 from .. import ws_server
+
+
+class judge_ws_server_log_level(enum.Enum):
+    LEVEL_INFO = 0
+    LEVEL_DEBUG = 1
+    LEVEL_WARNING = 2
+    LEVEL_ERROR = 3
 
 
 class judge_ws_server_application(ws_server.ws_server_application_protocol):
@@ -10,16 +17,45 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
     def log(
         self,
         log: str,
-        log_level: ws_server.ws_server_log_level = ws_server.ws_server_log_level.LEVEL_INFO,
+        log_level: judge_ws_server_log_level = judge_ws_server_log_level.LEVEL_INFO,
     ):
-        if log_level is ws_server.ws_server_log_level.LEVEL_INFO:
-            print("[JUDGE_SERVER] [INFO] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_DEBUG:
-            print("[JUDGE_SERVER] [DEBUG] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_WARNING:
-            print("[JUDGE_SERVER] [WARNING] {}".format(log))
-        if log_level is ws_server.ws_server_log_level.LEVEL_ERROR:
-            print("[JUDGE_SERVER] [ERROR] {}".format(log))
+        call_frame = sys._getframe(1)
+        if log_level is judge_ws_server_log_level.LEVEL_INFO:
+            print(
+                "\033[1;2m[WS_SERVER] [JUDGE_WS_SERVER_APP] [INFO] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is judge_ws_server_log_level.LEVEL_DEBUG:
+            print(
+                "\033[1;34m[WS_SERVER] [JUDGE_WS_SERVER_APP] [DEBUG] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is judge_ws_server_log_level.LEVEL_WARNING:
+            print(
+                "\033[1;33m[WS_SERVER] [JUDGE_WS_SERVER_APP] [WARNING] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
+        if log_level is judge_ws_server_log_level.LEVEL_ERROR:
+            print(
+                "\033[1;31m[WS_SERVER] [JUDGE_WS_SERVER_APP] [ERROR] {} (file `{}`, function `{}` on line {})\033[0m".format(
+                    log,
+                    call_frame.f_code.co_filename,
+                    call_frame.f_code.co_name,
+                    call_frame.f_lineno,
+                )
+            )
 
     async def on_login(
         self,
@@ -69,22 +105,24 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             ).now_submission_id
             + 1
         )
-        
+
         now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
             "judge"
         ).now_submission_id
-        
+
         self.log("Processing Submission {}".format(now_submission_id))
 
-        submission_code_path = self.ws_server_instance.server_instance.get_module_instance(
-            "compilers_manager"
-        ).get_file_path_by_language_and_compile_file_path(
-            content["language"],
+        submission_code_path = (
             self.ws_server_instance.server_instance.get_module_instance(
-                "judge"
-            ).get_submission_file_name_with_absolute_path_by_submission_id(
-                now_submission_id
-            ),
+                "compilers_manager"
+            ).get_file_path_by_language_and_compile_file_path(
+                content["language"],
+                self.ws_server_instance.server_instance.get_module_instance(
+                    "judge"
+                ).get_submission_file_name_with_absolute_path_by_submission_id(
+                    now_submission_id
+                ),
+            )
         )
         self.log("Opening {}.".format(submission_code_path))
         open(submission_code_path, "w").close()  # Create
@@ -113,15 +151,14 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             }
         )
 
-        response = {
-            "type": "submission_id",
-            "content": {
-                "submission_id": now_submission_id,
-                "request_key": content["request_key"],
-            },
-        }
-
         try:
+            response = {
+                "type": "submission_id",
+                "content": {
+                    "submission_id": now_submission_id,
+                    "request_key": content["request_key"],
+                },
+            }
             await websocket_protocol.send(json.dumps(response))
         except websockets.exceptions.ConnectionClosed:
             pass
@@ -155,7 +192,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                         "judge"
                     ).get_problem_statement_json_path(content["problem_number"])
                 ),
-                ws_server.ws_server_log_level.LEVEL_ERROR,
+                judge_ws_server_log_level.LEVEL_ERROR,
             )
             response["content"].update(
                 {
@@ -200,10 +237,55 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                         "judge"
                     ).get_problem_set_json_path()
                 ),
-                ws_server.ws_server_log_level.LEVEL_ERROR,
+                judge_ws_server_log_level.LEVEL_ERROR,
             )
 
         await websocket_protocol.send(json.dumps(response))
         response.clear()
 
-    # async def
+    async def on_submission_result(
+        self,
+        websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict,
+    ):
+        try:
+            response = dict()
+            response["type"] = "submission_result"
+            response["content"] = dict()
+            if (
+                content["submission_id"]
+                > self.ws_server_instance.server_instance.get_module_instance(
+                    "judge"
+                ).now_submission_id
+            ):
+                self.log(
+                    "Submission {} is not found!".format(content["submission_id"]),
+                    judge_ws_server_log_level.LEVEL_WARNING,
+                )
+                response["content"]["result"] = "SNF"
+                response["content"]["submission_id"] = content["submission_id"]
+                await websocket_protocol.send(json.dumps(response))
+                response.clear()
+                return
+
+            self.ws_server_instance.server_instance.get_module_instance(
+                "db_connector"
+            ).database_cursor.execute(
+                "SELECT result FROM judge_submission_result WHERE submission_id = {};".format(
+                    content["submission_id"]
+                )
+            )
+
+            fetch_result = self.ws_server_instance.server_instance.get_module_instance(
+                "db_connector"
+            ).database_cursor.fetchone()
+            if fetch_result == None:
+                response["content"]["result"] = "PD"
+                response["content"]["submission_id"] = content["submission_id"]
+            else:
+                response["content"] = json.loads(fetch_result[0])
+
+            await websocket_protocol.send(json.dumps(response))
+            response.clear()
+        except Exception as e:
+            self.log(repr(e), judge_ws_server_log_level.DEBUG)

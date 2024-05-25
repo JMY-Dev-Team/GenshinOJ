@@ -7,16 +7,13 @@ class LanguageNotSupportedException(Exception):
     pass
 
 
-# TODO(JMY): Add Python support
-
-
 class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
 
     def __init__(self, unload_timeout) -> None:
-        print("Python Compiler loaded.")
+        print("\033[1;2m[COMPILERS_MANAGER] [INFO] Python Compiler loaded.\033[0m")
         __slots__ = (
             "__init__",
-            "__del__",
+            "on_unload",
             "on_compile",
             "on_cleanup",
             "get_file_extension",
@@ -25,10 +22,12 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
         )
         self.unload_timeout = unload_timeout
 
-    def __del__(self) -> None:
-        print("Python Compiler unloaded.")
+    def on_unload(self) -> None:
+        print("\033[1;2m[COMPILERS_MANAGER] [INFO] Python Compiler unloaded.\033[0m")
 
-    async def on_compile(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_compile(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         if language == "py":
             try:
                 py_compile.compile(compile_file_path, compile_binary_path)
@@ -44,7 +43,9 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
                 "The language {} is not supported.".format(language)
             )
 
-    async def on_cleanup(self, language, compile_file_path, compile_binary_path) -> bool:
+    async def on_cleanup(
+        self, language, compile_file_path, compile_binary_path
+    ) -> bool:
         if language == "py":
             try:
                 os.remove(compile_file_path)
@@ -78,8 +79,10 @@ class python_compiler(compilers_manager.compilers.base_compiler.base_compiler):
             raise LanguageNotSupportedException(
                 "The language {} is not supported.".format(language)
             )
-    
-    def get_execute_binary_command_by_language_and_compile_file_path(self, language: str, compile_file_path: str) -> str:
+
+    def get_execute_binary_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> str:
         if language == "py":
             return "python {}.pyc".format(compile_file_path)
         else:

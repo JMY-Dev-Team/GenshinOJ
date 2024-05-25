@@ -31,6 +31,7 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         height: "fill",
+        padding: "4px 0",
     },
 });
 
@@ -53,7 +54,7 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
                 type: string;
                 content: {
                     online_users: string[],
-                    request_key: string
+                    request_key: string,
                 };
             }
 

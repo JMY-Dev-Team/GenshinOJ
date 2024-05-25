@@ -1,0 +1,9 @@
+{
+    "problem_number": 1001,
+    "difficulty": 1,
+    "problem_name": "A + B Problem",
+    "problem_statement": [
+        "You' re given two integers called $A$ and $B$, and you should print the sum of them.",
+        "**Note that at the end of the output, you should print a line feed, or your answer may be judged to be wrong.** :("
+    ]
+}
