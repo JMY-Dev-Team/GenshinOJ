@@ -1,5 +1,5 @@
 import "../css/style.css";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 const Editor = React.lazy(() => import("@monaco-editor/react"));
 import * as globals from "./Globals"
@@ -235,48 +235,50 @@ ${statement}
     }, [problemInfo]);
 
     return <>
-        <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
-            {
-                problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement
-                    ?
-                    <>
-                        <Title3>
-                            P{(problemInfo as ProblemInfoFromFetcher).problem_number} - {(problemInfo as ProblemInfoFromFetcher).problem_name}
-                        </Title3>
-                        &nbsp;&nbsp;&nbsp;&nbsp;
-                        <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
-                        <div style={{ display: "block", marginLeft: "1em" }}>
-                            <Subtitle1>Problem Statement</Subtitle1>
-                            <br />
-                            <div style={{ textIndent: "1em" }}>
-                                <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                    {convertStringListToMarkdownRenderString()}
-                                </Markdown>
-                                {
-                                    /*
-                                    (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement, index) => (
-                                        <Body2 key={index}>{statement}</Body2>
-                                    ))
-                                    */
-                                }
+        <Suspense fallback={<Spinner delay={100}/>}>
+            <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
+                {
+                    problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement
+                        ?
+                        <>
+                            <Title3>
+                                P{(problemInfo as ProblemInfoFromFetcher).problem_number} - {(problemInfo as ProblemInfoFromFetcher).problem_name}
+                            </Title3>
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                            <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
+                            <div style={{ display: "block", marginLeft: "1em" }}>
+                                <Subtitle1>Problem Statement</Subtitle1>
+                                <br />
+                                <div style={{ textIndent: "1em" }}>
+                                    <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                        {convertStringListToMarkdownRenderString()}
+                                    </Markdown>
+                                    {
+                                        /*
+                                        (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement, index) => (
+                                            <Body2 key={index}>{statement}</Body2>
+                                        ))
+                                        */
+                                    }
+                                </div>
+                                <Subtitle1>Submit Code</Subtitle1>
+                                <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} />
+                                <br />
+                                <Editor
+                                    height="500px"
+                                    language={codeLanguage}
+                                    onChange={(code,) => { setSubmissionCode((code === undefined) ? "" : code); }}
+                                    loading={<Spinner delay={200} />} />
+                                <div style={{ alignItems: "center", justifyContent: "center", display: "flex" }}>
+                                    <Button appearance="primary" onClick={() => { setRequestKey(handleClickSubmitCode); }}>Submit</Button>
+                                </div>
                             </div>
-                            <Subtitle1>Submit Code</Subtitle1>
-                            <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} />
-                            <br />
-                            <Editor
-                                height="500px"
-                                language={codeLanguage}
-                                onChange={(code,) => { setSubmissionCode((code === undefined) ? "" : code); }}
-                                loading={<Spinner delay={200} />} />
-                            <div style={{ alignItems: "center", justifyContent: "center", display: "flex" }}>
-                                <Button appearance="primary" onClick={() => { setRequestKey(handleClickSubmitCode); }}>Submit</Button>
-                            </div>
-                        </div>
-                    </>
-                    :
-                    <></>
-            }
-        </div>
+                        </>
+                        :
+                        <></>
+                }
+            </div>
+        </Suspense>
         <ProblemInfoFetcher
             lastJsonMessage={lastJsonMessage}
             setProblemInfo={setProblemInfo}

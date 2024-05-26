@@ -1,9 +1,12 @@
 import * as globals from "./Globals.ts";
-import { useEffect, useCallback } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useEffect, useCallback, useState } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import PopupDialog from "./PopupDialog.tsx";
 
 export default function Logout() {
     const { sendJsonMessage } = useOutletContext<globals.WebSocketHook>();
+    const [dialogLogoutSuccessOpenState, setDialogLogoutSuccessOpenState] = useState(false);
+    const navigate = useNavigate();
     const handleQuit = useCallback(() => {
         if (globals.fetchData("isLoggedIn") === true) {
             sendJsonMessage({
@@ -18,10 +21,19 @@ export default function Logout() {
             globals.setData("isLoggedIn", false);
         }
 
+        setDialogLogoutSuccessOpenState(true);
+
     }, [sendJsonMessage]);
+
     useEffect(() => {
         handleQuit();
     }, [handleQuit])
 
-    return <></>;
+    return <>
+    <PopupDialog
+        open={dialogLogoutSuccessOpenState}
+        setPopupDialogOpenState={setDialogLogoutSuccessOpenState}
+        text="Logout Successfully. Navigating to Root Page..."
+        onClose={() => { navigate("/"); }} />
+    </>;
 }

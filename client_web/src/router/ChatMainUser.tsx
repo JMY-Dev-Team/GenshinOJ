@@ -167,7 +167,7 @@ export default function ChatMainUser() {
     }, [toUsername, chatMessageToSend, sendJsonMessage]);
 
     return <div style={{ display: "block" }}>
-        <div style={{ overflowX: "auto", height: "200px" }}>
+        <div style={{ overflowX: "auto", height: "400px" }}>
             <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
                 {
                     chatMessageList == null
@@ -209,11 +209,11 @@ function ChatBubble({ text, fromMe }: {
     fromMe: boolean;
 }) {
     if (fromMe)
-        return <div className="chat-bubble chat-bubble--me">
+        return <div className="chat-bubble chat-bubble--me" style={{ display: "block", minHeight: "50px" }}>
             <p style={{ fontSize: "1em", color: "black" }}>{text}</p>
         </div>;
     else
-        return <div className="chat-bubble chat-bubble--not-me">
+        return <div className="chat-bubble chat-bubble--not-me" style={{ display: "block", minHeight: "50px" }}>
             <p style={{ fontSize: "1em", color: "white" }}>{text}</p>
         </div>;
 }

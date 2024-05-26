@@ -1,6 +1,15 @@
-import os, sys, abc, json, enum, typing, importlib
+import os, sys, abc, json, enum, importlib
 
-import asyncio, websockets.server
+try:
+    import asyncio, websockets.server
+except:
+    print("Installing dependencies...")
+    os.system("pip install asyncio nest-asyncio websockets")
+    try:
+        import asyncio, websockets.server
+    except ImportError:
+        print("Dependencies installation failed.")
+        sys.exit(-1)
 
 import server
 
