@@ -17,7 +17,7 @@ export default function Root() {
         sendJsonMessage,
         lastJsonMessage,
         readyState
-    } = useWebSocket("https://" + location.host + "/wss", {
+    } = useWebSocket("ws://" + location.host + "/wsapi", {
         share: true,
         shouldReconnect: () => true,
         reconnectAttempts: 10,
