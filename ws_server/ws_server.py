@@ -47,10 +47,13 @@ class ws_server:
                     getattr(
                         getattr(
                             getattr(
-                                importlib.__import__(
-                                    ws_server_application_config["path"]
+                                getattr(
+                                    importlib.__import__(
+                                        ws_server_application_config["path"]
+                                    ),
+                                    "ws_server_applications",
                                 ),
-                                "ws_server_applications",
+                                ws_server_application_config["id"],
                             ),
                             ws_server_application_config["id"],
                         ),

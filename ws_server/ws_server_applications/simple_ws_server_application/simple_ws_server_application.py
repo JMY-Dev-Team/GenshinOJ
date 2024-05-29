@@ -2,7 +2,7 @@ import sys, enum, json, random
 
 import websockets
 
-from .. import ws_server
+from ... import ws_server
 
 
 def generate_session_token(session_token_seed: int) -> str:
