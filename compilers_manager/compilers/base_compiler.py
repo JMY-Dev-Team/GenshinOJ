@@ -32,11 +32,13 @@ class base_compiler:
         pass
 
     @abc.abstractmethod
-    def get_compile_file_command(self, filename: str, language: str) -> str:
+    def get_compile_command_by_language_and_compile_file_path(
+        self, language: str, compile_file_path: str
+    ) -> list:
         pass
 
     @abc.abstractmethod
     def get_execute_binary_command_by_language_and_compile_file_path(
         self, language: str, compile_file_path: str
-    ) -> str:
+    ) -> list:
         pass

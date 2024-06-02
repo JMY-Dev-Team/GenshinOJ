@@ -127,7 +127,7 @@ class compilers_manager:
 
     def get_execute_binary_command_by_language_and_compile_file_path(
         self, language: str, compile_file_path: str
-    ) -> str:
+    ) -> list:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
@@ -156,21 +156,14 @@ class compilers_manager:
 
         raise NotImplementedError("Unsupported language {}.".format(language))
 
-    async def cleanup_file_by_language_and_compile_file_path(
+    async def get_compile_command_by_language_and_compile_file_path(
         self, language: str, compile_file_path: str
-    ) -> bool:
+    ) -> list:
         compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
         for compiler_instance in self.compilers_instance:
             if language in compiler_instance.language_bind:
-                return_code = await compiler_instance.on_cleanup(
-                    language,
-                    self.get_file_path_by_language_and_compile_file_path(
-                        language, compile_file_path
-                    ),
-                    self.get_binary_path_by_language_and_compile_file_path(
-                        language, compile_file_path
-                    ),
+                return compiler_instance.get_compile_command_by_language_and_compile_file_path(
+                    language, compile_file_path
                 )
-                return return_code
 
         raise NotImplementedError("Unsupported language {}.".format(language))

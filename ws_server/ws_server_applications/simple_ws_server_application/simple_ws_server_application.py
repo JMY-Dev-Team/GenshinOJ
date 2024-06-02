@@ -160,6 +160,7 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
             self.log("The session token: {}".format(new_session_token))
             setattr(self, "username", content["username"])
             setattr(self, "session_token", new_session_token)
+            setattr(websocket_protocol, "is_logged_in", True)
             response = {
                 "type": "session_token",
                 "content": {
@@ -190,7 +191,7 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
     ):
         await super().on_close_connection(websocket_protocol)
         if getattr(websocket_protocol, "is_logged_in", False):
-            setattr(websocket_protocol, "is_logged_in", True)
+            setattr(websocket_protocol, "is_logged_in", False)
             await self.on_quit(
                 websocket_protocol,
                 {"username": self.username, "session_token": self.session_token},

@@ -77,16 +77,14 @@ const router = createBrowserRouter([
                 path: "/submission",
                 element: <Suspense fallback={<Skeleton />}><SubmissionList /></Suspense>,
                 loader: () => document.title = "Submission",
-                children: [
-                    {
-                        path: "/submission/:submission_id",
-                        element: <Suspense fallback={<Skeleton />}><SubmissionShower /></Suspense>,
-                        loader: ({ params }) => {
-                            document.title = "Submission " + params.submission_id;
-                            return { submissionId: params.submission_id };
-                        },
-                    }
-                ],
+            },
+            {
+                path: "/submission/:submission_id",
+                element: <Suspense fallback={<Skeleton />}><SubmissionShower /></Suspense>,
+                loader: ({ params }) => {
+                    document.title = "Submission " + params.submission_id;
+                    return { submissionId: params.submission_id };
+                },
             },
             {
                 path: "/logout",

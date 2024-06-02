@@ -1,5 +1,5 @@
 {
 	"testcases": [
-		{"number": 1, "score": 100, "input": "input1.txt", "answer": "answer1.txt", "time_limit": 1.0}
+		{"number": 1, "score": 100, "input": "input1.txt", "answer": "answer1.txt", "time_limit": 1.0, "memory_limit": 256}
 	]
 }
