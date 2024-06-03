@@ -1,4 +1,4 @@
-import os, sys, json, enum, platform
+import os, sys, json, enum, platform, traceback
 
 try:
     import asyncio, pymysql, aiohttp
@@ -253,7 +253,7 @@ class judge:
 
             self.log("Go-judge server started.", judge_log_level.LEVEL_DEBUG)
         except Exception as e:
-            self.log(repr(e), judge_log_level.LEVEL_DEBUG)
+            self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
             self.log("Go-judge server failed to start.", judge_log_level.LEVEL_WARNING)
 
     async def judge_loop(self) -> None:
@@ -262,13 +262,26 @@ class judge:
             await asyncio.sleep(0)
             try:
                 for judgment in self.judgment_queue:
+                    try:
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "UPDATE judge_user_submission SET general=general+1 WHERE username = '{}';".format(
+                                judgment["username"]
+                            )
+                        )
+                    except pymysql.OperationalError:
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "INSERT INTO judge_user_submission (username, accepted, test_accepted, general) VALUES ('{}', 0, 0, 0);".format(
+                                judgment["username"]
+                            )
+                        )
+                    
                     self.server_instance.get_module_instance(
                         "db_connector"
-                    ).database_cursor.execute(
-                        "UPDATE judge_user_submission SET general=general+1 WHERE username = {};".format(
-                            judgment["username"]
-                        )
-                    )
+                    ).database.commit()
                     submission_id = judgment["submission_id"]  # Submission ID
                     submission_language = judgment["language"]  # Submission language
                     submission_problem_number = judgment[
@@ -486,13 +499,45 @@ class judge:
                                     continue
 
                     except Exception as e:
-                        self.log(repr(e), judge_log_level.LEVEL_DEBUG)
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
                         self.log(
                             "Problem {} is not configured correctly. Please configure it.".format(
                                 submission_problem_number
                             ),
                             judge_log_level.LEVEL_ERROR,
                         )
+
+                        judgment_result = {
+                            "submission_id": submission_id,
+                            "result": "UKE",
+                            "general_score": 0,
+                            "statuses": ["UKE"],
+                            "scores": [0],
+                            "problem_number": submission_problem_number,
+                        }
+
+                        response = dict()
+                        response["content"] = judgment_result
+                        response["type"] = "submission_result"
+                        await judgment["websocket_protocol"].send(
+                            json.dumps(response)
+                        )
+
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                                submission_id,
+                                json.dumps(judgment_result),
+                            )
+                        )
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database.commit()
+
+                        response.clear()
+                        del judgment_result
+                        continue
 
                     # Judging Part
 
@@ -648,18 +693,18 @@ class judge:
                                             ),
                                             judge_log_level.LEVEL_DEBUG,
                                         )
-                                        if body[0]["Status"] == "Time Limit Exceeded":
+                                        if body[0]["status"] == "Time Limit Exceeded":
                                             statuses.append("TLE")
                                             testcase_AC_flag = False
                                             continue
                                         elif (
-                                            body[0]["Status"] == "Memory Limit Exceeded"
+                                            body[0]["status"] == "Memory Limit Exceeded"
                                         ):
                                             statuses.append("MLE")
                                             testcase_AC_flag = False
                                             continue
                                         elif (
-                                            body[0]["Status"] == "Output Limit Exceeded"
+                                            body[0]["status"] == "Output Limit Exceeded"
                                         ):
                                             statuses.append("OLE")
                                             testcase_AC_flag = False
@@ -696,7 +741,7 @@ class judge:
                                                     testcase_AC_flag = False
                                                     break
                             except Exception as e:
-                                self.log(repr(e), judge_log_level.LEVEL_DEBUG)
+                                self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
 
                             if testcase_AC_flag == True:
                                 general_score = general_score + testcase["score"]
@@ -719,7 +764,7 @@ class judge:
                             self.server_instance.get_module_instance(
                                 "db_connector"
                             ).database_cursor.execute(
-                                "UPDATE judge_user_submission SET accepted=accepted+1 WHERE username = {};".format(
+                                "UPDATE judge_user_submission SET accepted=accepted+1 WHERE username = '{}';".format(
                                     judgment["username"]
                                 )
                             )
@@ -750,7 +795,7 @@ class judge:
                         response.clear()
                         del judgment_result
                     except Exception as e:
-                        self.log(repr(e), judge_log_level.LEVEL_DEBUG)
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
                         self.log(
                             "Problem {} is not configured correctly. Please configure it.".format(
                                 submission_problem_number
@@ -759,7 +804,7 @@ class judge:
                         )
 
             except Exception as e:
-                self.log(repr(e), judge_log_level.LEVEL_DEBUG)
+                self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
 
             self.judgment_queue.clear()
             await asyncio.sleep(0)
