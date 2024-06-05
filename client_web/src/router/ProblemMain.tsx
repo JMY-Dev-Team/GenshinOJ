@@ -12,7 +12,7 @@ const remarkMath = (await import("remark-math")).default;
 import 'katex/dist/katex.min.css'
 
 interface ProblemInfoFromLoader {
-    problemNumber: string;
+    problemNumber: number;
 }
 
 type ProblemInfoFromFetcher = {

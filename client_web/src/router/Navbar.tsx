@@ -9,7 +9,7 @@ import * as globals from "./Globals"
 export default function NavBar() {
     const navigate = useNavigate();
     const onTabSelect = (value: string) => {
-        if (value === "root") navigate("/");
+        if (value === "home") navigate("/home");
         if (value === "problem") navigate("/problem");
         if (value === "submission") navigate("/submission");
         if (value === "chat") navigate("/chat");
@@ -21,7 +21,7 @@ export default function NavBar() {
     return (
         <div style={{ padding: "4px 0" }}>
             <div style={{ display: "inline" }}>
-                <Tab onClick={() => onTabSelect("root")} style={{ float: "left" }} value="root" icon={<Avatar size={24} image={{ src: "https://img.atcoder.jp/icons/373e4eb93e4b8e5f441eeeea55e5ac84.jpg" }} />}>
+                <Tab onClick={() => onTabSelect("home")} style={{ float: "left" }} value="home" icon={<Avatar size={24} image={{ src: "https://img.atcoder.jp/icons/373e4eb93e4b8e5f441eeeea55e5ac84.jpg" }} />}>
                     Genshin OJ
                 </Tab>
                 <Tab onClick={() => onTabSelect("problem")} style={{ float: "left" }} value="problem" icon={<ClipboardTaskListLtrFilled />}>Problem</Tab>

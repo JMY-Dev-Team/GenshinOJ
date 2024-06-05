@@ -6,20 +6,20 @@ import {
 
 import React, { Suspense } from "react";
 
-const Root = React.lazy(() => import("./router/Root"));
-const Login = React.lazy(() => import("./router/Login"));
-const Register = React.lazy(() => import("./router/Register"));
-const Home = React.lazy(() => import("./router/Home"));
-const Chat = React.lazy(() => import("./router/Chat"));
-const ChatMainUser = React.lazy(() => import("./router/ChatMainUser"));
-const Problem = React.lazy(() => import("./router/Problem"));
-const ProblemMain = React.lazy(() => import("./router/ProblemMain"));
-const SubmissionShower = React.lazy(() => import("./router/SubmissionShower"));
-const SubmissionList = React.lazy(() => import("./router/SubmissionList"));
+const Root = React.lazy(() => import("./router/Root.tsx"));
+const Login = React.lazy(() => import("./router/Login.tsx"));
+const Register = React.lazy(() => import("./router/Register.tsx"));
+const Home = React.lazy(() => import("./router/Home.tsx"));
+const Chat = React.lazy(() => import("./router/Chat.tsx"));
+const ChatMainUser = React.lazy(() => import("./router/ChatMainUser.tsx"));
+const Problem = React.lazy(() => import("./router/Problem.tsx"));
+const ProblemMain = React.lazy(() => import("./router/ProblemMain.tsx"));
+const SubmissionShower = React.lazy(() => import("./router/SubmissionShower.tsx"));
+const SubmissionsList = React.lazy(() => import("./router/SubmissionsList.tsx"));
 
-import ErrorPage from "./ErrorPage";
+import ErrorPage from "./ErrorPage.tsx";
 import { Skeleton } from "@fluentui/react-components";
-import Logout from "./router/Logout";
+import Logout from "./router/Logout.tsx";
 
 const router = createBrowserRouter([
     {
@@ -68,22 +68,22 @@ const router = createBrowserRouter([
                         element: <Suspense fallback={<Skeleton />}><ProblemMain /></Suspense>,
                         loader: ({ params }) => {
                             document.title = "Problem " + params.problem_number;
-                            return { problemNumber: params.problem_number };
+                            return { problemNumber: Number(params.problem_number) };
                         },
                     }
                 ],
             },
             {
                 path: "/submission",
-                element: <Suspense fallback={<Skeleton />}><SubmissionList /></Suspense>,
-                loader: () => document.title = "Submission",
+                element: <Suspense fallback={<Skeleton />}><SubmissionsList /></Suspense>,
+                loader: () => document.title = "Submissions List",
             },
             {
                 path: "/submission/:submission_id",
                 element: <Suspense fallback={<Skeleton />}><SubmissionShower /></Suspense>,
                 loader: ({ params }) => {
                     document.title = "Submission " + params.submission_id;
-                    return { submissionId: params.submission_id };
+                    return { submissionId: Number(params.submission_id) };
                 },
             },
             {

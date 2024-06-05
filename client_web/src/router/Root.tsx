@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 import {
     FluentProvider,
@@ -57,7 +57,13 @@ export default function Root() {
 
     useEffect(() => {
         window.addEventListener('beforeunload', beforeunload);
-    }, [beforeunload])
+    }, [beforeunload]);
+
+    const navigate = useNavigate();
+    const nowLocation = useLocation();
+    useEffect(() => {
+        if(nowLocation.pathname == "/") navigate("/home");
+    }, [nowLocation]);
 
     return (
         <FluentProvider theme={webLightTheme}>

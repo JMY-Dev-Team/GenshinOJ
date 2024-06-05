@@ -141,7 +141,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             ).judgment_queue.append(
                 {
                     "submission_id": now_submission_id,
-                    "problem_number": content["problem_number"],
+                    "problem_number": int(content["problem_number"]),
                     "language": content["language"],
                     "username": self.ws_server_instance.server_instance.get_module_instance(
                         "ws_server"
@@ -179,7 +179,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 with open(
                     self.ws_server_instance.server_instance.get_module_instance(
                         "judge"
-                    ).get_problem_statement_json_path(content["problem_number"]),
+                    ).get_problem_statement_json_path(int(content["problem_number"])),
                     "r",
                 ) as problem_statement_json_file:
                     response["content"].update(json.load(problem_statement_json_file))
@@ -192,7 +192,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                     "problem_statement.json({}) is not found!".format(
                         self.ws_server_instance.server_instance.get_module_instance(
                             "judge"
-                        ).get_problem_statement_json_path(content["problem_number"])
+                        ).get_problem_statement_json_path(int(content["problem_number"]))
                     ),
                     judge_ws_server_log_level.LEVEL_ERROR,
                 )
@@ -281,30 +281,67 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 )
             )
 
-            fetch_result = self.ws_server_instance.server_instance.get_module_instance(
+            fetch_results = self.ws_server_instance.server_instance.get_module_instance(
                 "db_connector"
             ).database_cursor.fetchone()
-            if fetch_result == None:
+            if fetch_results == None:
                 response["content"]["result"] = "PD"
                 response["content"]["submission_id"] = content["submission_id"]
             else:
-                response["content"] = json.loads(fetch_result[0])
+                response["content"] = json.loads(fetch_results[0])
 
             await websocket_protocol.send(json.dumps(response))
             response.clear()
         except Exception as e:
             self.log(repr(e), judge_ws_server_log_level.WARNING)
 
-    #TODO(JackMerryYoung): WS_APP Configuration
-    async def on_submission_list(
+    async def on_submissions_list(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
         content: dict,
     ):
+        PAGE_SIZE = 10
+        now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
+            "judge"
+        ).now_submission_id
         self.ws_server_instance.server_instance.get_module_instance(
-                "db_connector"
-            ).database_cursor.execute(
-                "SELECT result FROM judge_submission_result WHERE submission_id >= {} AND submission_id < {};".format(
-                    content["index"] * PAGE_SIZE 
-                )
+            "db_connector"
+        ).database_cursor.execute(
+            "SELECT result FROM judge_submission_result WHERE submission_id >= {} AND submission_id < {} ORDER BY submission_id DESC;".format(
+                now_submission_id - content["index"] * PAGE_SIZE + 1,
+                now_submission_id - (content["index"] - 1) * PAGE_SIZE + 1,
             )
+        )
+
+        response = dict()
+        response["type"] = "submissions_list"
+        response["content"] = dict()
+        response["content"]["request_key"] = content["request_key"]
+        response["content"]["submissions_list"] = list()
+        fetch_results = self.ws_server_instance.server_instance.get_module_instance(
+            "db_connector"
+        ).database_cursor.fetchall()
+        if fetch_results != None:
+            for fetch_result in fetch_results:
+                response["content"]["submissions_list"].append(json.loads(fetch_result[0]))
+
+        await websocket_protocol.send(json.dumps(response))
+        response.clear()
+    
+    async def on_total_submissions_list_index(
+        self,
+        websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict,
+    ):
+        import math
+        PAGE_SIZE = 10
+        now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
+            "judge"
+        ).now_submission_id
+        response = dict()
+        response["type"] = "total_submissions_list_index"
+        response["content"] = dict()
+        response["content"]["request_key"] = content["request_key"]
+        response["content"]["total_submissions_list_index"] = int(math.ceil(now_submission_id / 10))
+        await websocket_protocol.send(json.dumps(response))
+        response.clear()

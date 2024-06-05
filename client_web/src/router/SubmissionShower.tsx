@@ -6,7 +6,7 @@ import { CheckmarkCircleRegular, ClipboardCheckmarkRegular, ErrorCircleRegular, 
 import { Label, Spinner, Table, TableBody, TableHeader, TableHeaderCell, TableCell, TableRow } from "@fluentui/react-components";
 
 interface SubmissionInfoFromLoader {
-    submissionId: string;
+    submissionId: number;
 }
 
 interface SubmissionResult {
@@ -19,7 +19,7 @@ interface SubmissionResult {
 }
 
 function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionResult, setDialogSubmissionNotFoundOpenState }: {
-    submissionId: string;
+    submissionId: number;
     lastJsonMessage: unknown;
     setSubmissionResult: React.Dispatch<React.SetStateAction<SubmissionResult | undefined>>;
     setDialogSubmissionNotFoundOpenState: React.Dispatch<React.SetStateAction<boolean>>;
@@ -79,7 +79,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                 if (isSubmissionResultFromFetch(_message)) {
                     const message = _message as SubmissionResultFromFetch;
                     console.log(message);
-                    if (message.content.submission_id.toString() == submissionId) {
+                    if (message.content.submission_id == submissionId) {
                         setSubmissionResult(message.content as SubmissionResult);
                         delete _websocketMessageHistory[_index];
                     }
@@ -87,7 +87,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                 else if (isSubmissionResultOthers(_message)) {
                     const message = _message as SubmissionResultOthers;
                     console.log(message);
-                    if (message.content.submission_id.toString() == submissionId) {
+                    if (message.content.submission_id == submissionId) {
                         setSubmissionResult(message.content as SubmissionResult);
                         if (message.content.result === "SNF") setDialogSubmissionNotFoundOpenState(true);
                         delete _websocketMessageHistory[_index];
@@ -115,7 +115,7 @@ export default function SubmissionShower() {
         sendJsonMessage({
             type: "submission_result",
             content: {
-                submission_id: Number(submissionId)
+                submission_id: submissionId
             }
         });
     }, [sendJsonMessage, submissionId])
@@ -212,7 +212,7 @@ export default function SubmissionShower() {
             open={dialogSubmissionNotFoundOpenState}
             setPopupDialogOpenState={setDialogSubmissionNotFoundOpenState}
             text={`Submission ${submissionId} is not found!`}
-            onClose={() => navigate("/")} />
+            onClose={() => navigate(-1)} />
         <PopupDialog
             open={dialogRequireLoginOpenState}
             setPopupDialogOpenState={setDialogRequireLoginOpenState}
