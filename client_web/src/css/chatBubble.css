@@ -7,7 +7,7 @@
   padding-left: 2%;
   padding-right: 2%;
   border-radius: 10px;
-  min-height: 5%;
+  min-height: 50px;
 }
 
 .chat-bubble--me {
@@ -19,7 +19,7 @@
   padding-left: 2%;
   padding-right: 2%;
   border-radius: 10px;
-  min-height: 5%;
+  min-height: 50px;
 }
 
 .chat-bubble::before {

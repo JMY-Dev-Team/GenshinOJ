@@ -1,8 +1,6 @@
-import os, sys, json, enum, importlib, platform
+import os, sys, json, enum, platform
 
 import server
-
-import compilers_manager.compilers.base_compiler
 
 
 class compilers_manager_log_level(enum.Enum):
@@ -32,30 +30,11 @@ class compilers_manager:
         with open(COMPILERS_CONFIG_JSON_PATH, "r") as self.compilers_config_json_file:
             self.compilers_config = json.load(self.compilers_config_json_file)
 
-        self.compilers_instance = []
-        for compiler_config in self.compilers_config["compilers"]:
-            if compiler_config["enabled"]:
-                tmp_compiler: (
-                    compilers_manager.compilers.base_compiler.base_compiler
-                ) = getattr(
-                    getattr(
-                        getattr(
-                            importlib.__import__(compiler_config["path"]), "compilers"
-                        ),
-                        compiler_config["id"],
-                    ),
-                    compiler_config["id"],
-                )(
-                    unload_timeout=compiler_config["unload_timeout"]
-                )
-                setattr(tmp_compiler, "language_bind", compiler_config["language_bind"])
-                self.compilers_instance.append(tmp_compiler)
+        self.compilers_info = dict()
+        for compiler_config in self.compilers_config["compilers"].values():
+            self.compilers_info[compiler_config["name"]] = compiler_config
 
     def on_unload(self) -> None:
-        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
-        for compiler_instance in self.compilers_instance:
-            compiler_instance.on_unload()
-
         self.log("Compilers Manger unloaded.")
 
     def log(
@@ -101,69 +80,8 @@ class compilers_manager:
                 )
             )
 
-    def get_file_path_by_language_and_compile_file_path(
-        self, language: str, compile_file_path: str
-    ) -> str:
-        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
-        for compiler_instance in self.compilers_instance:
-            if language in compiler_instance.language_bind:
-                return compile_file_path + compiler_instance.get_file_extension(
-                    language
-                )
-
-        raise NotImplementedError("Unsupported language {}.".format(language))
-
-    def get_binary_path_by_language_and_compile_file_path(
-        self, language: str, compile_file_path: str
-    ) -> str:
-        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
-        for compiler_instance in self.compilers_instance:
-            if language in compiler_instance.language_bind:
-                return compile_file_path + compiler_instance.get_binary_extension(
-                    language
-                )
-
-        raise NotImplementedError("Unsupported language {}.".format(language))
-
-    def get_execute_binary_command_by_language_and_compile_file_path(
-        self, language: str, compile_file_path: str
-    ) -> list:
-        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
-        for compiler_instance in self.compilers_instance:
-            if language in compiler_instance.language_bind:
-                return compiler_instance.get_execute_binary_command_by_language_and_compile_file_path(
-                    language, compile_file_path
-                )
-
-        raise NotImplementedError("Unsupported language {}.".format(language))
-
-    async def compile_file_by_language_and_compile_file_path(
-        self, language: str, compile_file_path: str
-    ) -> bool:
-        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
-        for compiler_instance in self.compilers_instance:
-            if language in compiler_instance.language_bind:
-                return_code = await compiler_instance.on_compile(
-                    language,
-                    self.get_file_path_by_language_and_compile_file_path(
-                        language, compile_file_path
-                    ),
-                    self.get_binary_path_by_language_and_compile_file_path(
-                        language, compile_file_path
-                    ),
-                )
-                return return_code
-
-        raise NotImplementedError("Unsupported language {}.".format(language))
-
-    async def get_compile_command_by_language_and_compile_file_path(
-        self, language: str, compile_file_path: str
-    ) -> list:
-        compiler_instance: compilers_manager.compilers.base_compiler.base_compiler
-        for compiler_instance in self.compilers_instance:
-            if language in compiler_instance.language_bind:
-                return compiler_instance.get_compile_command_by_language_and_compile_file_path(
-                    language, compile_file_path
-                )
-
-        raise NotImplementedError("Unsupported language {}.".format(language))
+    def get_compiler_info(self, language: str) -> list:
+        if language in self.compilers_info:
+            return self.compilers_info[language]
+        else:
+            raise NotImplementedError("Unsupported language {}.".format(language))

@@ -10,14 +10,14 @@ import {
     PasswordRegular
 } from "@fluentui/react-icons";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import "../css/style.css";
 
-import * as globals from "./Globals";
-import PopupDialog from "./PopupDialog";
+import * as globals from "./Globals.ts";
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
 
 const useStyles = makeStyles({
     root: {
@@ -26,7 +26,7 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         maxWidth: "300px",
-        padding: "4px 0",
+        padding: "4px 0 0 12px",
     },
 });
 

@@ -1,7 +1,7 @@
 import os, sys, json, enum, platform, traceback
 
 try:
-    import asyncio, pymysql, aiohttp
+    import asyncio, pymysql, aiohttp, pymysql.converters
 except:
     print("Installing dependencies...")
     os.system("pip install asyncio nest-asyncio pymysql cryptography aiohttp")
@@ -38,9 +38,10 @@ class judge:
             CREATE TABLE IF NOT EXISTS judge_user_submission (
                 id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
                 username VARCHAR(256) NOT NULL,
-                accepted INT NOT NULL,
-                test_accepted INT NOT NULL,
-                general INT NOT NULL
+                accepted INT NOT NULL DEFAULT 0,
+                test_accepted INT NOT NULL DEFAULT 0,
+                general INT NOT NULL DEFAULT 0,
+                UNIQUE KEY username (username) USING BTREE
             )
             """
             )
@@ -239,8 +240,8 @@ class judge:
                                     json.loads(await response.text())["goVersion"],
                                 )
                             )  # Show the version
-                except Exception as e:
-                    self.log(repr(e), judge_log_level.LEVEL_DEBUG)
+                except:
+                    self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
                     status_code = -1
 
                 await asyncio.sleep(0.5)
@@ -252,8 +253,8 @@ class judge:
                 return
 
             self.log("Go-judge server started.", judge_log_level.LEVEL_DEBUG)
-        except Exception as e:
-            self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
+        except:
+            self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
             self.log("Go-judge server failed to start.", judge_log_level.LEVEL_WARNING)
 
     async def judge_loop(self) -> None:
@@ -266,30 +267,22 @@ class judge:
                         self.server_instance.get_module_instance(
                             "db_connector"
                         ).database_cursor.execute(
-                            "UPDATE judge_user_submission SET general=general+1 WHERE username = '{}';".format(
+                            "INSERT INTO judge_user_submission (username, general) VALUE ('{}', 1) ON DUPLICATE KEY UPDATE general = general + 1;".format(
                                 judgment["username"]
                             )
                         )
-                    except pymysql.OperationalError:
                         self.server_instance.get_module_instance(
                             "db_connector"
-                        ).database_cursor.execute(
-                            "INSERT INTO judge_user_submission (username, accepted, test_accepted, general) VALUES ('{}', 0, 0, 0);".format(
-                                judgment["username"]
-                            )
-                        )
-                    
-                    self.server_instance.get_module_instance(
-                        "db_connector"
-                    ).database.commit()
+                        ).database.commit()
+                    except pymysql.OperationalError:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
+
                     submission_id = judgment["submission_id"]  # Submission ID
                     submission_language = judgment["language"]  # Submission language
                     submission_problem_number = judgment[
                         "problem_number"
                     ]  # Problem number
-                    submission_file_name = self.get_submission_file_name_with_absolute_path_by_submission_id(
-                        submission_id
-                    )
+                    submission_code = judgment["code"]
                     self.log(
                         "Judging Submission {} (language: {}, problem number: {}).".format(
                             submission_id,
@@ -301,67 +294,13 @@ class judge:
                     # Compile Part
 
                     try:
-                        submission_code: str = ""
-                        submission_compiled_tmp_file_id: str = ""
-                        with open(
+                        submission_language_compiler_info = (
                             self.server_instance.get_module_instance(
                                 "compilers_manager"
-                            ).get_file_path_by_language_and_compile_file_path(
-                                submission_language, submission_file_name
-                            ),
-                            "r+",
-                        ) as submission_file:
-                            submission_code = submission_file.read()
-
+                            ).get_compiler_info(submission_language)
+                        )
+                        submission_compiled_tmp_file_id: str = ""
                         async with aiohttp.ClientSession() as session:
-                            print(
-                                {
-                                    "cmd": [
-                                        {
-                                            "args": (
-                                                await self.server_instance.get_module_instance(
-                                                    "compilers_manager"
-                                                ).get_compile_command_by_language_and_compile_file_path(
-                                                    submission_language, "tmp"
-                                                )
-                                            ),
-                                            "env": ["PATH=/usr/bin:/bin"],
-                                            "files": [
-                                                {"content": ""},
-                                                {
-                                                    "name": "stdout",
-                                                    "max": 10240,
-                                                },
-                                                {
-                                                    "name": "stderr",
-                                                    "max": 10240,
-                                                },
-                                            ],
-                                            "cpuLimit": 10000000000,
-                                            "memoryLimit": 104857600,
-                                            "procLimit": 50,
-                                            "copyIn": {
-                                                self.server_instance.get_module_instance(
-                                                    "compilers_manager"
-                                                ).get_file_path_by_language_and_compile_file_path(
-                                                    submission_language, "tmp"
-                                                ): {
-                                                    "content": submission_code
-                                                }
-                                            },
-                                            "copyOut": ["stdout", "stderr"],
-                                            "copyOutCached": [
-                                                self.server_instance.get_module_instance(
-                                                    "compilers_manager"
-                                                ).get_binary_path_by_language_and_compile_file_path(
-                                                    submission_language,
-                                                    "tmp",
-                                                )
-                                            ],
-                                        }
-                                    ]
-                                }
-                            )
                             async with session.post(
                                 "http://localhost:5050/run",
                                 data=bytes(
@@ -369,43 +308,40 @@ class judge:
                                         {
                                             "cmd": [
                                                 {
-                                                    "args": await self.server_instance.get_module_instance(
-                                                        "compilers_manager"
-                                                    ).get_compile_command_by_language_and_compile_file_path(
-                                                        submission_language, "tmp"
-                                                    ),
-                                                    "env": ["PATH=/usr/bin:/bin"],
+                                                    "args": submission_language_compiler_info[
+                                                        "compileCmd"
+                                                    ],
+                                                    "env": [
+                                                        "PATH=/usr/bin:/bin:/usr/lib/jvm/java-21-openjdk-amd64/conf/security"
+                                                    ],
                                                     "files": [
                                                         {"content": ""},
                                                         {
                                                             "name": "stdout",
-                                                            "max": 10240,
+                                                            "max": 1024000,
                                                         },
                                                         {
                                                             "name": "stderr",
-                                                            "max": 10240,
+                                                            "max": 1024000,
                                                         },
                                                     ],
-                                                    "cpuLimit": 10000000000,
-                                                    "memoryLimit": 104857600,
-                                                    "procLimit": 50,
+                                                    "cpuLimit": 1000000000000,
+                                                    "memoryLimit": 4294967296,
+                                                    "procLimit": 255,
                                                     "copyIn": {
-                                                        self.server_instance.get_module_instance(
-                                                            "compilers_manager"
-                                                        ).get_file_path_by_language_and_compile_file_path(
-                                                            submission_language, "tmp"
-                                                        ): {
-                                                            "content": submission_code
+                                                        submission_language_compiler_info[
+                                                            "sourceFileName"
+                                                        ]: {
+                                                            "content": "".join(
+                                                                submission_code
+                                                            )
                                                         }
                                                     },
                                                     "copyOut": ["stdout", "stderr"],
                                                     "copyOutCached": [
-                                                        self.server_instance.get_module_instance(
-                                                            "compilers_manager"
-                                                        ).get_binary_path_by_language_and_compile_file_path(
-                                                            submission_language,
-                                                            "tmp",
-                                                        )
+                                                        submission_language_compiler_info[
+                                                            "executable"
+                                                        ]
                                                     ],
                                                 }
                                             ]
@@ -424,16 +360,12 @@ class judge:
                                 if body[0]["status"] == "Accepted":
                                     submission_compiled_tmp_file_id = body[0][
                                         "fileIds"
-                                    ][
-                                        self.server_instance.get_module_instance(
-                                            "compilers_manager"
-                                        ).get_binary_path_by_language_and_compile_file_path(
-                                            submission_language,
-                                            "tmp",
-                                        )
-                                    ]
+                                    ][submission_language_compiler_info["executable"]]
                                 elif body[0]["status"] == "Nonzero Exit Status":
-                                    print(body[0]["files"]["stderr"])
+                                    self.log(
+                                        body[0]["files"]["stderr"],
+                                        judge_log_level.LEVEL_WARNING,
+                                    )
                                     judgment_result = {
                                         "submission_id": submission_id,
                                         "result": "CE",
@@ -441,6 +373,7 @@ class judge:
                                         "statuses": ["CE"],
                                         "scores": [0],
                                         "problem_number": submission_problem_number,
+                                        "code": submission_code,
                                     }
 
                                     response = dict()
@@ -455,7 +388,9 @@ class judge:
                                     ).database_cursor.execute(
                                         "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
                                             submission_id,
-                                            json.dumps(judgment_result),
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
                                         )
                                     )
                                     self.server_instance.get_module_instance(
@@ -473,6 +408,7 @@ class judge:
                                         "statuses": ["UKE"],
                                         "scores": [0],
                                         "problem_number": submission_problem_number,
+                                        "code": submission_code,
                                     }
 
                                     response = dict()
@@ -487,7 +423,9 @@ class judge:
                                     ).database_cursor.execute(
                                         "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
                                             submission_id,
-                                            json.dumps(judgment_result),
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
                                         )
                                     )
                                     self.server_instance.get_module_instance(
@@ -498,8 +436,8 @@ class judge:
                                     del judgment_result
                                     continue
 
-                    except Exception as e:
-                        self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
+                    except:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
                         self.log(
                             "Problem {} is not configured correctly. Please configure it.".format(
                                 submission_problem_number
@@ -514,21 +452,22 @@ class judge:
                             "statuses": ["UKE"],
                             "scores": [0],
                             "problem_number": submission_problem_number,
+                            "code": submission_code,
                         }
 
                         response = dict()
                         response["content"] = judgment_result
                         response["type"] = "submission_result"
-                        await judgment["websocket_protocol"].send(
-                            json.dumps(response)
-                        )
+                        await judgment["websocket_protocol"].send(json.dumps(response))
 
                         self.server_instance.get_module_instance(
                             "db_connector"
                         ).database_cursor.execute(
                             "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
                                 submission_id,
-                                json.dumps(judgment_result),
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
                             )
                         )
                         self.server_instance.get_module_instance(
@@ -556,6 +495,9 @@ class judge:
                                     "testcases"
                                 ]  # Testcases
                         except:
+                            self.log(
+                                traceback.format_exc(), judge_log_level.LEVEL_WARNING
+                            )
                             judgment_result = {
                                 "submission_id": submission_id,
                                 "result": "UKE",
@@ -563,6 +505,7 @@ class judge:
                                 "statuses": ["UKE"],
                                 "scores": [0],
                                 "problem_number": submission_problem_number,
+                                "code": submission_code,
                             }
 
                             response = dict()
@@ -577,7 +520,9 @@ class judge:
                             ).database_cursor.execute(
                                 "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
                                     submission_id,
-                                    json.dumps(judgment_result),
+                                    pymysql.converters.escape_string(
+                                        json.dumps(judgment_result)
+                                    ),
                                 )
                             )
                             self.server_instance.get_module_instance(
@@ -624,6 +569,7 @@ class judge:
                             testcase_AC_flag: bool = True
                             testcase_output: str = ""
                             try:
+
                                 testcase_input: str = ""
                                 with open(
                                     testcase_input_path,
@@ -638,14 +584,11 @@ class judge:
                                                 {
                                                     "cmd": [
                                                         {
-                                                            "args": self.server_instance.get_module_instance(
-                                                                "compilers_manager"
-                                                            ).get_execute_binary_command_by_language_and_compile_file_path(
-                                                                submission_language,
-                                                                "tmp",
-                                                            ),
+                                                            "args": submission_language_compiler_info[
+                                                                "runCmd"
+                                                            ],
                                                             "env": [
-                                                                "PATH=/usr/bin:/bin"
+                                                                "PATH=/usr/bin:/bin:/usr/lib/jvm/java-21-openjdk-amd64/conf/security"
                                                             ],
                                                             "files": [
                                                                 {
@@ -653,11 +596,11 @@ class judge:
                                                                 },
                                                                 {
                                                                     "name": "stdout",
-                                                                    "max": 10240,
+                                                                    "max": 1024000,
                                                                 },
                                                                 {
                                                                     "name": "stderr",
-                                                                    "max": 10240,
+                                                                    "max": 1024000,
                                                                 },
                                                             ],
                                                             "cpuLimit": int(
@@ -668,14 +611,11 @@ class judge:
                                                                 testcase["memory_limit"]
                                                                 * 1048576
                                                             ),
-                                                            "procLimit": 50,
+                                                            "procLimit": 255,
                                                             "copyIn": {
-                                                                self.server_instance.get_module_instance(
-                                                                    "compilers_manager"
-                                                                ).get_binary_path_by_language_and_compile_file_path(
-                                                                    submission_language,
-                                                                    "tmp",
-                                                                ): {
+                                                                submission_language_compiler_info[
+                                                                    "executable"
+                                                                ]: {
                                                                     "fileId": submission_compiled_tmp_file_id
                                                                 }
                                                             },
@@ -696,24 +636,21 @@ class judge:
                                         if body[0]["status"] == "Time Limit Exceeded":
                                             statuses.append("TLE")
                                             testcase_AC_flag = False
-                                            continue
                                         elif (
                                             body[0]["status"] == "Memory Limit Exceeded"
                                         ):
                                             statuses.append("MLE")
                                             testcase_AC_flag = False
-                                            continue
                                         elif (
                                             body[0]["status"] == "Output Limit Exceeded"
                                         ):
                                             statuses.append("OLE")
                                             testcase_AC_flag = False
-                                            continue
 
-                                        testcase_output = body[0]["files"][
-                                            "stdout"
-                                        ]  # Get testcase output
-
+                                if testcase_AC_flag == True:
+                                    testcase_output = body[0]["files"][
+                                        "stdout"
+                                    ]  # Get testcase output
                                     with open(
                                         testcase_answer_path, "r"
                                     ) as testcase_answer_file:
@@ -740,8 +677,10 @@ class judge:
                                                     statuses.append("WA")
                                                     testcase_AC_flag = False
                                                     break
-                            except Exception as e:
-                                self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
+                            except:
+                                self.log(
+                                    traceback.format_exc(), judge_log_level.LEVEL_DEBUG
+                                )
 
                             if testcase_AC_flag == True:
                                 general_score = general_score + testcase["score"]
@@ -760,6 +699,7 @@ class judge:
                                 "statuses": statuses,
                                 "scores": scores,
                                 "problem_number": submission_problem_number,
+                                "code": submission_code,
                             }
                             self.server_instance.get_module_instance(
                                 "db_connector"
@@ -768,6 +708,9 @@ class judge:
                                     judgment["username"]
                                 )
                             )
+                            self.server_instance.get_module_instance(
+                                "db_connector"
+                            ).database.commit()
                         else:
                             judgment_result = {
                                 "submission_id": submission_id,
@@ -776,6 +719,7 @@ class judge:
                                 "statuses": statuses,
                                 "scores": scores,
                                 "problem_number": submission_problem_number,
+                                "code": submission_code,
                             }
 
                         response = dict()
@@ -786,7 +730,10 @@ class judge:
                             "db_connector"
                         ).database_cursor.execute(
                             "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
-                                submission_id, json.dumps(judgment_result)
+                                submission_id,
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
                             )
                         )
                         self.server_instance.get_module_instance(
@@ -794,8 +741,8 @@ class judge:
                         ).database.commit()
                         response.clear()
                         del judgment_result
-                    except Exception as e:
-                        self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
+                    except:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
                         self.log(
                             "Problem {} is not configured correctly. Please configure it.".format(
                                 submission_problem_number
@@ -803,8 +750,8 @@ class judge:
                             judge_log_level.LEVEL_ERROR,
                         )
 
-            except Exception as e:
-                self.log(traceback.format_exc(), judge_log_level.LEVEL_DEBUG)
+            except:
+                self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
 
             self.judgment_queue.clear()
             await asyncio.sleep(0)

@@ -2,9 +2,9 @@ import "../css/style.css";
 import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 const Editor = React.lazy(() => import("@monaco-editor/react"));
-import * as globals from "./Globals"
+import * as globals from "./Globals.ts";
 import { Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps, SelectionEvents, OptionOnSelectData } from "@fluentui/react-components";
-import PopupDialog from "./PopupDialog";
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
 import { AlignBottomFilled, AlignBottomRegular, AlignStretchHorizontalFilled, AlignStretchHorizontalRegular, AppGenericFilled, AppGenericRegular, AppsAddInRegular, ArrowRoutingRectangleMultipleRegular } from "@fluentui/react-icons";
 const Markdown = React.lazy(() => import("react-markdown"));
 const rehypeKatex = (await import("rehype-katex")).default;
@@ -235,7 +235,7 @@ ${statement}
     }, [problemInfo]);
 
     return <>
-        <Suspense fallback={<Spinner delay={100}/>}>
+        <Suspense fallback={<Spinner delay={100} />}>
             <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
                 {
                     problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement

@@ -105,37 +105,13 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 + 1
             )
 
-            now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
-                "judge"
-            ).now_submission_id
+            now_submission_id = (
+                self.ws_server_instance.server_instance.get_module_instance(
+                    "judge"
+                ).now_submission_id
+            )
 
             self.log("Processing Submission {}".format(now_submission_id))
-
-            submission_code_path = (
-                self.ws_server_instance.server_instance.get_module_instance(
-                    "compilers_manager"
-                ).get_file_path_by_language_and_compile_file_path(
-                    content["language"],
-                    self.ws_server_instance.server_instance.get_module_instance(
-                        "judge"
-                    ).get_submission_file_name_with_absolute_path_by_submission_id(
-                        now_submission_id
-                    ),
-                )
-            )
-            self.log("Opening {}.".format(submission_code_path))
-            open(submission_code_path, "w").close()  # Create
-            submission_code = open(submission_code_path, "w+")
-            submission_code.seek(0)
-            file_content = submission_code.read()
-            new_file_content = "" + file_content
-            submission_code.seek(0)
-            submission_code.write(new_file_content)
-            for line in content["code"]:
-                submission_code.write(line)
-
-            submission_code.flush()
-            submission_code.close()
             self.ws_server_instance.server_instance.get_module_instance(
                 "judge"
             ).judgment_queue.append(
@@ -145,7 +121,10 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                     "language": content["language"],
                     "username": self.ws_server_instance.server_instance.get_module_instance(
                         "ws_server"
-                    ).sessions[content["session_token"]],
+                    ).sessions[
+                        content["session_token"]
+                    ],
+                    "code": content["code"],
                     "websocket_protocol": websocket_protocol,
                 }
             )
@@ -192,7 +171,9 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                     "problem_statement.json({}) is not found!".format(
                         self.ws_server_instance.server_instance.get_module_instance(
                             "judge"
-                        ).get_problem_statement_json_path(int(content["problem_number"]))
+                        ).get_problem_statement_json_path(
+                            int(content["problem_number"])
+                        )
                     ),
                     judge_ws_server_log_level.LEVEL_ERROR,
                 )
@@ -323,17 +304,20 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         ).database_cursor.fetchall()
         if fetch_results != None:
             for fetch_result in fetch_results:
-                response["content"]["submissions_list"].append(json.loads(fetch_result[0]))
+                response["content"]["submissions_list"].append(
+                    json.loads(fetch_result[0])
+                )
 
         await websocket_protocol.send(json.dumps(response))
         response.clear()
-    
+
     async def on_total_submissions_list_index(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
         content: dict,
     ):
         import math
+
         PAGE_SIZE = 10
         now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
             "judge"
@@ -342,6 +326,8 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         response["type"] = "total_submissions_list_index"
         response["content"] = dict()
         response["content"]["request_key"] = content["request_key"]
-        response["content"]["total_submissions_list_index"] = int(math.ceil(now_submission_id / 10))
+        response["content"]["total_submissions_list_index"] = int(
+            math.ceil(now_submission_id / 10)
+        )
         await websocket_protocol.send(json.dumps(response))
         response.clear()

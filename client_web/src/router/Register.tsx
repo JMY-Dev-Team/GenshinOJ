@@ -25,8 +25,8 @@ const useStyles = makeStyles({
         flexDirection: "column",
         rowGap: "4px",
         columnGap: "4px",
-        maxWidth: "250px",
-        padding: "4px 0",
+        maxWidth: "300px",
+        padding: "4px 0 0 12px ",
     },
 });
 

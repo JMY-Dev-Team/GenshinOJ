@@ -17,12 +17,12 @@ import {
 
 import { useNavigate } from "react-router-dom";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import React, { useEffect, useState, Suspense, useCallback } from "react";
 
 import "../css/style.css";
 
-import * as globals from "./Globals";
-import PopupDialog from "./PopupDialog";
+import * as globals from "./Globals.ts";
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
 
 const useStyles = makeStyles({
     root: {
@@ -31,8 +31,17 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         height: "fill",
-        padding: "4px 0",
+        margin: "auto 4px",
     },
+    chat_list: {
+        flex: "20"
+    },
+    divider: {
+        flex: "1"
+    },
+    chat_main_outlet: {
+        flex: "120"
+    }
 });
 
 function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessage }: {
@@ -142,6 +151,7 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
 export default function Chat() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const navigate = useNavigate();
+    const style = useStyles();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
 
     useEffect(() => {
@@ -149,22 +159,22 @@ export default function Chat() {
             setDialogRequireLoginOpenState(true);
     }, []);
 
-    return <div className={useStyles().root}>
+    return <div className={style.root}>
         {
             globals.fetchData("isLoggedIn")
                 ?
                 <>
-                    <div style={{ flex: 20 }}>
+                    <div className={style.chat_list}>
                         <Suspense fallback={<Skeleton />}>
                             <ChatList
                                 sendJsonMessage={sendJsonMessage}
                                 lastJsonMessage={lastJsonMessage} />
                         </Suspense>
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div className={style.divider}>
                         <Divider vertical style={{ height: "100%" }} />
                     </div>
-                    <div style={{ flex: 120 }}>
+                    <div className={style.chat_main_outlet}>
                         <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
                     </div>
                 </>

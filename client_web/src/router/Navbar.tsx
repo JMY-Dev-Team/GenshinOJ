@@ -13,6 +13,7 @@ export default function NavBar() {
         if (value === "problem") navigate("/problem");
         if (value === "submission") navigate("/submission");
         if (value === "chat") navigate("/chat");
+        if (value === "user") navigate("/user");
         if (value === "login") navigate("/login");
         if (value === "register") navigate("/register");
         if (value === "logout") navigate("/logout");
@@ -35,8 +36,7 @@ export default function NavBar() {
                         <Tab onClick={() => onTabSelect("login")} style={{ float: "right" }} value="login">Sign in</Tab>
                 }
                 <Tab onClick={() => onTabSelect("register")} style={{ float: "right" }} value="register">Sign up</Tab>
-
-                {/* </TabList> */}
+                <Tab onClick={() => onTabSelect("user")} style={{ float: "right" }} value="user">User</Tab>
                 <Divider />
             </div>
         </div>

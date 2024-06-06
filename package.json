@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "copy-to-clipboard": "^3.3.3"
+  }
+}

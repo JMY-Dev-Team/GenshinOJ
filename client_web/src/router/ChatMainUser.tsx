@@ -1,9 +1,9 @@
 import "../css/style.css";
 import React, { useCallback, useEffect, useState } from "react";
 import { useLoaderData, useOutletContext } from "react-router-dom";
-import * as globals from "./Globals"
+import * as globals from "./Globals.ts"
 import { Input, Button, Field } from "@fluentui/react-components";
-import PopupDialog from "./PopupDialog";
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
 
 interface ChatMessage {
     message: string;
@@ -209,11 +209,11 @@ function ChatBubble({ text, fromMe }: {
     fromMe: boolean;
 }) {
     if (fromMe)
-        return <div className="chat-bubble chat-bubble--me" style={{ display: "block", minHeight: "50px" }}>
+        return <div className="chat-bubble chat-bubble--me">
             <p style={{ fontSize: "1em", color: "black" }}>{text}</p>
         </div>;
     else
-        return <div className="chat-bubble chat-bubble--not-me" style={{ display: "block", minHeight: "50px" }}>
+        return <div className="chat-bubble chat-bubble--not-me">
             <p style={{ fontSize: "1em", color: "white" }}>{text}</p>
         </div>;
 }

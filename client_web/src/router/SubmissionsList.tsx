@@ -1,32 +1,33 @@
-import { 
+import {
     makeStyles,
-    Button, 
-    Divider,
+    Button,
     Label,
-    Field, 
-    Input,  
+    Field,
+    Input,
     Table,
     TableHeader,
     TableRow,
     TableHeaderCell,
     TableCell,
-    TableBody, 
+    TableBody,
 } from "@fluentui/react-components";
-import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useOutletContext, Link } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 
-import * as globals from "./Globals";
+import * as globals from "./Globals.ts";
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
 
 function getColorByResult(result: string) {
-    if(result === "AC") return "#3AAF00";
-    else if(result === "CE") return "#FDDB10";
-    else if(result === "WA") return "#DA3737";
+    if (result === "AC") return "#3AAF00";
+    else if (result === "CE") return "#FDDB10";
+    else if (result === "WA") return "#DA3737";
+    else if (result === "UKE") return "#1F103F";
     else return "#4183C4";
 }
 
 function getColorByScore(score: number) {
-    if(score >= 80) return "#3AAF00";
-    else if(score >= 60) return "#FDDB10";
+    if (score >= 80) return "#3AAF00";
+    else if (score >= 60) return "#FDDB10";
     else return "#DA3737";
 }
 
@@ -37,6 +38,7 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         maxWidth: "450px",
+        padding: "4px 0 0 0",
     },
 });
 
@@ -49,46 +51,10 @@ interface SubmissionResult {
     problem_number: number;
 }
 
-interface SubmissionResultFromFetch {
-    type: string;
-    content: {
-        submission_id: number;
-        result: string;
-        general_score: number;
-        statuses: string[];
-        scores: number[];
-        problem_number: number;
-    };
-}
-
-function isSubmissionResultFromFetch(x: object) {
-    if ('type' in x && 'content' in x && typeof x.content === 'object') {
-        return 'submission_id' in (x.content as object) &&
-        'result' in (x.content as object) &&
-        'general_score' in (x.content as object) &&
-        'statuses' in (x.content as object) &&
-        'scores' in (x.content as object) &&
-        'problem_number' in (x.content as object);
-    }
-
-    return false;
-}
-
 interface SubmissionResultOthers {
-    type: string;
-    content: {
-        submission_id: number;
-        result: string;
-    };
-}
-
-function isSubmissionResultOthers(x: object) {
-    if ('type' in x && 'content' in x && typeof x.content === 'object') {
-        return 'submission_id' in (x.content as object) &&
-        'result' in (x.content as object);
-    }
-
-    return false;
+    submission_id: number;
+    result: string;
+    problem_number: number;
 }
 
 interface SubmissionsListFromFetch {
@@ -102,7 +68,7 @@ interface SubmissionsListFromFetch {
 function isSubmissionsListFromFetch(x: object) {
     if ('type' in x && 'content' in x && typeof x.content === 'object') {
         return 'submissions_list' in (x.content as object) &&
-        'request_key' in (x.content as object);
+            'request_key' in (x.content as object);
     }
 
     return false;
@@ -110,7 +76,7 @@ function isSubmissionsListFromFetch(x: object) {
 
 function SubmissionsListFetcher({ lastJsonMessage, setSubmissionsList, requestKey }: {
     lastJsonMessage: unknown;
-    setSubmissionsList: React.Dispatch<React.SetStateAction<SubmissionResult[] | SubmissionResultOthers[] | undefined[]>>;
+    setSubmissionsList: React.Dispatch<React.SetStateAction<SubmissionResult[] | SubmissionResultOthers[]>>;
     requestKey: string;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
@@ -151,7 +117,7 @@ interface TotalSubmissionsListIndexFromFetch {
 function isTotalSubmissionsListIndexFromFetch(x: object) {
     if ('type' in x && 'content' in x && typeof x.content === 'object') {
         return 'total_submissions_list_index' in (x.content as object) &&
-        'request_key' in (x.content as object);
+            'request_key' in (x.content as object);
     }
 
     return false;
@@ -172,7 +138,6 @@ function TotalSubmissionsListIndexFetcher({ lastJsonMessage, setTotalSubmissions
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((_message, _index) => {
             if (_message) {
-                console.log(_message);
                 if (isTotalSubmissionsListIndexFromFetch(_message)) {
                     const message = _message as TotalSubmissionsListIndexFromFetch;
                     if (message.content.request_key == requestKey) {
@@ -193,14 +158,15 @@ function TotalSubmissionsListIndexFetcher({ lastJsonMessage, setTotalSubmissions
 export default function SubmissionsList() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [requestKeyOfSubmissionsListFetcher, setRequestKeyOfSubmissionsListFetcher] = useState("");
-    const [requestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfTotalSubmissionsListIndexFetcher ] = useState("");
-    const navigate = useNavigate();
+    const [requestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfTotalSubmissionsListIndexFetcher] = useState("");
     const [submissionId, setSubmissionId] = useState("-1");
     const [submissionsListIndex, setSubmissionsListIndex] = useState(1);
-    const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[] | undefined[]>([]);
+    const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[]>([]);
     const [totalSubmissionsListIndex, setTotalSubmissionsListIndex] = useState(1);
+    const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const navigate = useNavigate();
 
-    const handleFetchSubmissionsList = useCallback((_submissionsListIndex) => {
+    const handleFetchSubmissionsList = useCallback((_submissionsListIndex: number) => {
         const _requestKey = globals.randomUUID();
         sendJsonMessage({
             type: "submissions_list",
@@ -226,8 +192,13 @@ export default function SubmissionsList() {
     }, [sendJsonMessage]);
 
     useEffect(() => {
-        setRequestKeyOfSubmissionsListFetcher(handleFetchSubmissionsList(submissionsListIndex));
-        setRequestKeyOfTotalSubmissionsListIndexFetcher(handleFetchTotalSubmissionsListIndex());
+        if (!globals.fetchData("isLoggedIn"))
+            setDialogRequireLoginOpenState(true);
+        else {
+            setRequestKeyOfSubmissionsListFetcher(handleFetchSubmissionsList(submissionsListIndex));
+            setRequestKeyOfTotalSubmissionsListIndexFetcher(handleFetchTotalSubmissionsListIndex());
+        }
+
     }, [handleFetchSubmissionsList, handleFetchTotalSubmissionsListIndex, submissionsListIndex, setRequestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfSubmissionsListFetcher]);
 
     return <>
@@ -235,36 +206,36 @@ export default function SubmissionsList() {
             <form style={{ margin: "0 0 0 12px" }}>
                 <Field label="Submission ID">
                     <div style={{ display: "flex", columnGap: "4px" }}>
-                        <Input onChange={(props) => setSubmissionId(props.target.value)} style={{ flex: "70%" }} />
+                        <Input onChange={(props) => setSubmissionId(props.target.value)} style={{ flex: "75%" }} />
                         <Button appearance="primary"
-                            style={{ flex: "30%" }}
+                            style={{ flex: "25%" }}
                             onClick={() => { navigate("/submission/" + String(submissionId)); }}>Jump to</Button>
                     </div>
                 </Field>
                 <br />
                 <div>
                     <div style={{ margin: "0 0 4px 0" }}>
-                        <Label>Submission Index Page of {submissionsListIndex} / {totalSubmissionsListIndex}</Label>
+                        <Label>Submission Index Page of {submissionsListIndex} / {Math.max(totalSubmissionsListIndex, 1)}</Label>
                     </div>
                     <div style={{ display: "flex", columnGap: "4px" }}>
-                        <Button appearance="primary"
-                            style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.min(totalSubmissionsListIndex, c + 1))); }}>Next</Button>
                         <Button appearance="primary"
                             style={{ flex: "25%" }}
                             onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 1))); }}>Previous</Button>
                         <Button appearance="primary"
                             style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.min(totalSubmissionsListIndex, c + 10))); }}>Forward 10</Button>
+                            onClick={() => { setSubmissionsListIndex((c) => (Math.min(totalSubmissionsListIndex, c + 1))); }}>Next</Button>
                         <Button appearance="primary"
                             style={{ flex: "25%" }}
                             onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 10))); }}>Backward 10</Button>
+                        <Button appearance="primary"
+                            style={{ flex: "25%" }}
+                            onClick={() => { setSubmissionsListIndex((c) => (Math.min(totalSubmissionsListIndex, c + 10))); }}>Forward 10</Button>
                     </div>
                 </div>
             </form>
         </div>
         <br />
-        <div style={{ margin: "auto 4px", maxWidth: "700px" }}>
+        <div style={{ padding: "4px 4px 0 4px", maxWidth: "700px" }}>
             <Table size="medium">
                 <TableHeader>
                     <TableRow>
@@ -278,26 +249,31 @@ export default function SubmissionsList() {
                     {
                         submissionsList.map((submissionResult: SubmissionResult | SubmissionResultOthers, key) => (
                             <TableRow key={key}>
-                                <TableCell style={{ color: "#4183C4" }} 
-                                    onMouseEnter={(e) => { e.target.style.color = "#0056B3"; e.target.style.cursor = "pointer"; }}
-                                    onMouseLeave={(e) => { e.target.style.color = "#4183C4"; e.target.style.cursor = "default"; }}
+                                <TableCell style={{ color: "#4183C4" }}
+                                    onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                    onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
                                     onClick={() => { navigate("/submission/" + String(submissionResult.submission_id)); }}>
                                     {submissionResult.submission_id}
                                 </TableCell>
                                 <TableCell style={{ color: "#4183C4" }}
-                                    onMouseEnter={(e) => { e.target.style.color = "#0056B3"; e.target.style.cursor = "pointer"; }}
-                                    onMouseLeave={(e) => { e.target.style.color = "#4183C4"; e.target.style.cursor = "default"; }}
+                                    onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                    onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
                                     onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
                                     {submissionResult.problem_number}
                                 </TableCell>
-                                <TableCell style={{ color: getColorByResult(submissionResult.result) }}>{submissionResult.result}</TableCell>
-                                <TableCell style={{ color: getColorByScore(submissionResult.general_score) }}>{ "general_score" in submissionResult ? submissionResult.general_score : "-" }</TableCell>
+                                <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD") }}>{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
+                                <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined }}>{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
                             </TableRow>
                         )
                         )
                     }
                 </TableBody>
             </Table>
+            <PopupDialog
+                open={dialogRequireLoginOpenState}
+                setPopupDialogOpenState={setDialogRequireLoginOpenState}
+                text="Please login first."
+                onClose={() => navigate("/login")} />
             <SubmissionsListFetcher
                 setSubmissionsList={setSubmissionsList}
                 requestKey={requestKeyOfSubmissionsListFetcher}

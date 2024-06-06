@@ -22,29 +22,6 @@ function initData(type: string) {
     throw Error("Not implemented yet: " + type);
 }
 
-export function useWrapPromise(promise: { status: string; value: any; reason: any; then: (arg0: (result: any) => void, arg1: (reason: any) => void) => void; }) {
-    if (promise.status === 'fulfilled') {
-        return promise.value;
-    } else if (promise.status === 'rejected') {
-        throw promise.reason;
-    } else if (promise.status === 'pending') {
-        throw promise;
-    } else {
-        promise.status = 'pending';
-        promise.then(
-            result => {
-                promise.status = 'fulfilled';
-                promise.value = result;
-            },
-            reason => {
-                promise.status = 'rejected';
-                promise.reason = reason;
-            },
-        );
-        throw promise;
-    }
-}
-
 export function randomUUID() {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
         const r = (Math.random() * 16) | 0,

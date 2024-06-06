@@ -17,12 +17,12 @@ import {
 
 import { useNavigate } from "react-router-dom";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import React, { useEffect, useState, Suspense, useCallback } from "react";
 
 import "../css/style.css";
 
-import * as globals from "./Globals";
-import PopupDialog from "./PopupDialog";
+import * as globals from "./Globals.ts";
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
 
 const useStyles = makeStyles({
     root: {

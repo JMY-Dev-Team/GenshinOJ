@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import { Link, useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
-import * as globals from "./Globals"
-import PopupDialog from "./PopupDialog";
-import { CheckmarkCircleRegular, ClipboardCheckmarkRegular, ErrorCircleRegular, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
+import React, { useState, useEffect, useCallback, BaseSyntheticEvent } from "react";
+import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
+import * as globals from "./Globals.ts"
+const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+import { ClipboardCheckmarkRegular, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
 import { Label, Spinner, Table, TableBody, TableHeader, TableHeaderCell, TableCell, TableRow } from "@fluentui/react-components";
+const SyntaxHighlighter = React.lazy(() => import("react-syntax-highlighter"));
+import "../css/font.css"
+import { BadgeButton } from "./BadgeButton";
+import copy from "copy-to-clipboard";
 
 interface SubmissionInfoFromLoader {
     submissionId: number;
@@ -16,6 +20,22 @@ interface SubmissionResult {
     statuses: string[];
     scores: number[];
     problem_number: number;
+    code: string[];
+}
+
+function CopyToTheClipboardButton({ content }: {
+    content: string;
+}) {
+    const [tipText, setTipText] = useState("Copy");
+    useEffect(() => {
+        if (tipText === "Copied")
+            setTimeout(() => {
+                if (tipText === "Copied") setTipText("Copy");
+            }, 500);
+    }, [tipText]);
+
+    const handleOnClick = useCallback((e: BaseSyntheticEvent) => { console.log(e); copy(content); setTipText(() => "Copied"); }, [content]);
+    return <BadgeButton style={{ marginLeft: "auto", marginRight: "4px" }} text={tipText} onClick={handleOnClick} />
 }
 
 function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionResult, setDialogSubmissionNotFoundOpenState }: {
@@ -42,6 +62,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                     statuses: string[];
                     scores: number[];
                     problem_number: number;
+                    code: string[];
                 };
             }
 
@@ -52,24 +73,28 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                         'general_score' in (x.content as object) &&
                         'statuses' in (x.content as object) &&
                         'scores' in (x.content as object) &&
-                        'problem_number' in (x.content as object);
+                        'problem_number' in (x.content as object) &&
+                        'code' in (x.content as object);
                 }
 
                 return false;
             }
 
-            interface SubmissionResultOthers {
+            interface SubmissionResultOthersFromFetch {
                 type: string;
                 content: {
                     submission_id: number;
                     result: string;
+                    problem_number: number;
+                    code: string[];
                 };
             }
 
-            function isSubmissionResultOthers(x: object) {
+            function isSubmissionResultOthersFromFetch(x: object) {
                 if ('type' in x && 'content' in x && typeof x.content === 'object') {
                     return 'submission_id' in (x.content as object) &&
-                        'result' in (x.content as object);
+                        'result' in (x.content as object) &&
+                        'code' in (x.content as object);
                 }
 
                 return false;
@@ -84,8 +109,8 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                         delete _websocketMessageHistory[_index];
                     }
                 }
-                else if (isSubmissionResultOthers(_message)) {
-                    const message = _message as SubmissionResultOthers;
+                else if (isSubmissionResultOthersFromFetch(_message)) {
+                    const message = _message as SubmissionResultOthersFromFetch;
                     console.log(message);
                     if (message.content.submission_id == submissionId) {
                         setSubmissionResult(message.content as SubmissionResult);
@@ -118,7 +143,17 @@ export default function SubmissionShower() {
                 submission_id: submissionId
             }
         });
-    }, [sendJsonMessage, submissionId])
+    }, [sendJsonMessage, submissionId]);
+
+    const convertCodeToRenderString = (x: string[]) => {
+        let renderString: string = "";
+        x.map((_s, index) => {
+            renderString = renderString + _s.replace("\t", "    ");
+            if (index !== x.length - 1) renderString = renderString + '\n';
+        });
+
+        return renderString;
+    }
 
     useEffect(() => {
         if (!globals.fetchData("isLoggedIn"))
@@ -136,10 +171,18 @@ export default function SubmissionShower() {
             globals.fetchData("isLoggedIn") && submissionResult
                 ?
                 <>
-                    <div style={{ display: "flex" }}>
-                        <Label style={{ margin: "auto 4px auto 20px" }}>Submission ID: {submissionResult.submission_id}</Label>
-                        <Label style={{ margin: "auto 4px auto 20px" }}>Submission Problem: <Link style={{ color: "#4183C4" }} to={`/problem/${submissionResult.problem_number}`}>{submissionResult.problem_number}</Link></Label>
-                        <Label style={{ margin: "auto 4px auto 20px" }}>Status: </Label>
+                    <div style={{ display: "flex", marginBottom: "10px" }}>
+                        <Label style={{ margin: "auto 2px auto 18px" }}
+                        >Submission ID: {submissionResult.submission_id}</Label>
+                        <div style={{ margin: "auto 2px auto 18px" }}>Submission Problem:&nbsp;
+                            <Label style={{ color: "#4183C4" }}
+                                onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
+                                onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
+                                {submissionResult.problem_number}
+                            </Label>
+                        </div>
+                        <Label style={{ margin: "auto 2px auto 18px" }}>Status: </Label>
                         {
                             (
                                 submissionResult.result === "PD"
@@ -149,17 +192,17 @@ export default function SubmissionShower() {
                                     (
                                         submissionResult.result === "AC"
                                             ?
-                                            <><CheckmarkCircleRegular fontSize="20px" style={{ color: "#3AAF00" }} /><Label>&nbsp;Accepted</Label></>
+                                            <><Label style={{ color: "#3AAF00" }}>&nbsp;AC</Label></>
                                             :
                                             (
                                                 submissionResult.result === "CE"
                                                     ?
-                                                    <><ErrorCircleRegular fontSize="20px" style={{ color: "#FDDB10" }} /><Label>&nbsp;Compile Error</Label></>
+                                                    <><Label style={{ color: "#FDDB10" }}>&nbsp;CE</Label></>
                                                     :
                                                     (
                                                         submissionResult.result === "WA"
                                                             ?
-                                                            <><ErrorCircleRegular fontSize="20px" style={{ color: "#DA3737" }} /><Label>&nbsp;Unaccepted</Label></>
+                                                            <><Label style={{ color: "#DA3737" }}>&nbsp;WA</Label></>
                                                             :
                                                             <></>
                                                     )
@@ -177,8 +220,7 @@ export default function SubmissionShower() {
                                 <></>
                         }
                     </div>
-                    <br />
-                    <div style={{ margin: "auto 12px" }}>
+                    <div style={{ margin: "auto 10px", marginBottom: "10px" }}>
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -203,6 +245,15 @@ export default function SubmissionShower() {
                                 }
                             </TableBody>
                         </Table>
+                    </div>
+                    <div>
+                        <div style={{ marginLeft: "18px", display: "flex" }}>
+                            <Label style={{ marginRight: "auto" }}>Code:&nbsp;</Label>
+                            <CopyToTheClipboardButton content={convertCodeToRenderString(submissionResult.code)} />
+                        </div>
+                        <div>
+                            <SyntaxHighlighter showLineNumbers={true} >{convertCodeToRenderString(submissionResult.code)}</SyntaxHighlighter>
+                        </div>
                     </div>
                 </>
                 :

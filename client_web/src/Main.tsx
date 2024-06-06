@@ -9,6 +9,7 @@ import React, { Suspense } from "react";
 const Root = React.lazy(() => import("./router/Root.tsx"));
 const Login = React.lazy(() => import("./router/Login.tsx"));
 const Register = React.lazy(() => import("./router/Register.tsx"));
+const Logout = React.lazy(() => import("./router/Logout.tsx"));
 const Home = React.lazy(() => import("./router/Home.tsx"));
 const Chat = React.lazy(() => import("./router/Chat.tsx"));
 const ChatMainUser = React.lazy(() => import("./router/ChatMainUser.tsx"));
@@ -16,10 +17,11 @@ const Problem = React.lazy(() => import("./router/Problem.tsx"));
 const ProblemMain = React.lazy(() => import("./router/ProblemMain.tsx"));
 const SubmissionShower = React.lazy(() => import("./router/SubmissionShower.tsx"));
 const SubmissionsList = React.lazy(() => import("./router/SubmissionsList.tsx"));
+const UserProfile = React.lazy(() => import("./router/UserProfile.tsx"));
+const ErrorPage = React.lazy(() => import("./ErrorPage.tsx"));
 
-import ErrorPage from "./ErrorPage.tsx";
 import { Skeleton } from "@fluentui/react-components";
-import Logout from "./router/Logout.tsx";
+
 
 const router = createBrowserRouter([
     {
@@ -91,6 +93,19 @@ const router = createBrowserRouter([
                 element: <Suspense fallback={<Skeleton />}><Logout /></Suspense>,
                 loader: () => document.title = "Home Page"
             },
+            {
+                path: "/user/:username",
+                element: <Suspense fallback={<Skeleton />}><UserProfile /></Suspense>,
+                loader: ({ params }) => {
+                    document.title = "Profile of User " + params.username;
+                    return { username: params.username };
+                },
+            },
+            {
+                path: "/user",
+                element: <Suspense fallback={<Skeleton />}><UserProfile /></Suspense>,
+                loader: () => document.title = "Profile of User",
+            }
         ]
     }
 ]);

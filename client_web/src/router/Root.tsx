@@ -5,12 +5,12 @@ import {
     webLightTheme
 } from "@fluentui/react-components";
 
-import NavBar from "./Navbar";
+const NavBar = React.lazy(() => import("./NavBar.tsx"));
 
 import "../css/style.css";
 import useWebSocket from "react-use-websocket";
-import * as globals from "./Globals"
-import { useCallback, useEffect } from "react";
+import * as globals from "./Globals.ts"
+import React, { useCallback, useEffect } from "react";
 
 export default function Root() {
     const {
@@ -62,8 +62,9 @@ export default function Root() {
     const navigate = useNavigate();
     const nowLocation = useLocation();
     useEffect(() => {
-        if(nowLocation.pathname == "/") navigate("/home");
-    }, [nowLocation]);
+        if (nowLocation.pathname == "/") navigate("/home");
+        if (nowLocation.pathname == "/user") navigate("/user/" + globals.fetchData("loginUsername"));
+    }, [nowLocation, navigate]);
 
     return (
         <FluentProvider theme={webLightTheme}>
