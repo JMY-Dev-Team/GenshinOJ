@@ -1,16 +1,15 @@
+import { useCallback, useEffect, lazy } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
-import {
-    FluentProvider,
-    webLightTheme
-} from "@fluentui/react-components";
+import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 
-const NavBar = React.lazy(() => import("./NavBar.tsx"));
+import useWebSocket from "react-use-websocket";
+
+const NavBar = lazy(() => import("./NavBar.tsx"));
+
+import * as globals from "./Globals.ts";
 
 import "../css/style.css";
-import useWebSocket from "react-use-websocket";
-import * as globals from "./Globals.ts"
-import React, { useCallback, useEffect } from "react";
 
 export default function Root() {
     const {
@@ -69,7 +68,7 @@ export default function Root() {
     return (
         <FluentProvider theme={webLightTheme}>
             <NavBar />
-            <div>
+            <div className="react-router-outlet">
                 <Outlet context={{ sendJsonMessage, lastJsonMessage, readyState }} />
             </div>
         </FluentProvider>

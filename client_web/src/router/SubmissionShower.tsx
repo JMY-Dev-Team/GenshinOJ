@@ -1,13 +1,20 @@
-import React, { useState, useEffect, useCallback, BaseSyntheticEvent } from "react";
+import { useState, useEffect, useCallback, BaseSyntheticEvent, lazy } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
-import * as globals from "./Globals.ts"
-const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+
+
 import { ClipboardCheckmarkRegular, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
 import { Label, Spinner, Table, TableBody, TableHeader, TableHeaderCell, TableCell, TableRow } from "@fluentui/react-components";
-const SyntaxHighlighter = React.lazy(() => import("react-syntax-highlighter"));
-import "../css/font.css"
-import { BadgeButton } from "./BadgeButton";
-import copy from "copy-to-clipboard";
+
+const copy = (await import("copy-to-clipboard")).default;
+
+const SyntaxHighlighter = lazy(() => import("react-syntax-highlighter"));
+
+const BadgeButton = lazy(() => import("./BadgeButton.tsx"));
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
+
+import * as globals from "./Globals.ts";
+
+import "../css/font.css";
 
 interface SubmissionInfoFromLoader {
     submissionId: number;
@@ -129,7 +136,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
 
 export default function SubmissionShower() {
     const { submissionId } = (useLoaderData() as SubmissionInfoFromLoader);
-    const [submissionResult, setSubmissionResult] = useState<SubmissionResult>();
+    const [submissionResult, setSubmissionResult] = useState<SubmissionResult | undefined>(undefined);
     const [, setWebsocketMessageHistory] = useState([]);
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
@@ -145,7 +152,7 @@ export default function SubmissionShower() {
         });
     }, [sendJsonMessage, submissionId]);
 
-    const convertCodeToRenderString = (x: string[]) => {
+    const convertCodeToRenderString = useCallback((x: string[]) => {
         let renderString: string = "";
         x.map((_s, index) => {
             renderString = renderString + _s.replace("\t", "    ");
@@ -153,7 +160,7 @@ export default function SubmissionShower() {
         });
 
         return renderString;
-    }
+    }, []);
 
     useEffect(() => {
         if (!globals.fetchData("isLoggedIn"))
@@ -166,28 +173,36 @@ export default function SubmissionShower() {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
     }, [lastJsonMessage]);
 
+    const handleNavigateLogin = useCallback(() => {
+        navigate("/login");
+    }, [navigate]);
+
+    const handleNavigateBackward = useCallback(() => {
+        navigate(-1);
+    }, [navigate]);
+
     return <div style={{ padding: "4px 0" }}>
         {
-            globals.fetchData("isLoggedIn") && submissionResult
+            globals.fetchData("isLoggedIn")
                 ?
                 <>
                     <div style={{ display: "flex", marginBottom: "10px" }}>
                         <Label style={{ margin: "auto 2px auto 18px" }}
-                        >Submission ID: {submissionResult.submission_id}</Label>
+                        >Submission ID: {submissionResult?.submission_id}</Label>
                         <div style={{ margin: "auto 2px auto 18px" }}>Submission Problem:&nbsp;
                             <Label style={{ color: "#4183C4" }}
                                 onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
                                 onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
-                                onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
-                                {submissionResult.problem_number}
+                                onClick={() => { navigate("/problem/" + String(submissionResult?.problem_number)); }}>
+                                {submissionResult?.problem_number}
                             </Label>
                         </div>
-                        <Label style={{ margin: "auto 2px auto 18px" }}>Status: </Label>
+                        <Label style={{ margin: "auto 2px auto 18px" }}>Status:&nbsp;</Label>
                         {
                             (
-                                submissionResult.result === "PD"
+                                submissionResult === undefined
                                     ?
-                                    <Spinner size="tiny" label="Pending..." />
+                                    <Spinner size="tiny" label="Waiting..." />
                                     :
                                     (
                                         submissionResult.result === "AC"
@@ -213,9 +228,15 @@ export default function SubmissionShower() {
                             )
                         }
                         {
-                            submissionResult.result !== "PD" && submissionResult.result !== "SNF"
+                            submissionResult !== undefined && submissionResult.result !== "PD" && submissionResult.result !== "SNF"
                                 ?
-                                <Label style={{ margin: "auto 4px auto 20px" }}>Score: <Label style={{ color: (submissionResult.general_score >= 80) ? "#3AAF00" : ((submissionResult.general_score >= 60) ? "#FDDB10" : "#DA3737") }}>{submissionResult.general_score}</Label></Label>
+                                <Label style={{ margin: "auto 4px auto 20px" }}>Score:&nbsp;
+                                    <Label style={{
+                                        color: (submissionResult.general_score >= 80) ? "#3AAF00" : ((submissionResult.general_score >= 60) ? "#FDDB10" : "#DA3737")
+                                    }}>
+                                        {submissionResult.general_score}
+                                    </Label>
+                                </Label>
                                 :
                                 <></>
                         }
@@ -231,13 +252,17 @@ export default function SubmissionShower() {
                             </TableHeader>
                             <TableBody>
                                 {
-                                    submissionResult.statuses
+                                    submissionResult?.statuses
                                         ?
                                         submissionResult.statuses.map((status, index) => {
                                             return <TableRow key={index}>
                                                 <TableCell>{index + 1}</TableCell>
-                                                <TableCell>{status}</TableCell>
-                                                <TableCell>{submissionResult.scores[index]}</TableCell>
+                                                <TableCell style={{
+                                                    color: status === "AC" ? "#3AAF00" : status === "WA" ? "#DA3737" : "#000643"
+                                                }}>{status}</TableCell>
+                                                <TableCell style={{
+                                                    color: submissionResult.scores[index] !== 0 ? "#3AAF00" : "#DA3737"
+                                                }}>{submissionResult.scores[index]}</TableCell>
                                             </TableRow>;
                                         })
                                         :
@@ -246,15 +271,21 @@ export default function SubmissionShower() {
                             </TableBody>
                         </Table>
                     </div>
-                    <div>
-                        <div style={{ marginLeft: "18px", display: "flex" }}>
-                            <Label style={{ marginRight: "auto" }}>Code:&nbsp;</Label>
-                            <CopyToTheClipboardButton content={convertCodeToRenderString(submissionResult.code)} />
-                        </div>
-                        <div>
-                            <SyntaxHighlighter showLineNumbers={true} >{convertCodeToRenderString(submissionResult.code)}</SyntaxHighlighter>
-                        </div>
-                    </div>
+                    {
+                        submissionResult
+                            ?
+                            <div>
+                                <div style={{ marginLeft: "18px", display: "flex" }}>
+                                    <Label style={{ marginRight: "auto" }}>Code:&nbsp;</Label>
+                                    <CopyToTheClipboardButton content={convertCodeToRenderString(submissionResult.code)} />
+                                </div>
+                                <div>
+                                    <SyntaxHighlighter showLineNumbers={true} >{convertCodeToRenderString(submissionResult.code)}</SyntaxHighlighter>
+                                </div>
+                            </div>
+                            :
+                            <></>
+                    }
                 </>
                 :
                 <></>
@@ -263,17 +294,16 @@ export default function SubmissionShower() {
             open={dialogSubmissionNotFoundOpenState}
             setPopupDialogOpenState={setDialogSubmissionNotFoundOpenState}
             text={`Submission ${submissionId} is not found!`}
-            onClose={() => navigate(-1)} />
+            onClose={handleNavigateBackward} />
         <PopupDialog
             open={dialogRequireLoginOpenState}
             setPopupDialogOpenState={setDialogRequireLoginOpenState}
             text="Please login first."
-            onClose={() => navigate("/login")} />
+            onClose={handleNavigateLogin} />
         <SubmissionStatusFetcher
             submissionId={submissionId}
             lastJsonMessage={lastJsonMessage}
             setSubmissionResult={setSubmissionResult}
-            setDialogSubmissionNotFoundOpenState={setDialogSubmissionNotFoundOpenState}
-        />
+            setDialogSubmissionNotFoundOpenState={setDialogSubmissionNotFoundOpenState} />
     </div>;
 }

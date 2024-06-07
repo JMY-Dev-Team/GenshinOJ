@@ -1,13 +1,63 @@
-import "../css/style.css";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, lazy } from "react";
 import { useLoaderData, useOutletContext } from "react-router-dom";
-import * as globals from "./Globals.ts"
+
 import { Input, Button, Field } from "@fluentui/react-components";
-const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
+
+import * as globals from "./Globals.ts";
+
+import "../css/style.css";
 
 interface ChatMessage {
     message: string;
     fromMe: boolean;
+}
+
+interface ChatMessageFromFetch {
+    type: string;
+    from: string;
+    content: string;
+}
+
+function isChatMessageFromFetch(x: object) {
+    return 'type' in x &&
+        'from' in x &&
+        'content' in x;
+}
+
+interface ChatMessageFromEchoSuccess {
+    type: string;
+    content: {
+        status: number,
+        messages: string,
+    };
+}
+
+function isChatMessageFromEchoSuccess(x: object) {
+    return "type" in x &&
+        "content" in x &&
+        typeof x.content === "object" &&
+        x.content !== null &&
+        "status" in x.content &&
+        "messages" in x.content;
+}
+
+interface ChatMessageFromEchoFailure {
+    type: string;
+    content: {
+        status: number,
+        reason: string,
+    };
+}
+
+function isChatMessageFromEchoFailure(x: object) {
+    return "type" in x &&
+        "content" in x &&
+        typeof x.content === "object" &&
+        x.content !== null &&
+        "status" in x.content &&
+        "reason" in x.content;
 }
 
 function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername, lastJsonMessage, chatMessageLoaded, setChatMessageLoaded, setDialogChatMessageSendFailureOpenState }: {
@@ -31,40 +81,6 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
         const newChatMessageList: ChatMessage[] = [];
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((_message, index) => {
-            interface ChatMessageFromFetch {
-                type: string;
-                from: string;
-                content: string;
-            }
-
-            function isChatMessageFromFetch(x: object) {
-                return 'type' in x && 'from' in x && 'content' in x;
-            }
-
-            interface ChatMessageFromEchoSuccess {
-                type: string;
-                content: {
-                    status: number,
-                    messages: string,
-                };
-            }
-
-            function isChatMessageFromEchoSuccess(x: object) {
-                return "type" in x && "content" in x && typeof x.content === "object" && x.content !== null && "status" in x.content && "messages" in x.content;
-            }
-
-            interface ChatMessageFromEchoFailure {
-                type: string;
-                content: {
-                    status: number,
-                    reason: string,
-                };
-            }
-
-            function isChatMessageFromEchoFailure(x: object) {
-                return "type" in x && "content" in x && typeof x.content === "object" && x.content !== null && "status" in x.content && "reason" in x.content;
-            }
-
             if (_message) {
                 if (isChatMessageFromFetch(_message)) {
                     const message = _message as ChatMessageFromFetch;
@@ -114,7 +130,7 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
             setChatMessageLoaded(true);
             console.log("Loaded local storage (%s)...", "chatMessageTo" + fromUsername);
         }
-    }, [fromUsername, setChatMessageLoaded, chatMessageLoaded]); // Sync from old
+    }, [fromUsername, setChatMessageLoaded, chatMessageLoaded]);
 
     useEffect(() => {
         setChatMessageList(localStorageChatMessageList)
@@ -122,9 +138,9 @@ function ChatMessageFetcher({ chatMessageList, setChatMessageList, fromUsername,
 
     useEffect(() => {
         if (chatMessageLoaded) localStorage.setItem("chatMessageTo" + fromUsername, JSON.stringify(chatMessageList))
-    }, [chatMessageList, fromUsername, chatMessageLoaded]); // Write new to old
+    }, [chatMessageList, fromUsername, chatMessageLoaded]);
 
-    return <div></div>;
+    return <></>;
 }
 
 interface ChatInfo {
@@ -145,8 +161,8 @@ export default function ChatMainUser() {
     }, [lastJsonMessage]);
 
     const handleCliCkClearLocalStorageChatMessageList = useCallback(() => {
-        localStorage.setItem("chatMessageTo" + toUsername, JSON.stringify([])); // Clear
-        setChatMessageLoaded(false); // Force refresh
+        localStorage.setItem("chatMessageTo" + toUsername, JSON.stringify([]));
+        setChatMessageLoaded(false);
     }, [toUsername]);
 
     const handleClickSendChatMessage = useCallback(() => {
@@ -166,40 +182,42 @@ export default function ChatMainUser() {
         return _requestKey;
     }, [toUsername, chatMessageToSend, sendJsonMessage]);
 
-    return <div style={{ display: "block" }}>
-        <div style={{ overflowX: "auto", height: "400px" }}>
-            <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
-                {
-                    chatMessageList == null
-                        ?
-                        <></>
-                        :
-                        chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
-                }
+    return <>
+        <div style={{ display: "block" }}>
+            <div style={{ overflowX: "auto", height: "400px" }}>
+                <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
+                    {
+                        chatMessageList == null
+                            ?
+                            <></>
+                            :
+                            chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
+                    }
+                </div>
             </div>
+            <div style={{ display: "flex", flexDirection: "row", width: "fill", alignItems: "end" }}>
+                <form>
+                    <Field label="Input to chat" style={{ maxWidth: "300px", flex: 3 }}>
+                        <Input type="text" id="chat-input" value={chatMessageToSend} onChange={(props) => setChatMessageToSend(props.target.value)} />
+                    </Field>
+                    <Button onClick={handleClickSendChatMessage} style={{ flex: 1 }}>Send</Button>
+                </form>
+            </div>
+            <Button onClick={handleCliCkClearLocalStorageChatMessageList}>Clear Chat Message</Button>
+            <PopupDialog
+                open={dialogChatMessageSendFailureOpenState}
+                setPopupDialogOpenState={setDialogChatMessageSendFailureOpenState}
+                text="Chat message send failed." />
+            <ChatMessageFetcher
+                chatMessageList={chatMessageList}
+                setChatMessageList={setChatMessageList}
+                fromUsername={toUsername as string}
+                lastJsonMessage={lastJsonMessage}
+                chatMessageLoaded={chatMessageLoaded}
+                setChatMessageLoaded={setChatMessageLoaded}
+                setDialogChatMessageSendFailureOpenState={setDialogChatMessageSendFailureOpenState} />
         </div>
-        <div style={{ display: "flex", flexDirection: "row", width: "fill", alignItems: "end" }}>
-            <form>
-                <Field label="Input to chat" style={{ maxWidth: "300px", flex: 3 }}>
-                    <Input type="text" id="chat-input" value={chatMessageToSend} onChange={(props) => setChatMessageToSend(props.target.value)} />
-                </Field>
-                <Button onClick={handleClickSendChatMessage} style={{ flex: 1 }}>Send</Button>
-            </form>
-        </div>
-        <Button onClick={handleCliCkClearLocalStorageChatMessageList}>Clear Chat Message</Button>
-        <PopupDialog
-            open={dialogChatMessageSendFailureOpenState}
-            setPopupDialogOpenState={setDialogChatMessageSendFailureOpenState}
-            text="Chat message send failed." />
-        <ChatMessageFetcher
-            chatMessageList={chatMessageList}
-            setChatMessageList={setChatMessageList}
-            fromUsername={toUsername as string}
-            lastJsonMessage={lastJsonMessage}
-            chatMessageLoaded={chatMessageLoaded}
-            setChatMessageLoaded={setChatMessageLoaded}
-            setDialogChatMessageSendFailureOpenState={setDialogChatMessageSendFailureOpenState} />
-    </div>;
+    </>;
 }
 
 import "../css/chatBubble.css"

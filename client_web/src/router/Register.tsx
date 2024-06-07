@@ -1,23 +1,14 @@
-import {
-    makeStyles,
-    Input,
-    Field,
-    Button,
-} from "@fluentui/react-components";
-
-import {
-    PersonRegular,
-    PasswordRegular
-} from "@fluentui/react-icons";
-
-import { useEffect, useState } from "react";
-
+import { useEffect, useState, lazy, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import "../css/style.css";
+import { makeStyles, Input, Field, Button } from "@fluentui/react-components";
+import { PersonRegular, PasswordRegular } from "@fluentui/react-icons";
+
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "./Globals";
-import PopupDialog from "./PopupDialog";
+
+import "../css/style.css";
 
 const useStyles = makeStyles({
     root: {
@@ -78,7 +69,7 @@ function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterF
         });
     }, [websocketMessageHistory, requestKey, setDialogRegisterFailureOpenState, setDialogRegisterSuccessOpenState]);
 
-    return <div></div>;
+    return <></>;
 }
 
 export default function Register() {
@@ -93,7 +84,7 @@ export default function Register() {
     const [dialogRegisterSuccessOpenState, setDialogRegisterSuccessOpenState] = useState(false);
     const navigate = useNavigate();
 
-    const handleClickRegisterSession = () => {
+    const handleClickRegisterSession = useCallback(() => {
         const request_key = globals.randomUUID();
         sendJsonMessage({
             type: "register",
@@ -104,7 +95,14 @@ export default function Register() {
             }
         });
         return request_key;
-    };
+    }, [registerPassword, registerUsername, sendJsonMessage]);
+
+    const handleRegistrationClick = useCallback(() => {
+        if (registerPassword != registerPasswordConfirm)
+            setDialogPasswordInputAndConfirmNotTheSameOpenState(true);
+        else
+            setRequestKey(handleClickRegisterSession());
+    }, [handleClickRegisterSession, registerPassword, registerPasswordConfirm]);
 
     useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
     return (
@@ -123,13 +121,7 @@ export default function Register() {
                         <Input contentBefore={<PasswordRegular />} type="password"
                             onChange={(props) => setRegisterPasswordConfirm(props.target.value)} />
                     </Field>
-                    <br />
-                    <Button appearance="primary" onClick={() => {
-                        if (registerPassword != registerPasswordConfirm)
-                            setDialogPasswordInputAndConfirmNotTheSameOpenState(true);
-                        else
-                            setRequestKey(handleClickRegisterSession());
-                    }}>Register</Button>
+                    <Button appearance="primary" onClick={handleRegistrationClick} style={{ marginTop: "1em" }}>Register</Button>
                 </form>
                 <PopupDialog
                     open={dialogLoggedInOpenState && !dialogRegisterSuccessOpenState}

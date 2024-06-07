@@ -4,21 +4,21 @@ import {
     RouterProvider,
 } from "react-router-dom";
 
-import React, { Suspense } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 
-const Root = React.lazy(() => import("./router/Root.tsx"));
-const Login = React.lazy(() => import("./router/Login.tsx"));
-const Register = React.lazy(() => import("./router/Register.tsx"));
-const Logout = React.lazy(() => import("./router/Logout.tsx"));
-const Home = React.lazy(() => import("./router/Home.tsx"));
-const Chat = React.lazy(() => import("./router/Chat.tsx"));
-const ChatMainUser = React.lazy(() => import("./router/ChatMainUser.tsx"));
-const Problem = React.lazy(() => import("./router/Problem.tsx"));
-const ProblemMain = React.lazy(() => import("./router/ProblemMain.tsx"));
-const SubmissionShower = React.lazy(() => import("./router/SubmissionShower.tsx"));
-const SubmissionsList = React.lazy(() => import("./router/SubmissionsList.tsx"));
-const UserProfile = React.lazy(() => import("./router/UserProfile.tsx"));
-const ErrorPage = React.lazy(() => import("./ErrorPage.tsx"));
+const Root = lazy(() => import("./router/Root.tsx"));
+const Login = lazy(() => import("./router/Login.tsx"));
+const Register = lazy(() => import("./router/Register.tsx"));
+const Logout = lazy(() => import("./router/Logout.tsx"));
+const Home = lazy(() => import("./router/Home.tsx"));
+const Chat = lazy(() => import("./router/Chat.tsx"));
+const ChatMainUser = lazy(() => import("./router/ChatMainUser.tsx"));
+const Problem = lazy(() => import("./router/Problem.tsx"));
+const ProblemMain = lazy(() => import("./router/ProblemMain.tsx"));
+const SubmissionShower = lazy(() => import("./router/SubmissionShower.tsx"));
+const SubmissionsList = lazy(() => import("./router/SubmissionsList.tsx"));
+const UserProfile = lazy(() => import("./router/UserProfile.tsx"));
+const ErrorPage = lazy(() => import("./ErrorPage.tsx"));
 
 import { Skeleton } from "@fluentui/react-components";
 
@@ -113,7 +113,7 @@ const router = createBrowserRouter([
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
-    ReactDOM.createRoot(rootElement).render(<RouterProvider router={router} />);
+    ReactDOM.createRoot(rootElement).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
 } else {
     console.error("Failed to find the root element");
 }

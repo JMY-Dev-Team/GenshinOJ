@@ -1,3 +1,4 @@
+import { useEffect, useState, useCallback, lazy } from "react";
 import {
     makeStyles,
     Button,
@@ -10,12 +11,12 @@ import {
     TableHeaderCell,
     TableCell,
     TableBody,
+    Spinner,
 } from "@fluentui/react-components";
-import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import * as globals from "./Globals.ts";
-const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 function getColorByResult(result: string) {
     if (result === "AC") return "#3AAF00";
@@ -76,7 +77,7 @@ function isSubmissionsListFromFetch(x: object) {
 
 function SubmissionsListFetcher({ lastJsonMessage, setSubmissionsList, requestKey }: {
     lastJsonMessage: unknown;
-    setSubmissionsList: React.Dispatch<React.SetStateAction<SubmissionResult[] | SubmissionResultOthers[]>>;
+    setSubmissionsList: React.Dispatch<React.SetStateAction<SubmissionResult[] | SubmissionResultOthers[] | undefined>>;
     requestKey: string;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
@@ -161,7 +162,7 @@ export default function SubmissionsList() {
     const [requestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfTotalSubmissionsListIndexFetcher] = useState("");
     const [submissionId, setSubmissionId] = useState("-1");
     const [submissionsListIndex, setSubmissionsListIndex] = useState(1);
-    const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[]>([]);
+    const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[] | undefined>(undefined);
     const [totalSubmissionsListIndex, setTotalSubmissionsListIndex] = useState(1);
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
     const navigate = useNavigate();
@@ -200,6 +201,10 @@ export default function SubmissionsList() {
         }
 
     }, [handleFetchSubmissionsList, handleFetchTotalSubmissionsListIndex, submissionsListIndex, setRequestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfSubmissionsListFetcher]);
+
+    const handleNavigateLogin = useCallback(() => {
+        navigate("/login");
+    }, [navigate]);
 
     return <>
         <div className={useStyles().root}>
@@ -247,25 +252,28 @@ export default function SubmissionsList() {
                 </TableHeader>
                 <TableBody>
                     {
-                        submissionsList.map((submissionResult: SubmissionResult | SubmissionResultOthers, key) => (
-                            <TableRow key={key}>
-                                <TableCell style={{ color: "#4183C4" }}
-                                    onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
-                                    onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
-                                    onClick={() => { navigate("/submission/" + String(submissionResult.submission_id)); }}>
-                                    {submissionResult.submission_id}
-                                </TableCell>
-                                <TableCell style={{ color: "#4183C4" }}
-                                    onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
-                                    onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
-                                    onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
-                                    {submissionResult.problem_number}
-                                </TableCell>
-                                <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD") }}>{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
-                                <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined }}>{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
-                            </TableRow>
-                        )
-                        )
+                        submissionsList === undefined ?
+                            <Spinner size="tiny" label="Waiting..." delay={500} />
+                            :
+                            submissionsList.map((submissionResult: SubmissionResult | SubmissionResultOthers, key) => (
+                                <TableRow key={key}>
+                                    <TableCell style={{ color: "#4183C4" }}
+                                        onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                        onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
+                                        onClick={() => { navigate("/submission/" + String(submissionResult.submission_id)); }}>
+                                        {submissionResult.submission_id}
+                                    </TableCell>
+                                    <TableCell style={{ color: "#4183C4" }}
+                                        onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                        onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
+                                        onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
+                                        {submissionResult.problem_number}
+                                    </TableCell>
+                                    <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD") }}>{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
+                                    <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined }}>{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
+                                </TableRow>
+                            )
+                            )
                     }
                 </TableBody>
             </Table>
@@ -273,7 +281,7 @@ export default function SubmissionsList() {
                 open={dialogRequireLoginOpenState}
                 setPopupDialogOpenState={setDialogRequireLoginOpenState}
                 text="Please login first."
-                onClose={() => navigate("/login")} />
+                onClose={handleNavigateLogin} />
             <SubmissionsListFetcher
                 setSubmissionsList={setSubmissionsList}
                 requestKey={requestKeyOfSubmissionsListFetcher}

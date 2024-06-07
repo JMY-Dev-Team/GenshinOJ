@@ -1,10 +1,11 @@
-import { Divider, Avatar, Tab } from "@fluentui/react-components";
-
-import "../css/style.css"
 import { useNavigate } from "react-router-dom";
+
+import { Divider, Avatar, Tab } from "@fluentui/react-components";
 import { ChartMultipleFilled, ChatFilled, ClipboardTaskListLtrFilled } from "@fluentui/react-icons";
 
-import * as globals from "./Globals"
+import * as globals from "./Globals.ts";
+
+import "../css/style.css";
 
 export default function NavBar() {
     const navigate = useNavigate();

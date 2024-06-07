@@ -1,23 +1,14 @@
-import {
-    makeStyles,
-    Input,
-    Field,
-    Button
-} from "@fluentui/react-components";
-
-import {
-    PersonRegular,
-    PasswordRegular
-} from "@fluentui/react-icons";
-
-import React, { useEffect, useState } from "react";
-
+import { useEffect, useState, lazy, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import "../css/style.css";
+import { makeStyles, Input, Field, Button } from "@fluentui/react-components";
+import { PersonRegular, PasswordRegular } from "@fluentui/react-icons";
+
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "./Globals.ts";
-const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+
+import "../css/style.css";
 
 const useStyles = makeStyles({
     root: {
@@ -91,7 +82,7 @@ function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpe
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, loginUsername, setDialogLoginFailureOpenState, setDialogLoginSuccessOpenState]);
 
-    return <div></div>;
+    return <></>;
 }
 
 export default function Login() {
@@ -104,7 +95,7 @@ export default function Login() {
     const [dialogLoginSuccessOpenState, setDialogLoginSuccessOpenState] = useState(false);
     const navigate = useNavigate();
 
-    const handleClickLoginSession = () => {
+    const handleClickLoginSession = useCallback(() => {
         const _requestKey = globals.randomUUID();
         sendJsonMessage({
             type: "login",
@@ -116,7 +107,15 @@ export default function Login() {
         });
 
         return _requestKey;
-    };
+    }, [loginUsername, loginPassword, sendJsonMessage]);
+
+    const handleClickLogin = useCallback(() => {
+        setRequestKey(handleClickLoginSession());
+    }, [handleClickLoginSession]);
+
+    const handleNavigateBackward = useCallback(() => {
+        navigate(-1);
+    }, [navigate]);
 
     useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
     return (
@@ -131,25 +130,23 @@ export default function Login() {
                         <Input contentBefore={<PasswordRegular />} type="password"
                             onChange={(props) => setLoginPassword(props.target.value)} />
                     </Field>
-                    <br />
-                    <Button appearance="primary"
-                        onClick={() => { setRequestKey(handleClickLoginSession()); }}>Login</Button>
+                    <Button appearance="primary" style={{ marginTop: "1em" }}
+                        onClick={handleClickLogin}>Login</Button>
                 </form>
                 <PopupDialog
                     open={dialogLoggedInOpenState}
                     setPopupDialogOpenState={setDialogLoggedInOpenState}
                     text="You have already logged in."
-                    onClose={() => navigate(-1)} />
+                    onClose={handleNavigateBackward} />
                 <PopupDialog
                     open={dialogLoginFailureOpenState}
                     setPopupDialogOpenState={setDialogLoginFailureOpenState}
-                    text="Login failed. Maybe you used a wrong password or username?"
-                    onClose={undefined} />
+                    text="Login failed. Maybe you used a wrong password or username?" />
                 <PopupDialog
                     open={dialogLoginSuccessOpenState}
                     setPopupDialogOpenState={setDialogLoginSuccessOpenState}
                     text="Login successfully."
-                    onClose={() => navigate(-1)} />
+                    onClose={handleNavigateBackward} />
                 <LoginChecker
                     setDialogLoginFailureOpenState={setDialogLoginFailureOpenState}
                     setDialogLoginSuccessOpenState={setDialogLoginSuccessOpenState}

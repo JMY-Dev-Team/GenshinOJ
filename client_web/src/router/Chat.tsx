@@ -1,7 +1,5 @@
-import {
-    Outlet,
-    useOutletContext,
-} from "react-router-dom";
+import { useEffect, useState, Suspense, useCallback, lazy } from "react";
+import { useNavigate, Outlet, useOutletContext } from "react-router-dom";
 
 import {
     makeStyles,
@@ -15,14 +13,11 @@ import {
     Divider,
 } from "@fluentui/react-components";
 
-import { useNavigate } from "react-router-dom";
-
-import React, { useEffect, useState, Suspense, useCallback } from "react";
-
-import "../css/style.css";
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "./Globals.ts";
-const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+
+import "../css/style.css";
 
 const useStyles = makeStyles({
     root: {
@@ -44,6 +39,23 @@ const useStyles = makeStyles({
     }
 });
 
+interface OnlineUsersList {
+    type: string;
+    content: {
+        online_users: string[],
+        request_key: string,
+    };
+}
+
+function isOnlineUsersList(x: object) {
+    if ('type' in x && 'content' in x && typeof x.content === 'object') {
+        return 'online_users' in (x.content as object) &&
+            'request_key' in (x.content as object);
+    }
+
+    return false;
+}
+
 function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessage }: {
     setOnlineUsersList: React.Dispatch<React.SetStateAction<string[]>>;
     requestKey: string;
@@ -59,22 +71,6 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
         let newOnlineUsersList: string[] = [], changed = false;
         const _websocketMessageHistory = websocketMessageHistory;
         _websocketMessageHistory.map((_message, index) => {
-            interface OnlineUsersList {
-                type: string;
-                content: {
-                    online_users: string[],
-                    request_key: string,
-                };
-            }
-
-            function isOnlineUsersList(x: object) {
-                if ('type' in x && 'content' in x && typeof x.content === 'object') {
-                    return 'online_users' in (x.content as object) &&
-                        'request_key' in (x.content as object);
-                }
-
-                return false;
-            }
             if (_message && isOnlineUsersList(_message)) {
                 const message = _message as OnlineUsersList;
                 console.log(message);
@@ -90,7 +86,7 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, setOnlineUsersList]);
 
-    return <div></div>;
+    return <></>;
 }
 
 export function ChatList({ sendJsonMessage, lastJsonMessage }: {
@@ -159,32 +155,34 @@ export default function Chat() {
             setDialogRequireLoginOpenState(true);
     }, []);
 
-    return <div className={style.root}>
-        {
-            globals.fetchData("isLoggedIn")
-                ?
-                <>
-                    <div className={style.chat_list}>
-                        <Suspense fallback={<Skeleton />}>
-                            <ChatList
-                                sendJsonMessage={sendJsonMessage}
-                                lastJsonMessage={lastJsonMessage} />
-                        </Suspense>
-                    </div>
-                    <div className={style.divider}>
-                        <Divider vertical style={{ height: "100%" }} />
-                    </div>
-                    <div className={style.chat_main_outlet}>
-                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
-                    </div>
-                </>
-                :
-                <></>
-        }
-        <PopupDialog
-            open={dialogRequireLoginOpenState}
-            setPopupDialogOpenState={setDialogRequireLoginOpenState}
-            text="Please login first."
-            onClose={() => navigate("/login")} />
-    </div>
+    return <>
+        <div className={style.root}>
+            {
+                globals.fetchData("isLoggedIn")
+                    ?
+                    <>
+                        <div className={style.chat_list}>
+                            <Suspense fallback={<Skeleton />}>
+                                <ChatList
+                                    sendJsonMessage={sendJsonMessage}
+                                    lastJsonMessage={lastJsonMessage} />
+                            </Suspense>
+                        </div>
+                        <div className={style.divider}>
+                            <Divider vertical style={{ height: "100%" }} />
+                        </div>
+                        <div className={style.chat_main_outlet}>
+                            <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
+                        </div>
+                    </>
+                    :
+                    <></>
+            }
+            <PopupDialog
+                open={dialogRequireLoginOpenState}
+                setPopupDialogOpenState={setDialogRequireLoginOpenState}
+                text="Please login first."
+                onClose={() => navigate("/login")} />
+        </div>
+    </>;
 }

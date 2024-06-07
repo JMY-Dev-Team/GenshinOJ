@@ -1,6 +1,4 @@
-import {
-    makeStyles,
-} from "@fluentui/react-components";
+import { makeStyles } from "@fluentui/react-components";
 
 import "../css/style.css";
 

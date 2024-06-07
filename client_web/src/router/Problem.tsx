@@ -1,7 +1,5 @@
-import {
-    Outlet,
-    useOutletContext,
-} from "react-router-dom";
+import { useEffect, useState, useCallback, lazy } from "react";
+import { Outlet, useOutletContext, useNavigate } from "react-router-dom";
 
 import {
     makeStyles,
@@ -11,18 +9,14 @@ import {
     TableHeaderCell,
     TableCell,
     TableBody,
-    Skeleton,
     Divider,
 } from "@fluentui/react-components";
 
-import { useNavigate } from "react-router-dom";
-
-import React, { useEffect, useState, Suspense, useCallback } from "react";
-
-import "../css/style.css";
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "./Globals.ts";
-const PopupDialog = React.lazy(() => import("./PopupDialog.tsx"));
+
+import "../css/style.css";
 
 const useStyles = makeStyles({
     root: {
@@ -36,7 +30,7 @@ const useStyles = makeStyles({
 });
 
 function ProblemListFetcher({ setProblemList, requestKey, lastJsonMessage }: {
-    setProblemList: React.Dispatch<React.SetStateAction<string[]>>;
+    setProblemList: React.Dispatch<React.SetStateAction<string[] | undefined>>;
     requestKey: string;
     lastJsonMessage: unknown;
 }) {
@@ -79,14 +73,25 @@ function ProblemListFetcher({ setProblemList, requestKey, lastJsonMessage }: {
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, setProblemList]);
 
-    return <div></div>;
+    return <></>;
+}
+
+function TableCellForProblemList({ problem_number }: {
+    problem_number: string;
+}) {
+    const navigate = useNavigate();
+    const handleClick = useCallback(() => {
+        navigate("/problem/" + problem_number);
+    }, [navigate, problem_number]);
+    return <TableRow key={problem_number}>
+        <TableCell onClick={handleClick} >{problem_number}</TableCell>
+    </TableRow>;
 }
 
 export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMessage: globals.SendJsonMessage, lastJsonMessage: unknown }) {
-    const [, setWebsocketMessageHistory] = useState([]);
-    const [problemList, setProblemList] = useState([]);
-    const [requestKey, setRequestKey] = useState("");
-    const navigate = useNavigate();
+    const [, setWebsocketMessageHistory] = useState<unknown[]>([]);
+    const [problemList, setProblemList] = useState<string[] | undefined>([]);
+    const [requestKey, setRequestKey] = useState<string>("");
 
     useEffect(() => {
         if (lastJsonMessage !== null)
@@ -118,17 +123,19 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
             </TableHeader>
             <TableBody>
                 {
-                    problemList.map((problem_number: string) => (
-                        <TableRow key={problem_number}>
-                            <TableCell onClick={() => navigate("/problem/" + problem_number)} >{problem_number}</TableCell>
-                        </TableRow>
-                    )
-                    )
+                    problemList !== undefined
+                        ?
+                        problemList.map((problem_number: string) => (
+                            <TableCellForProblemList problem_number={problem_number} />
+                        )
+                        )
+                        :
+                        <></>
                 }
             </TableBody>
         </Table>
         <ProblemListFetcher
-            setProblemList={setProblemList as React.Dispatch<React.SetStateAction<string[]>>}
+            setProblemList={setProblemList}
             lastJsonMessage={lastJsonMessage}
             requestKey={requestKey} />
     </div>;
@@ -138,38 +145,43 @@ export default function Problem() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const navigate = useNavigate();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const style = useStyles();
 
     useEffect(() => {
         if (!globals.fetchData("isLoggedIn"))
             setDialogRequireLoginOpenState(true);
     }, []);
 
-    return <div className={useStyles().root}>
-        {
-            globals.fetchData("isLoggedIn")
-                ?
-                <>
-                    <div style={{ flex: 20 }}>
-                        <Suspense fallback={<Skeleton />}>
+    const handleCloseDialogRequireLogin = useCallback(() => {
+        navigate("/login");
+    }, [navigate]);
+
+    return <>
+        <div className={style.root}>
+            {
+                globals.fetchData("isLoggedIn")
+                    ?
+                    <>
+                        <div style={{ flex: 20 }}>
                             <ProblemList
                                 sendJsonMessage={sendJsonMessage}
                                 lastJsonMessage={lastJsonMessage} />
-                        </Suspense>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <Divider vertical style={{ height: "100%" }} />
-                    </div>
-                    <div style={{ flex: 120 }}>
-                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
-                    </div>
-                </>
-                :
-                <></>
-        }
-        <PopupDialog
-            open={dialogRequireLoginOpenState}
-            setPopupDialogOpenState={setDialogRequireLoginOpenState}
-            text="Please login first."
-            onClose={() => navigate("/login")} />
-    </div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <Divider vertical style={{ height: "100%" }} />
+                        </div>
+                        <div style={{ flex: 120 }}>
+                            <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
+                        </div>
+                    </>
+                    :
+                    <></>
+            }
+            <PopupDialog
+                open={dialogRequireLoginOpenState}
+                setPopupDialogOpenState={setDialogRequireLoginOpenState}
+                text="Please login first."
+                onClose={handleCloseDialogRequireLogin} />
+        </div>
+    </>;
 }
