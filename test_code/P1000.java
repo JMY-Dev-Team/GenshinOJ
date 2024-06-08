@@ -1,5 +1,5 @@
-class MyJavaSourceCode {
-    public MyJavaSourceCode() {
+public class Main {
+    public static void main(String[] args) {
         System.out.println("Genshin Impact, launch!"); 
     }
 }

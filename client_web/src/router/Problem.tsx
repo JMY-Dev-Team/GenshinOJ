@@ -1,7 +1,5 @@
-import {
-    Outlet,
-    useOutletContext,
-} from "react-router-dom";
+import { useEffect, useState, useCallback, lazy } from "react";
+import { Outlet, useOutletContext, useNavigate } from "react-router-dom";
 
 import {
     makeStyles,
@@ -11,18 +9,22 @@ import {
     TableHeaderCell,
     TableCell,
     TableBody,
-    Skeleton,
     Divider,
+    Spinner,
 } from "@fluentui/react-components";
 
-import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { nanoid } from "nanoid";
+
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
+
+import * as globals from "../Globals.ts";
+
+import { RootState } from "../store.ts";
 
 import "../css/style.css";
 
-import * as globals from "./Globals";
-import PopupDialog from "./PopupDialog";
 
 const useStyles = makeStyles({
     root: {
@@ -31,12 +33,12 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         height: "fill",
-        padding: "4px 0",
+        margin: "auto 4px",
     },
 });
 
 function ProblemListFetcher({ setProblemList, requestKey, lastJsonMessage }: {
-    setProblemList: React.Dispatch<React.SetStateAction<string[]>>;
+    setProblemList: React.Dispatch<React.SetStateAction<string[] | undefined>>;
     requestKey: string;
     lastJsonMessage: unknown;
 }) {
@@ -79,14 +81,25 @@ function ProblemListFetcher({ setProblemList, requestKey, lastJsonMessage }: {
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, setProblemList]);
 
-    return <div></div>;
+    return <></>;
+}
+
+function TableCellForProblemList({ problem_number }: {
+    problem_number: string;
+}) {
+    const navigate = useNavigate();
+    const handleClick = useCallback(() => {
+        navigate("/problem/" + problem_number);
+    }, [navigate, problem_number]);
+    return <TableRow key={problem_number}>
+        <TableCell onClick={handleClick} >{problem_number}</TableCell>
+    </TableRow>;
 }
 
 export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMessage: globals.SendJsonMessage, lastJsonMessage: unknown }) {
-    const [, setWebsocketMessageHistory] = useState([]);
-    const [problemList, setProblemList] = useState([]);
-    const [requestKey, setRequestKey] = useState("");
-    const navigate = useNavigate();
+    const [, setWebsocketMessageHistory] = useState<unknown[]>([]);
+    const [problemList, setProblemList] = useState<string[] | undefined>(undefined);
+    const [requestKey, setRequestKey] = useState<string>("");
 
     useEffect(() => {
         if (lastJsonMessage !== null)
@@ -94,7 +107,7 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
     }, [lastJsonMessage]);
 
     const handleLoadProblemList = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "problem_set",
             content: {
@@ -110,25 +123,29 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
     }, [handleLoadProblemList]);
 
     return <div>
-        <Table size="medium">
-            <TableHeader>
-                <TableRow>
-                    <TableHeaderCell>Problem List</TableHeaderCell>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {
-                    problemList.map((problem_number: string) => (
-                        <TableRow key={problem_number}>
-                            <TableCell onClick={() => navigate("/problem/" + problem_number)} >{problem_number}</TableCell>
+        {
+            problemList !== undefined
+                ?
+                <Table size="medium">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell>Problem List</TableHeaderCell>
                         </TableRow>
-                    )
-                    )
-                }
-            </TableBody>
-        </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {
+                            problemList.map((problem_number: string, index: number) => (
+                                <TableCellForProblemList key={index} problem_number={problem_number} />
+                            )
+                            )
+                        }
+                    </TableBody>
+                </Table>
+                :
+                <Spinner size="tiny" label="Waiting..." delay={500} />
+        }
         <ProblemListFetcher
-            setProblemList={setProblemList as React.Dispatch<React.SetStateAction<string[]>>}
+            setProblemList={setProblemList}
             lastJsonMessage={lastJsonMessage}
             requestKey={requestKey} />
     </div>;
@@ -138,38 +155,44 @@ export default function Problem() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const navigate = useNavigate();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
+    const style = useStyles();
 
     useEffect(() => {
-        if (!globals.fetchData("isLoggedIn"))
+        if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
-    }, []);
+    }, [loginStatus]);
 
-    return <div className={useStyles().root}>
-        {
-            globals.fetchData("isLoggedIn")
-                ?
-                <>
-                    <div style={{ flex: 20 }}>
-                        <Suspense fallback={<Skeleton />}>
+    const handleCloseDialogRequireLogin = useCallback(() => {
+        navigate("/login");
+    }, [navigate]);
+
+    return <>
+        <div className={style.root}>
+            {
+                loginStatus.value === true
+                    ?
+                    <>
+                        <div style={{ flex: 20 }}>
                             <ProblemList
                                 sendJsonMessage={sendJsonMessage}
                                 lastJsonMessage={lastJsonMessage} />
-                        </Suspense>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <Divider vertical style={{ height: "100%" }} />
-                    </div>
-                    <div style={{ flex: 120 }}>
-                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
-                    </div>
-                </>
-                :
-                <></>
-        }
-        <PopupDialog
-            open={dialogRequireLoginOpenState}
-            setPopupDialogOpenState={setDialogRequireLoginOpenState}
-            text="Please login first."
-            onClose={() => navigate("/login")} />
-    </div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <Divider vertical style={{ height: "100%" }} />
+                        </div>
+                        <div style={{ flex: 120 }}>
+                            <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
+                        </div>
+                    </>
+                    :
+                    <></>
+            }
+            <PopupDialog
+                open={dialogRequireLoginOpenState}
+                setPopupDialogOpenState={setDialogRequireLoginOpenState}
+                text="Please login first."
+                onClose={handleCloseDialogRequireLogin} />
+        </div>
+    </>;
 }

@@ -5,7 +5,7 @@
             "name": "Test Application",
             "id": "test_ws_server_application",
             "enabled": false,
-            "path": "ws_server.ws_server_applications.test_ws_server_application",
+            "path": "ws_server.ws_server_applications.test_ws_server_application.test_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
         },
@@ -13,7 +13,7 @@
             "name": "Simple Websocket Server Application",
             "id": "simple_ws_server_application",
             "enabled": true,
-            "path": "ws_server.ws_server_applications.simple_ws_server_application",
+            "path": "ws_server.ws_server_applications.simple_ws_server_application.simple_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
         },
@@ -21,7 +21,7 @@
             "name": "Judgment Application",
             "id": "judge_ws_server_application",
             "enabled": true,
-            "path": "ws_server.ws_server_applications.judge_ws_server_application",
+            "path": "ws_server.ws_server_applications.judge_ws_server_application.judge_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
         },
@@ -29,7 +29,7 @@
             "name": "Chat Server Application",
             "id": "chat_ws_server_application",
             "enabled": true,
-            "path": "ws_server.ws_server_applications.chat_ws_server_application",
+            "path": "ws_server.ws_server_applications.chat_ws_server_application.chat_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
         },
@@ -37,7 +37,7 @@
             "name": "Music Player Server Application",
             "id": "music_player_ws_server_application",
             "enabled": false,
-            "path": "ws_server.ws_server_applications.music_player_ws_server_application",
+            "path": "ws_server.ws_server_applications.music_player_ws_server_application.music_player_ws_server_application",
             "dependencies": [],
             "unload_timeout": 0
         }

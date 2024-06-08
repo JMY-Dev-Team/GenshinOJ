@@ -1,0 +1,9 @@
+@font-face {
+    font-family: "FiraCodeRegular";
+    src: url('../font/FiraCode-Regular.woff2');
+}
+
+pre, code {
+    font-family: "FiraCodeRegular";
+    font-size: 13px;
+}

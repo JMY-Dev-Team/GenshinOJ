@@ -28,6 +28,7 @@ class server:
         self.MODULE_CONFIG_JSON_PATH: str = os.getcwd() + "/module_config.json"
         self.tasks: list = []
         # asyncio.get_event_loop_policy().get_event_loop().set_debug(True)
+        os.system("clear")
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)

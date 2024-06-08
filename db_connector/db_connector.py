@@ -91,7 +91,7 @@ class db_connector:
                 port=DATABASE_PORT,
                 database="GenshinOJ",
             )
-            self.log("连接成功！")
+            self.log("Connection established.")
         except Exception:  # If the database is not established, create it
             self.database: pymysql.Connection = pymysql.connect(
                 host="localhost",

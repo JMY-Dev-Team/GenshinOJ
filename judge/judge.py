@@ -1,6 +1,15 @@
-import os, sys, json, enum, platform
+import os, sys, json, enum, platform, traceback
 
-import asyncio, logging, pymysql
+try:
+    import asyncio, pymysql, aiohttp, pymysql.converters
+except:
+    print("Installing dependencies...")
+    os.system("pip install asyncio nest-asyncio pymysql cryptography aiohttp")
+    try:
+        import asyncio, pymysql, aiohttp
+    except ImportError:
+        print("Dependencies installation failed.")
+        sys.exit(-1)
 
 import server
 
@@ -18,6 +27,7 @@ class judge:
         # Necessary Initialization
         self.server_instance = server_instance
         self.server_instance.working_loads["judge"]["instance"] = self
+        self.MAX_CONNECTION_RETRIES = 10
 
         self.judgment_queue = []
         try:
@@ -28,9 +38,10 @@ class judge:
             CREATE TABLE IF NOT EXISTS judge_user_submission (
                 id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
                 username VARCHAR(256) NOT NULL,
-                accepted INT NOT NULL,
-                test_accepted INT NOT NULL,
-                general INT NOT NULL
+                accepted INT NOT NULL DEFAULT 0,
+                test_accepted INT NOT NULL DEFAULT 0,
+                general INT NOT NULL DEFAULT 0,
+                UNIQUE KEY username (username) USING BTREE
             )
             """
             )
@@ -58,7 +69,8 @@ class judge:
                 """
             CREATE TABLE IF NOT EXISTS judge_submission_result (
                 submission_id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
-                result JSON NOT NULL
+                result JSON NOT NULL,
+                UNIQUE KEY submission_id (submission_id) USING BTREE
             )
             """
             )
@@ -110,6 +122,11 @@ class judge:
             self.now_submission_id = 0
 
         self.log("Now Submission Id: {}".format(self.now_submission_id))
+
+        # Init go-judge server
+        self.server_instance.tasks.append(
+            asyncio.create_task(self.go_judge_server_loop())
+        )  # Add looped task
 
         self.server_instance.tasks.append(
             asyncio.create_task(self.judge_loop())
@@ -195,27 +212,65 @@ class judge:
         if platform.system() == "Linux":
             return os.getcwd() + "/submit/submission_" + str(submission_id)
 
+    async def go_judge_server_loop(self):
+        try:
+            self.go_judge_server_proc = await asyncio.create_subprocess_shell(
+                "go-judge>/tmp/go-judge.log",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            await asyncio.sleep(0.5)
+            status_code = -1
+            connection_retry_times: int = 0
+            while (
+                status_code != 200
+                and status_code != 429
+                and connection_retry_times <= self.MAX_CONNECTION_RETRIES
+            ):  # Handle automatic reconnection
+                connection_retry_times = connection_retry_times + 1
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            "http://localhost:5050/version"
+                        ) as response:
+                            status_code = response.status  # Get the status code
+                            self.log(
+                                "Go-judge version: {}, Go version: {}".format(
+                                    json.loads(await response.text())["buildVersion"],
+                                    json.loads(await response.text())["goVersion"],
+                                )
+                            )  # Show the version
+                except:
+                    self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
+                    status_code = -1
+
+                await asyncio.sleep(0.5)
+
+            if status_code != 200:
+                self.log(
+                    "Go-judge server failed to start.", judge_log_level.LEVEL_WARNING
+                )
+                return
+
+            self.log("Go-judge server started.", judge_log_level.LEVEL_DEBUG)
+        except:
+            self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
+            self.log("Go-judge server failed to start.", judge_log_level.LEVEL_WARNING)
+
     async def judge_loop(self) -> None:
         await asyncio.sleep(0)
         while True:
             await asyncio.sleep(0)
             try:
                 for judgment in self.judgment_queue:
-                    self.server_instance.working_loads["db_connector"][
-                        "instance"
-                    ].database_cursor.execute(
-                        "UPDATE judge_user_submission SET general=general+1 WHERE username = {};".format(
-                            judgment["username"]
-                        )
-                    )
-                    submission_id = judgment["submission_id"]
-                    submission_language = judgment["language"]
+                    submission_id = judgment["submission_id"]  # Submission ID
+                    submission_language = judgment["language"]  # Submission language
                     submission_problem_number = judgment[
                         "problem_number"
                     ]  # Problem number
-                    submission_file_name = self.get_submission_file_name_with_absolute_path_by_submission_id(
-                        submission_id
-                    )
+                    submission_code = judgment["code"]
+                    submission_username = judgment["username"]
                     self.log(
                         "Judging Submission {} (language: {}, problem number: {}).".format(
                             submission_id,
@@ -224,52 +279,250 @@ class judge:
                         )
                     )
 
-                    # Compile Part
-                    exit_code = await self.server_instance.get_module_instance(
-                        "compilers_manager"
-                    ).compile_file_by_language_and_compile_file_path(
-                        submission_language,
-                        submission_file_name,
+                    judgment_result = {
+                        "submission_id": submission_id,
+                        "result": "PD",
+                        "problem_number": submission_problem_number,
+                        "code": submission_code,
+                        "language": submission_language,
+                        "username": submission_username,
+                    }
+
+                    self.server_instance.get_module_instance(
+                        "db_connector"
+                    ).database_cursor.execute(
+                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
+                            submission_id,
+                            pymysql.converters.escape_string(
+                                json.dumps(judgment_result)
+                            ),
+                            pymysql.converters.escape_string(
+                                json.dumps(judgment_result)
+                            ),
+                        )
                     )
-                    if exit_code == False:
-                        # Delete source code
-                        await self.server_instance.get_module_instance(
-                            "compilers_manager"
-                        ).cleanup_file_by_language_and_compile_file_path(
-                            submission_language,
-                            submission_file_name,
+                    self.server_instance.get_module_instance(
+                        "db_connector"
+                    ).database.commit()
+
+                    try:
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "INSERT INTO judge_user_submission (username, general) VALUE ('{}', 1) ON DUPLICATE KEY UPDATE general = general + 1;".format(
+                                submission_username
+                            )
+                        )
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database.commit()
+                    except pymysql.OperationalError:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
+
+                    # Compile Part
+
+                    try:
+                        submission_language_compiler_info = (
+                            self.server_instance.get_module_instance(
+                                "compilers_manager"
+                            ).get_compiler_info(submission_language)
+                        )
+                        submission_compiled_tmp_file_id: str = ""
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(
+                                "http://localhost:5050/run",
+                                data=bytes(
+                                    json.dumps(
+                                        {
+                                            "cmd": [
+                                                {
+                                                    "args": submission_language_compiler_info[
+                                                        "compileCmd"
+                                                    ],
+                                                    "env": [
+                                                        "PATH=/usr/bin:/bin:/usr/lib/jvm/java-21-openjdk-amd64/conf/security"
+                                                    ],
+                                                    "files": [
+                                                        {"content": ""},
+                                                        {
+                                                            "name": "stdout",
+                                                            "max": 1024000,
+                                                        },
+                                                        {
+                                                            "name": "stderr",
+                                                            "max": 1024000,
+                                                        },
+                                                    ],
+                                                    "cpuLimit": 1000000000000,
+                                                    "memoryLimit": 4294967296,
+                                                    "procLimit": 255,
+                                                    "copyIn": {
+                                                        submission_language_compiler_info[
+                                                            "sourceFileName"
+                                                        ]: {
+                                                            "content": "".join(
+                                                                submission_code
+                                                            )
+                                                        }
+                                                    },
+                                                    "copyOut": ["stdout", "stderr"],
+                                                    "copyOutCached": [
+                                                        submission_language_compiler_info[
+                                                            "executable"
+                                                        ]
+                                                    ],
+                                                }
+                                            ]
+                                        }
+                                    ),
+                                    encoding="utf-8",
+                                ),
+                            ) as response:
+                                body = json.loads(await response.text())
+                                self.log(
+                                    "Status: {}, Response Body: {}".format(
+                                        response.status, json.dumps(body)
+                                    ),
+                                    judge_log_level.LEVEL_DEBUG,
+                                )
+                                if body[0]["status"] == "Accepted":
+                                    submission_compiled_tmp_file_id = body[0][
+                                        "fileIds"
+                                    ][submission_language_compiler_info["executable"]]
+                                elif body[0]["status"] == "Nonzero Exit Status":
+                                    self.log(
+                                        body[0]["files"]["stderr"],
+                                        judge_log_level.LEVEL_WARNING,
+                                    )
+                                    judgment_result = {
+                                        "submission_id": submission_id,
+                                        "result": "CE",
+                                        "general_score": 0,
+                                        "statuses": ["CE"],
+                                        "scores": [0],
+                                        "problem_number": submission_problem_number,
+                                        "code": submission_code,
+                                        "language": submission_language,
+                                        "username": submission_username,
+                                    }
+
+                                    response = dict()
+                                    response["content"] = judgment_result
+                                    response["type"] = "submission_result"
+                                    await judgment["websocket_protocol"].send(
+                                        json.dumps(response)
+                                    )
+
+                                    self.server_instance.get_module_instance(
+                                        "db_connector"
+                                    ).database_cursor.execute(
+                                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
+                                            submission_id,
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
+                                        )
+                                    )
+                                    self.server_instance.get_module_instance(
+                                        "db_connector"
+                                    ).database.commit()
+
+                                    response.clear()
+                                    del judgment_result
+                                    continue
+                                else:
+                                    judgment_result = {
+                                        "submission_id": submission_id,
+                                        "result": "UKE",
+                                        "general_score": 0,
+                                        "statuses": ["UKE"],
+                                        "scores": [0],
+                                        "problem_number": submission_problem_number,
+                                        "code": submission_code,
+                                        "language": submission_language,
+                                        "username": submission_username,
+                                    }
+
+                                    response = dict()
+                                    response["content"] = judgment_result
+                                    response["type"] = "submission_result"
+                                    await judgment["websocket_protocol"].send(
+                                        json.dumps(response)
+                                    )
+
+                                    self.server_instance.get_module_instance(
+                                        "db_connector"
+                                    ).database_cursor.execute(
+                                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
+                                            submission_id,
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
+                                        )
+                                    )
+                                    self.server_instance.get_module_instance(
+                                        "db_connector"
+                                    ).database.commit()
+
+                                    response.clear()
+                                    del judgment_result
+                                    continue
+
+                    except:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
+                        self.log(
+                            "Problem {} is not configured correctly. Please configure it.".format(
+                                submission_problem_number
+                            ),
+                            judge_log_level.LEVEL_ERROR,
                         )
 
                         judgment_result = {
                             "submission_id": submission_id,
-                            "result": "CE",
+                            "result": "UKE",
                             "general_score": 0,
-                            "statuses": ["CE"],
+                            "statuses": ["UKE"],
                             "scores": [0],
                             "problem_number": submission_problem_number,
+                            "code": submission_code,
+                            "language": submission_language,
+                            "username": submission_username,
                         }
 
                         response = dict()
-                        response["type"] = "submission_result"
                         response["content"] = judgment_result
+                        response["type"] = "submission_result"
                         await judgment["websocket_protocol"].send(json.dumps(response))
 
-                        self.server_instance.working_loads["db_connector"][
-                            "instance"
-                        ].database_cursor.execute(
-                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
-                                submission_id, json.dumps(judgment_result)
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
+                                submission_id,
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
                             )
                         )
-                        self.server_instance.working_loads["db_connector"][
-                            "instance"
-                        ].database.commit()
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database.commit()
 
                         response.clear()
                         del judgment_result
-                        break
+                        continue
 
                     # Judging Part
+
                     try:
                         try:
                             with open(
@@ -285,6 +538,9 @@ class judge:
                                     "testcases"
                                 ]  # Testcases
                         except:
+                            self.log(
+                                traceback.format_exc(), judge_log_level.LEVEL_WARNING
+                            )
                             judgment_result = {
                                 "submission_id": submission_id,
                                 "result": "UKE",
@@ -292,6 +548,9 @@ class judge:
                                 "statuses": ["UKE"],
                                 "scores": [0],
                                 "problem_number": submission_problem_number,
+                                "code": submission_code,
+                                "language": submission_language,
+                                "username": submission_username,
                             }
 
                             response = dict()
@@ -301,21 +560,26 @@ class judge:
                                 json.dumps(response)
                             )
 
-                            self.server_instance.working_loads["db_connector"][
-                                "instance"
-                            ].database_cursor.execute(
-                                "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                            self.server_instance.get_module_instance(
+                                "db_connector"
+                            ).database_cursor.execute(
+                                "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
                                     submission_id,
-                                    json.dumps(judgment_result),
+                                    pymysql.converters.escape_string(
+                                        json.dumps(judgment_result)
+                                    ),
+                                    pymysql.converters.escape_string(
+                                        json.dumps(judgment_result)
+                                    ),
                                 )
                             )
-                            self.server_instance.working_loads["db_connector"][
-                                "instance"
-                            ].database.commit()
+                            self.server_instance.get_module_instance(
+                                "db_connector"
+                            ).database.commit()
 
                             response.clear()
                             del judgment_result
-                            break
+                            continue
 
                         general_score = 0  # General score
                         general_AC_flag = True  # General AC flag
@@ -338,13 +602,6 @@ class judge:
                                         testcase["answer"],
                                     )
                                 )  # Answer file path
-                                testcase_output_path = (
-                                    "{}\\problem\\{}\\output\\{}".format(
-                                        os.getcwd(),
-                                        submission_problem_number,
-                                        "output{}.txt".format(testcase_number),
-                                    )
-                                )  # Output file path
                             if platform.system() == "Linux":
                                 testcase_input_path = "{}/problem/{}/input/{}".format(
                                     os.getcwd(),
@@ -356,38 +613,101 @@ class judge:
                                     submission_problem_number,
                                     testcase["answer"],
                                 )  # Answer file path
-                                testcase_output_path = "{}/problem/{}/output/{}".format(
-                                    os.getcwd(),
-                                    submission_problem_number,
-                                    "output{}.txt".format(testcase_number),
-                                )  # Output file path
 
-                            testcase_AC_flag = True
+                            testcase_AC_flag: bool = True
+                            testcase_output: str = ""
                             try:
-                                await self.server_instance.get_module_instance(
-                                    "global_message_queue"
-                                ).execute_command(
-                                    '{} < "{}" > "{}"'.format(
-                                        self.server_instance.get_module_instance(
-                                            "compilers_manager"
-                                        ).get_execute_binary_command_by_language_and_compile_file_path(
-                                            submission_language,
-                                            submission_file_name,
+
+                                testcase_input: str = ""
+                                with open(
+                                    testcase_input_path,
+                                    "r+",
+                                ) as testcase_input_file:
+                                    testcase_input = testcase_input_file.read()
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.post(
+                                        "http://localhost:5050/run",
+                                        data=bytes(
+                                            json.dumps(
+                                                {
+                                                    "cmd": [
+                                                        {
+                                                            "args": submission_language_compiler_info[
+                                                                "runCmd"
+                                                            ],
+                                                            "env": [
+                                                                "PATH=/usr/bin:/bin:/usr/lib/jvm/java-21-openjdk-amd64/conf/security"
+                                                            ],
+                                                            "files": [
+                                                                {
+                                                                    "content": testcase_input
+                                                                },
+                                                                {
+                                                                    "name": "stdout",
+                                                                    "max": 1024000,
+                                                                },
+                                                                {
+                                                                    "name": "stderr",
+                                                                    "max": 1024000,
+                                                                },
+                                                            ],
+                                                            "cpuLimit": int(
+                                                                testcase["time_limit"]
+                                                                * 1000000000
+                                                            ),
+                                                            "memoryLimit": int(
+                                                                testcase["memory_limit"]
+                                                                * 1048576
+                                                            ),
+                                                            "procLimit": 255,
+                                                            "copyIn": {
+                                                                submission_language_compiler_info[
+                                                                    "executable"
+                                                                ]: {
+                                                                    "fileId": submission_compiled_tmp_file_id
+                                                                }
+                                                            },
+                                                        }
+                                                    ]
+                                                }
+                                            ),
+                                            encoding="utf-8",
                                         ),
-                                        testcase_input_path,
-                                        testcase_output_path,
-                                    ),
-                                    testcase["time_limit"],
-                                )
-                                with open(testcase_output_path, "r") as testcase_output:
+                                    ) as response:
+                                        body = json.loads(await response.text())
+                                        self.log(
+                                            "Status: {}, Response Body: {}".format(
+                                                response.status, json.dumps(body)
+                                            ),
+                                            judge_log_level.LEVEL_DEBUG,
+                                        )
+                                        if body[0]["status"] == "Time Limit Exceeded":
+                                            statuses.append("TLE")
+                                            testcase_AC_flag = False
+                                        elif (
+                                            body[0]["status"] == "Memory Limit Exceeded"
+                                        ):
+                                            statuses.append("MLE")
+                                            testcase_AC_flag = False
+                                        elif (
+                                            body[0]["status"] == "Output Limit Exceeded"
+                                        ):
+                                            statuses.append("OLE")
+                                            testcase_AC_flag = False
+
+                                if testcase_AC_flag == True:
+                                    testcase_output = body[0]["files"][
+                                        "stdout"
+                                    ]  # Get testcase output
                                     with open(
                                         testcase_answer_path, "r"
-                                    ) as testcase_answer:
-                                        testcase_output_lines = (
-                                            testcase_output.readlines()
+                                    ) as testcase_answer_file:
+                                        testcase_answer = testcase_answer_file.read()
+                                        testcase_output_lines = testcase_output.split(
+                                            "\n"
                                         )
-                                        testcase_answer_lines = (
-                                            testcase_answer.readlines()
+                                        testcase_answer_lines = testcase_answer.split(
+                                            "\n"
                                         )
                                         if len(testcase_answer_lines) != len(
                                             testcase_output_lines
@@ -405,12 +725,10 @@ class judge:
                                                     statuses.append("WA")
                                                     testcase_AC_flag = False
                                                     break
-                            except TimeoutError:
-                                statuses.append("TLE")
-                                scores.append(0)
-                                testcase_AC_flag = False
-                            except Exception as e:
-                                logging.exception(e)
+                            except:
+                                self.log(
+                                    traceback.format_exc(), judge_log_level.LEVEL_DEBUG
+                                )
 
                             if testcase_AC_flag == True:
                                 general_score = general_score + testcase["score"]
@@ -419,19 +737,6 @@ class judge:
                             else:
                                 general_AC_flag = False
                                 scores.append(0)
-
-                            if platform.system() == "Linux":
-                                await self.server_instance.get_module_instance(
-                                    "global_message_queue"
-                                ).execute_command(
-                                    'rm -rf "{}"'.format(testcase_output_path)
-                                )
-                            if platform.system() == "Windows":
-                                await self.server_instance.get_module_instance(
-                                    "global_message_queue"
-                                ).execute_command(
-                                    'del "{}"'.format(testcase_output_path)
-                                )
 
                         judgment_result = dict()
                         if general_AC_flag == True:
@@ -442,14 +747,20 @@ class judge:
                                 "statuses": statuses,
                                 "scores": scores,
                                 "problem_number": submission_problem_number,
+                                "code": submission_code,
+                                "language": submission_language,
+                                "username": submission_username,
                             }
-                            self.server_instance.working_loads["db_connector"][
-                                "instance"
-                            ].database_cursor.execute(
-                                "UPDATE judge_user_submission SET accepted=accepted+1 WHERE username = {};".format(
+                            self.server_instance.get_module_instance(
+                                "db_connector"
+                            ).database_cursor.execute(
+                                "UPDATE judge_user_submission SET accepted=accepted+1 WHERE username = '{}';".format(
                                     judgment["username"]
                                 )
                             )
+                            self.server_instance.get_module_instance(
+                                "db_connector"
+                            ).database.commit()
                         else:
                             judgment_result = {
                                 "submission_id": submission_id,
@@ -458,26 +769,35 @@ class judge:
                                 "statuses": statuses,
                                 "scores": scores,
                                 "problem_number": submission_problem_number,
+                                "code": submission_code,
+                                "language": submission_language,
+                                "username": submission_username,
                             }
 
                         response = dict()
                         response["type"] = "submission_result"
                         response["content"] = judgment_result
                         await judgment["websocket_protocol"].send(json.dumps(response))
-                        self.server_instance.working_loads["db_connector"][
-                            "instance"
-                        ].database_cursor.execute(
-                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
-                                submission_id, json.dumps(judgment_result)
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
+                                submission_id,
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
                             )
                         )
-                        self.server_instance.working_loads["db_connector"][
-                            "instance"
-                        ].database.commit()
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database.commit()
                         response.clear()
                         del judgment_result
-                    except Exception as e:
-                        logging.exception(e)
+                    except:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
                         self.log(
                             "Problem {} is not configured correctly. Please configure it.".format(
                                 submission_problem_number
@@ -485,16 +805,8 @@ class judge:
                             judge_log_level.LEVEL_ERROR,
                         )
 
-                    # Clean-up Part
-                    await self.server_instance.get_module_instance(
-                        "compilers_manager"
-                    ).cleanup_file_by_language_and_compile_file_path(
-                        submission_language,
-                        submission_file_name,
-                    )
-                    await asyncio.sleep(0)
-            except Exception as e:
-                logging.exception(e)
+            except:
+                self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
 
             self.judgment_queue.clear()
             await asyncio.sleep(0)

@@ -1,21 +1,31 @@
-import "../css/style.css";
-import React, { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState, lazy } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
-const Editor = React.lazy(() => import("@monaco-editor/react"));
-import * as globals from "./Globals"
+
 import { Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps, SelectionEvents, OptionOnSelectData } from "@fluentui/react-components";
-import PopupDialog from "./PopupDialog";
 import { AlignBottomFilled, AlignBottomRegular, AlignStretchHorizontalFilled, AlignStretchHorizontalRegular, AppGenericFilled, AppGenericRegular, AppsAddInRegular, ArrowRoutingRectangleMultipleRegular } from "@fluentui/react-icons";
-const Markdown = React.lazy(() => import("react-markdown"));
+
+const Editor = lazy(() => import("@monaco-editor/react"));
+const Markdown = lazy(() => import("react-markdown"));
 const rehypeKatex = (await import("rehype-katex")).default;
 const remarkMath = (await import("remark-math")).default;
-import 'katex/dist/katex.min.css'
+
+import { useSelector } from "react-redux";
+
+import { nanoid } from "nanoid";
+
+const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
+
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
+
+import 'katex/dist/katex.min.css';
+import "../css/style.css";
 
 interface ProblemInfoFromLoader {
-    problemNumber: string;
+    problemNumber: number;
 }
 
-type ProblemInfoFromFetcher = {
+interface ProblemInfoFromFetcher {
     problem_number: number;
     difficulty: number;
     problem_name: string;
@@ -47,7 +57,7 @@ const options = [
 
 function ProblemInfoFetcher({ lastJsonMessage, setProblemInfo, requestKey }: {
     lastJsonMessage: unknown;
-    setProblemInfo: React.Dispatch<React.SetStateAction<ProblemInfoFromFetcher>>;
+    setProblemInfo: React.Dispatch<React.SetStateAction<ProblemInfoFromFetcher | undefined>>;
     requestKey: string;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
@@ -99,7 +109,7 @@ function ProblemInfoFetcher({ lastJsonMessage, setProblemInfo, requestKey }: {
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, setProblemInfo]);
-    return <div></div>;
+    return <></>;
 }
 
 function SubmissionIdFetcher({ lastJsonMessage, requestKey, setSubmissionId, setDialogSubmitSuccessOpenState }: {
@@ -148,7 +158,7 @@ function SubmissionIdFetcher({ lastJsonMessage, requestKey, setSubmissionId, set
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, setSubmissionId, setDialogSubmitSuccessOpenState]);
 
-    return <div></div>;
+    return <></>;
 }
 
 function DifficultyShower({ difficulty }: {
@@ -177,12 +187,16 @@ export default function ProblemMain() {
     const [, setWebsocketMessageHistory] = useState([]);
     const [submissionCode, setSubmissionCode] = useState("");
     const [submissionId, setSubmissionId] = useState(-1);
-    const [submissionCodeLanguage, setSubmissionCodeLanguage] = useState("cpp")
-    const [codeLanguage, setCodeLanguage] = useState("cpp")
+    const [submissionCodeLanguage, setSubmissionCodeLanguage] = useState("cpp");
+    const [codeLanguage, setCodeLanguage] = useState("cpp");
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
-    const [problemInfo, setProblemInfo] = useState({} as ProblemInfoFromFetcher);
-    const [requestKey, setRequestKey] = useState("");
+    const [problemInfo, setProblemInfo] = useState<ProblemInfoFromFetcher | undefined>(undefined);
+    const [requestKeyOfProblemInfoFetcher, setRequestKeyOfProblemInfoFetcher] = useState("");
+    const [requestKeyOfSubmissionIdFetcher, setRequestKeyOfSubmissionIdFetcher] = useState("");
     const [dialogSubmitSuccessOpenState, setDialogSubmitSuccessOpenState] = useState(false);
+    const [convertedMarkdownRenderString, setConvertedMarkdownRenderString] = useState("");
+    const loginUsername = useSelector((state: RootState) => state.loginUsername);
+    const sessionToken = useSelector((state: RootState) => state.sessionToken);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -190,7 +204,7 @@ export default function ProblemMain() {
     }, [lastJsonMessage]);
 
     const handleLoadProblemInfo = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "problem_statement",
             content: {
@@ -202,29 +216,36 @@ export default function ProblemMain() {
         return _requestKey;
     }, [problemNumber, sendJsonMessage]);
 
-    const handleClickSubmitCode = useCallback(() => {
-        const request_key = globals.randomUUID();
+    const handleSubmitCode = useCallback(() => {
+        console.log("`handleSubmitCode()` triggered.");
+        const request_key = nanoid();
         sendJsonMessage({
             type: "submission",
             content: {
-                username: globals.fetchData("loginUsername"),
-                session_token: globals.fetchData("sessionToken"),
+                username: loginUsername.value,
+                session_token: sessionToken.value,
                 problem_number: problemNumber,
                 language: submissionCodeLanguage,
                 code: submissionCode.split('\n'),
                 request_key: request_key
             }
         });
+
         return request_key;
     }, [problemNumber, sendJsonMessage, submissionCode, submissionCodeLanguage]);
 
     useEffect(() => {
-        setRequestKey(handleLoadProblemInfo());
+        setRequestKeyOfProblemInfoFetcher(handleLoadProblemInfo());
     }, [handleLoadProblemInfo]);
 
-    const convertStringListToMarkdownRenderString = useCallback(() => {
+    const handleClickSubmitCode = useCallback(() => {
+        console.log("`handleClickSubmitCode()` triggered.");
+        setRequestKeyOfSubmissionIdFetcher(handleSubmitCode());
+    }, [handleSubmitCode]);
+
+    const convertStringListToMarkdownRenderString = useCallback((_problemInfo: ProblemInfoFromFetcher) => {
         let markdownRenderString: string = "";
-        (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement) => {
+        _problemInfo.problem_statement.map((statement) => {
             markdownRenderString = markdownRenderString +
                 `
 ${statement}
@@ -232,7 +253,20 @@ ${statement}
         });
 
         return markdownRenderString;
-    }, [problemInfo]);
+    }, []);
+
+    useEffect(() => {
+        if (problemInfo !== undefined)
+            setConvertedMarkdownRenderString(convertStringListToMarkdownRenderString(problemInfo));
+    }, [convertStringListToMarkdownRenderString, problemInfo]);
+
+    const handleSubmissionNavigate = useCallback(() => {
+        navigate("/submission/" + submissionId);
+    }, [submissionId, navigate]);
+
+    const handleEditorContentChange = useCallback((code: string | undefined,) => {
+        setSubmissionCode((code === undefined) ? "" : code);
+    }, []);
 
     return <>
         <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
@@ -247,29 +281,25 @@ ${statement}
                         <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
                         <div style={{ display: "block", marginLeft: "1em" }}>
                             <Subtitle1>Problem Statement</Subtitle1>
-                            <br />
-                            <div style={{ textIndent: "1em" }}>
-                                <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                    {convertStringListToMarkdownRenderString()}
-                                </Markdown>
-                                {
-                                    /*
-                                    (problemInfo as ProblemInfoFromFetcher).problem_statement.map((statement, index) => (
-                                        <Body2 key={index}>{statement}</Body2>
-                                    ))
-                                    */
-                                }
+                            <div style={{ textIndent: "1em", marginTop: "1em" }}>
+                                <Suspense fallback={<Spinner size="tiny" delay={500} />}>
+                                    <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                        {convertedMarkdownRenderString}
+                                    </Markdown>
+                                </Suspense>
                             </div>
                             <Subtitle1>Submit Code</Subtitle1>
-                            <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} />
-                            <br />
-                            <Editor
-                                height="500px"
-                                language={codeLanguage}
-                                onChange={(code,) => { setSubmissionCode((code === undefined) ? "" : code); }}
-                                loading={<Spinner delay={200} />} />
+                            <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} style={{ marginTop: "0.5em", marginBottom: "1em" }} />
+                            <Suspense fallback={<Spinner size="tiny" delay={500} />}>
+                                <Editor
+                                    height="500px"
+                                    language={codeLanguage}
+                                    onChange={handleEditorContentChange}
+                                    loading={<Spinner delay={200} />} />
+                            </Suspense>
+
                             <div style={{ alignItems: "center", justifyContent: "center", display: "flex" }}>
-                                <Button appearance="primary" onClick={() => { setRequestKey(handleClickSubmitCode); }}>Submit</Button>
+                                <Button appearance="primary" onClick={handleClickSubmitCode}>Submit</Button>
                             </div>
                         </div>
                     </>
@@ -280,41 +310,44 @@ ${statement}
         <ProblemInfoFetcher
             lastJsonMessage={lastJsonMessage}
             setProblemInfo={setProblemInfo}
-            requestKey={requestKey} />
+            requestKey={requestKeyOfProblemInfoFetcher} />
         <SubmissionIdFetcher
             lastJsonMessage={lastJsonMessage}
             setSubmissionId={setSubmissionId}
             setDialogSubmitSuccessOpenState={setDialogSubmitSuccessOpenState}
-            requestKey={requestKey} />
+            requestKey={requestKeyOfSubmissionIdFetcher} />
         <PopupDialog
             open={dialogSubmitSuccessOpenState}
             setPopupDialogOpenState={setDialogSubmitSuccessOpenState}
             text="Submit Successfully. Navigating to your submission..."
-            onClose={() => { navigate("/submission/" + submissionId); }} />
+            onClose={handleSubmissionNavigate} />
     </>;
 }
 
-function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, ...props }: {
+function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, style, ...props }: {
     setCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
     setSubmissionCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
+    style?: React.CSSProperties;
 } & Partial<{
     props: DropdownProps;
 }>) {
     const [, setSelectedOptions] = useState(["cpp cpp"]);
-    const handleOptionSelect = (_ev: SelectionEvents, data: OptionOnSelectData) => {
+    const handleOptionSelect = useCallback((_ev: SelectionEvents, data: OptionOnSelectData) => {
         if (data.optionValue) {
             setSelectedOptions(data.selectedOptions);
             setCodeLanguage(data.optionValue.split(' ')[1]);
             setSubmissionCodeLanguage(data.optionValue.split(' ')[0]);
         }
-    };
+    }, [setCodeLanguage, setSubmissionCodeLanguage]);
 
     return (
-        <div>
+        <div style={style}>
             <Dropdown placeholder="Code Language" onOptionSelect={handleOptionSelect} defaultValue="C++" defaultSelectedOptions={["cpp cpp"]} {...props}>
-                {options.map((option) => (
-                    <Option value={option.submissionCodeLanguage + ' ' + option.codeLanguage} key={option.submissionCodeLanguage + ' ' + option.codeLanguage}>{option.description}</Option>
-                ))}
+                {
+                    options.map((option) => (
+                        <Option value={option.submissionCodeLanguage + ' ' + option.codeLanguage} key={option.submissionCodeLanguage + ' ' + option.codeLanguage}>{option.description}</Option>
+                    ))
+                }
             </Dropdown>
         </div>
     );
