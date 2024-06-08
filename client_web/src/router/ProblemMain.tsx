@@ -282,15 +282,13 @@ ${statement}
                             <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
                             <div style={{ display: "block", marginLeft: "1em" }}>
                                 <Subtitle1>Problem Statement</Subtitle1>
-                                <br />
-                                <div style={{ textIndent: "1em" }}>
+                                <div style={{ textIndent: "1em", marginTop: "1em" }}>
                                     <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                                         {convertedMarkdownRenderString}
                                     </Markdown>
                                 </div>
                                 <Subtitle1>Submit Code</Subtitle1>
-                                <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} />
-                                <br />
+                                <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} style={{ marginTop: "0.5em", marginBottom: "1em" }} />
                                 <Editor
                                     height="500px"
                                     language={codeLanguage}
@@ -323,9 +321,10 @@ ${statement}
     </>;
 }
 
-function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, ...props }: {
+function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, style, ...props }: {
     setCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
     setSubmissionCodeLanguage: React.Dispatch<React.SetStateAction<string>>;
+    style?: React.CSSProperties;
 } & Partial<{
     props: DropdownProps;
 }>) {
@@ -339,7 +338,7 @@ function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, ...pr
     }, [setCodeLanguage, setSubmissionCodeLanguage]);
 
     return (
-        <div>
+        <div style={style}>
             <Dropdown placeholder="Code Language" onOptionSelect={handleOptionSelect} defaultValue="C++" defaultSelectedOptions={["cpp cpp"]} {...props}>
                 {
                     options.map((option) => (

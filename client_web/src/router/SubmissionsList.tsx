@@ -224,8 +224,7 @@ export default function SubmissionsList() {
                             onClick={() => { navigate("/submission/" + String(submissionId)); }}>Jump to</Button>
                     </div>
                 </Field>
-                <br />
-                <div>
+                <div style={{ marginTop: "1em" }}>
                     <div style={{ margin: "0 0 4px 0" }}>
                         <Label>Submission Index Page of {submissionsListIndex} / {Math.max(totalSubmissionsListIndex, 1)}</Label>
                     </div>
@@ -246,8 +245,7 @@ export default function SubmissionsList() {
                 </div>
             </form>
         </div>
-        <br />
-        <div style={{ padding: "4px 4px 0 4px", maxWidth: "700px" }}>
+        <div style={{ padding: "4px 4px 0 4px", maxWidth: "700px", marginTop: "1em" }}>
             {
                 submissionsList === undefined ?
                     <div style={{ padding: "4px 4px 0 4px", maxWidth: "450px" }}><Spinner size="tiny" label="Waiting..." delay={500} /></div>
