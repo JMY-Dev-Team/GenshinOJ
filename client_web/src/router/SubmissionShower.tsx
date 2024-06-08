@@ -5,6 +5,7 @@ import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 import { ClipboardCheckmarkRegular, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
 import { Label, Spinner, Table, TableBody, TableHeader, TableHeaderCell, TableCell, TableRow } from "@fluentui/react-components";
 
+import { useSelector } from "react-redux";
 const copy = (await import("copy-to-clipboard")).default;
 
 const SyntaxHighlighter = lazy(() => import("react-syntax-highlighter"));
@@ -12,7 +13,9 @@ const SyntaxHighlighter = lazy(() => import("react-syntax-highlighter"));
 const BadgeButton = lazy(() => import("./BadgeButton.tsx"));
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals.ts";
+import * as globals from "../Globals.ts";
+
+import { RootState } from "../store.ts";
 
 import "../css/font.css";
 
@@ -141,6 +144,7 @@ export default function SubmissionShower() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
     const [dialogSubmissionNotFoundOpenState, setDialogSubmissionNotFoundOpenState] = useState(false);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const navigate = useNavigate();
 
     const handleSubmissionResultFetch = useCallback(() => {
@@ -163,7 +167,7 @@ export default function SubmissionShower() {
     }, []);
 
     useEffect(() => {
-        if (!globals.fetchData("isLoggedIn"))
+        if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
         else
             handleSubmissionResultFetch();
@@ -183,7 +187,7 @@ export default function SubmissionShower() {
 
     return <div style={{ padding: "4px 0" }}>
         {
-            globals.fetchData("isLoggedIn")
+            loginStatus
                 ?
                 <>
                     <div style={{ display: "flex", marginBottom: "10px" }}>

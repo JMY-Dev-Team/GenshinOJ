@@ -13,9 +13,12 @@ import {
     Divider,
 } from "@fluentui/react-components";
 
+import { useSelector } from "react-redux";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals.ts";
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
 
 import "../css/style.css";
 
@@ -62,6 +65,7 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
     lastJsonMessage: unknown;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const loginUsername = useSelector((state: RootState) => state.loginUsername);
     useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
@@ -82,7 +86,7 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
             }
         });
 
-        if (changed) setOnlineUsersList(newOnlineUsersList.filter((element) => element !== globals.fetchData("loginUsername")));
+        if (changed) setOnlineUsersList(newOnlineUsersList.filter((element) => element !== loginUsername.value));
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
     }, [websocketMessageHistory, requestKey, setOnlineUsersList]);
 
@@ -146,19 +150,20 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
 
 export default function Chat() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
+    const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
     const navigate = useNavigate();
     const style = useStyles();
-    const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
 
     useEffect(() => {
-        if (!globals.fetchData("isLoggedIn"))
+        if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
     }, []);
 
     return <>
         <div className={style.root}>
             {
-                globals.fetchData("isLoggedIn")
+                loginStatus.value === true
                     ?
                     <>
                         <div className={style.chat_list}>

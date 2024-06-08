@@ -4,9 +4,13 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { makeStyles, Input, Field, Button } from "@fluentui/react-components";
 import { PersonRegular, PasswordRegular } from "@fluentui/react-icons";
 
+import { useDispatch, useSelector } from "react-redux";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals";
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
+import { logoutReducer } from "../../redux/loginStatusSlice.ts";
 
 import "../css/style.css";
 
@@ -28,6 +32,7 @@ function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterF
     lastJsonMessage: unknown;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const dispatch = useDispatch();
 
     useEffect(() => {
         if (lastJsonMessage !== null)
@@ -56,13 +61,13 @@ function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterF
                 const message = _message as RegisterSessionResult;
                 if (message.content.reason == "registration_success") {
                     setDialogRegisterSuccessOpenState(true);
-                    globals.setData("isLoggedIn", false);
+                    dispatch(logoutReducer());
                     delete _websocketMessageHistory[index];
                 }
 
                 if (message.type == "quit" && message.content.reason == "registration_failure") {
                     setDialogRegisterFailureOpenState(true);
-                    globals.setData("isLoggedIn", false);
+                    dispatch(logoutReducer());
                     delete _websocketMessageHistory[index];
                 }
             }
@@ -75,13 +80,14 @@ function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterF
 export default function Register() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [requestKey, setRequestKey] = useState("");
-    const [registerUsername, setRegisterUsername] = useState("");
-    const [registerPassword, setRegisterPassword] = useState("");
-    const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
+    const [registerUsernameFromInput, setRegisterUsernameFromInput] = useState("");
+    const [registerPasswordFromInput, setRegisterPasswordFromInput] = useState("");
+    const [registerPasswordConfirmFromInput, setRegisterPasswordConfirmFromInput] = useState("");
     const [dialogLoggedInOpenState, setDialogLoggedInOpenState] = useState(false);
     const [dialogPasswordInputAndConfirmNotTheSameOpenState, setDialogPasswordInputAndConfirmNotTheSameOpenState] = useState(false);
     const [dialogRegisterFailureOpenState, setDialogRegisterFailureOpenState] = useState(false);
     const [dialogRegisterSuccessOpenState, setDialogRegisterSuccessOpenState] = useState(false);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const navigate = useNavigate();
 
     const handleClickRegisterSession = useCallback(() => {
@@ -89,37 +95,37 @@ export default function Register() {
         sendJsonMessage({
             type: "register",
             content: {
-                username: registerUsername,
-                password: registerPassword,
+                username: registerUsernameFromInput,
+                password: registerPasswordFromInput,
                 request_key: request_key
             }
         });
         return request_key;
-    }, [registerPassword, registerUsername, sendJsonMessage]);
+    }, [registerPasswordFromInput, registerUsernameFromInput, sendJsonMessage]);
 
     const handleRegistrationClick = useCallback(() => {
-        if (registerPassword != registerPasswordConfirm)
+        if (registerPasswordFromInput != registerPasswordConfirmFromInput)
             setDialogPasswordInputAndConfirmNotTheSameOpenState(true);
         else
             setRequestKey(handleClickRegisterSession());
-    }, [handleClickRegisterSession, registerPassword, registerPasswordConfirm]);
+    }, [handleClickRegisterSession, registerPasswordFromInput, registerPasswordConfirmFromInput]);
 
-    useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
+    useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, []);
     return (
         <>
             <div className={useStyles().root}>
                 <form>
                     <Field label="Register Username" required>
                         <Input contentBefore={<PersonRegular />}
-                            onChange={(props) => setRegisterUsername(props.target.value)} />
+                            onChange={(props) => setRegisterUsernameFromInput(props.target.value)} />
                     </Field>
                     <Field label="Register Password" required>
                         <Input contentBefore={<PasswordRegular />} type="password"
-                            onChange={(props) => setRegisterPassword(props.target.value)} />
+                            onChange={(props) => setRegisterPasswordFromInput(props.target.value)} />
                     </Field>
                     <Field label="Confirm Register Password" required>
                         <Input contentBefore={<PasswordRegular />} type="password"
-                            onChange={(props) => setRegisterPasswordConfirm(props.target.value)} />
+                            onChange={(props) => setRegisterPasswordConfirmFromInput(props.target.value)} />
                     </Field>
                     <Button appearance="primary" onClick={handleRegistrationClick} style={{ marginTop: "1em" }}>Register</Button>
                 </form>
@@ -131,13 +137,11 @@ export default function Register() {
                 <PopupDialog
                     open={dialogPasswordInputAndConfirmNotTheSameOpenState}
                     setPopupDialogOpenState={setDialogPasswordInputAndConfirmNotTheSameOpenState}
-                    text="You input the password which is not the same as confirmed."
-                    onClose={undefined} />
+                    text="You input the password which is not the same as confirmed." />
                 <PopupDialog
                     open={dialogRegisterFailureOpenState}
                     setPopupDialogOpenState={setDialogRegisterFailureOpenState}
-                    text="Registration failed. Maybe you registered an existed username or something went wrong."
-                    onClose={undefined} />
+                    text="Registration failed. Maybe you registered an existed username or something went wrong." />
                 <PopupDialog
                     open={dialogRegisterSuccessOpenState}
                     setPopupDialogOpenState={setDialogRegisterSuccessOpenState}

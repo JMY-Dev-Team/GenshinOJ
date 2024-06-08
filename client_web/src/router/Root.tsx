@@ -3,15 +3,23 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 
+import { useSelector, useDispatch } from "react-redux";
+
 import useWebSocket from "react-use-websocket";
 
 const NavBar = lazy(() => import("./NavBar.tsx"));
 
-import * as globals from "./Globals.ts";
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
+import { logoutReducer } from "../../redux/loginStatusSlice.ts";
 
 import "../css/style.css";
 
 export default function Root() {
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
+    const loginUsername = useSelector((state: RootState) => state.loginUsername);
+    const sessionToken = useSelector((state: RootState) => state.sessionToken);
+    const dispatch = useDispatch();
     const {
         sendJsonMessage,
         lastJsonMessage,
@@ -22,34 +30,36 @@ export default function Root() {
         reconnectAttempts: 10,
         reconnectInterval: 3000,
         onClose: () => {
-            if (globals.fetchData("isLoggedIn") === true) {
+            if (loginStatus.value === true) {
                 console.log("quitting...");
                 sendJsonMessage({
                     type: "quit",
                     content: {
-                        username: globals.fetchData("loginUsername"),
-                        session_token: globals.fetchData("sessionToken"),
+                        username: loginUsername.value,
+                        session_token: sessionToken.value,
                         request_key: globals.randomUUID()
                     }
                 });
-                globals.setData("isLoggedIn", false);
+
+                dispatch(logoutReducer());
             }
         },
     });
 
     const beforeunload = useCallback((ev: Event) => {
         if (ev) {
-            if (globals.fetchData("isLoggedIn") === true) {
+            if (loginStatus.value === true) {
                 console.log("quitting...");
                 sendJsonMessage({
                     type: "quit",
                     content: {
-                        username: globals.fetchData("loginUsername"),
-                        session_token: globals.fetchData("sessionToken"),
+                        username: loginUsername.value,
+                        session_token: sessionToken.value,
                         request_key: globals.randomUUID()
                     }
                 });
-                globals.setData("isLoggedIn", false);
+
+                dispatch(logoutReducer());
             }
         }
     }, [sendJsonMessage]);
@@ -62,7 +72,7 @@ export default function Root() {
     const nowLocation = useLocation();
     useEffect(() => {
         if (nowLocation.pathname == "/") navigate("/home");
-        if (nowLocation.pathname == "/user") navigate("/user/" + globals.fetchData("loginUsername"));
+        if (nowLocation.pathname == "/user") navigate("/user/" + loginUsername.value);
     }, [nowLocation, navigate]);
 
     return (

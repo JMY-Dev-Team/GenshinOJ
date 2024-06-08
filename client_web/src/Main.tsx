@@ -1,10 +1,14 @@
+import { StrictMode, Suspense, lazy } from "react";
 import * as ReactDOM from "react-dom/client";
+
 import {
     createBrowserRouter,
     RouterProvider,
 } from "react-router-dom";
 
-import { StrictMode, Suspense, lazy } from "react";
+import { Provider } from "react-redux";
+
+import { Skeleton } from "@fluentui/react-components";
 
 const Root = lazy(() => import("./router/Root.tsx"));
 const Login = lazy(() => import("./router/Login.tsx"));
@@ -20,8 +24,7 @@ const SubmissionsList = lazy(() => import("./router/SubmissionsList.tsx"));
 const UserProfile = lazy(() => import("./router/UserProfile.tsx"));
 const ErrorPage = lazy(() => import("./ErrorPage.tsx"));
 
-import { Skeleton } from "@fluentui/react-components";
-
+import store from "./store.ts";
 
 const router = createBrowserRouter([
     {
@@ -113,7 +116,7 @@ const router = createBrowserRouter([
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
-    ReactDOM.createRoot(rootElement).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
+    ReactDOM.createRoot(rootElement).render(<StrictMode><Provider store={store}><RouterProvider router={router} /></Provider></StrictMode>);
 } else {
     console.error("Failed to find the root element");
 }

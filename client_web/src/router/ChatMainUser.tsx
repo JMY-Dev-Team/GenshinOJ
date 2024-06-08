@@ -3,11 +3,16 @@ import { useLoaderData, useOutletContext } from "react-router-dom";
 
 import { Input, Button, Field } from "@fluentui/react-components";
 
+import { useSelector } from "react-redux";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals.ts";
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
 
 import "../css/style.css";
+
+import "../css/chatBubble.css"
 
 interface ChatMessage {
     message: string;
@@ -155,6 +160,8 @@ export default function ChatMainUser() {
     const [chatMessageToSend, setChatMessageToSend] = useState("");
     const [chatMessageLoaded, setChatMessageLoaded] = useState(false);
     const [dialogChatMessageSendFailureOpenState, setDialogChatMessageSendFailureOpenState] = useState(false);
+    const loginUsername = useSelector((state: RootState) => state.loginUsername);
+    const sessionToken = useSelector((state: RootState) => state.sessionToken);
 
     useEffect(() => {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
@@ -170,10 +177,10 @@ export default function ChatMainUser() {
         sendJsonMessage({
             type: "chat_user",
             content: {
-                from: globals.fetchData("loginUsername"),
+                from: loginUsername.value,
                 to: toUsername,
                 messages: chatMessageToSend as string,
-                session_token: globals.fetchData("sessionToken"),
+                session_token: sessionToken.value,
                 request_key: _requestKey,
             }
         });
@@ -219,8 +226,6 @@ export default function ChatMainUser() {
         </div>
     </>;
 }
-
-import "../css/chatBubble.css"
 
 function ChatBubble({ text, fromMe }: {
     text: string;

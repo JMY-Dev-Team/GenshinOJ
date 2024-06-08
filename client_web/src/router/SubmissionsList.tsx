@@ -15,8 +15,12 @@ import {
 } from "@fluentui/react-components";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import * as globals from "./Globals.ts";
+import { useSelector } from "react-redux";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
+
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
 
 function getColorByResult(result: string) {
     if (result === "AC") return "#3AAF00";
@@ -165,6 +169,7 @@ export default function SubmissionsList() {
     const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[] | undefined>(undefined);
     const [totalSubmissionsListIndex, setTotalSubmissionsListIndex] = useState(1);
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const navigate = useNavigate();
 
     const handleFetchSubmissionsList = useCallback((_submissionsListIndex: number) => {
@@ -193,7 +198,7 @@ export default function SubmissionsList() {
     }, [sendJsonMessage]);
 
     useEffect(() => {
-        if (!globals.fetchData("isLoggedIn"))
+        if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
         else {
             setRequestKeyOfSubmissionsListFetcher(handleFetchSubmissionsList(submissionsListIndex));

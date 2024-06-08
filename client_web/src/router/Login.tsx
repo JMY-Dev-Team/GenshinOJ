@@ -6,9 +6,16 @@ import { PersonRegular, PasswordRegular } from "@fluentui/react-icons";
 
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals.ts";
+import { useSelector, useDispatch } from "react-redux";
+
+import * as globals from "../Globals.ts";
+
+import { loginReducer, logoutReducer } from "../../redux/loginStatusSlice.ts";
 
 import "../css/style.css";
+import { RootState } from "../store.ts";
+import { modifySessionTokenReducer } from "../../redux/sessionTokenSlice.ts";
+import { modifyLoginUsernameReducer } from "../../redux/loginUsernameSlice.ts";
 
 const useStyles = makeStyles({
     root: {
@@ -21,14 +28,15 @@ const useStyles = makeStyles({
     },
 });
 
-function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpenState, requestKey, loginUsername, lastJsonMessage }: {
+function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpenState, requestKey, loginUsernameFromInput, lastJsonMessage }: {
     setDialogLoginSuccessOpenState: React.Dispatch<React.SetStateAction<boolean>>;
     setDialogLoginFailureOpenState: React.Dispatch<React.SetStateAction<boolean>>;
     requestKey: string;
-    loginUsername: string;
+    loginUsernameFromInput: string;
     lastJsonMessage: unknown;
 }) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const dispatch = useDispatch();
 
     useEffect(() => {
         if (lastJsonMessage !== null)
@@ -65,13 +73,13 @@ function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpe
                 if ((_message as LoginSessionResult).content.request_key === requestKey) {
                     if ((_message as LoginSessionResult).type === "quit") {
                         setDialogLoginFailureOpenState(true);
-                        globals.setData("isLoggedIn", false);
+                        dispatch(logoutReducer());
                     }
                     if ((_message as LoginSessionResult).type === "session_token") {
                         setDialogLoginSuccessOpenState(true);
-                        globals.setData("isLoggedIn", true);
-                        globals.setData("sessionToken", (_message as LoginSessionResultSuccess).content.session_token);
-                        globals.setData("loginUsername", loginUsername);
+                        dispatch(loginReducer());
+                        dispatch(modifySessionTokenReducer((_message as LoginSessionResultSuccess).content.session_token));
+                        dispatch(modifyLoginUsernameReducer(loginUsernameFromInput));
                     }
 
                     delete _websocketMessageHistory[index];
@@ -80,7 +88,7 @@ function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpe
         });
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, requestKey, loginUsername, setDialogLoginFailureOpenState, setDialogLoginSuccessOpenState]);
+    }, [websocketMessageHistory, requestKey, loginUsernameFromInput, setDialogLoginFailureOpenState, setDialogLoginSuccessOpenState]);
 
     return <></>;
 }
@@ -88,11 +96,12 @@ function LoginChecker({ setDialogLoginSuccessOpenState, setDialogLoginFailureOpe
 export default function Login() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [requestKey, setRequestKey] = useState("");
-    const [loginUsername, setLoginUsername] = useState("");
-    const [loginPassword, setLoginPassword] = useState("");
+    const [loginUsernameFromInput, setLoginUsernameFromInput] = useState("");
+    const [loginPasswordFromInput, setLoginPasswordFromInput] = useState("");
     const [dialogLoggedInOpenState, setDialogLoggedInOpenState] = useState(false);
     const [dialogLoginFailureOpenState, setDialogLoginFailureOpenState] = useState(false);
     const [dialogLoginSuccessOpenState, setDialogLoginSuccessOpenState] = useState(false);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const navigate = useNavigate();
 
     const handleClickLoginSession = useCallback(() => {
@@ -100,14 +109,14 @@ export default function Login() {
         sendJsonMessage({
             type: "login",
             content: {
-                username: loginUsername,
-                password: loginPassword,
+                username: loginUsernameFromInput,
+                password: loginPasswordFromInput,
                 request_key: _requestKey
             }
         });
 
         return _requestKey;
-    }, [loginUsername, loginPassword, sendJsonMessage]);
+    }, [loginUsernameFromInput, loginPasswordFromInput, sendJsonMessage]);
 
     const handleClickLogin = useCallback(() => {
         setRequestKey(handleClickLoginSession());
@@ -117,18 +126,18 @@ export default function Login() {
         navigate(-1);
     }, [navigate]);
 
-    useEffect(() => { if (globals.fetchData("isLoggedIn")) setDialogLoggedInOpenState(true); }, []);
+    useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, []);
     return (
         <>
             <div className={useStyles().root}>
                 <form>
                     <Field label="Login Username" required>
                         <Input contentBefore={<PersonRegular />}
-                            onChange={(props) => setLoginUsername(props.target.value)} />
+                            onChange={(props) => setLoginUsernameFromInput(props.target.value)} />
                     </Field>
                     <Field label="Login Password" required>
                         <Input contentBefore={<PasswordRegular />} type="password"
-                            onChange={(props) => setLoginPassword(props.target.value)} />
+                            onChange={(props) => setLoginPasswordFromInput(props.target.value)} />
                     </Field>
                     <Button appearance="primary" style={{ marginTop: "1em" }}
                         onClick={handleClickLogin}>Login</Button>
@@ -151,7 +160,7 @@ export default function Login() {
                     setDialogLoginFailureOpenState={setDialogLoginFailureOpenState}
                     setDialogLoginSuccessOpenState={setDialogLoginSuccessOpenState}
                     requestKey={requestKey}
-                    loginUsername={loginUsername}
+                    loginUsernameFromInput={loginUsernameFromInput}
                     lastJsonMessage={lastJsonMessage} />
             </div>
         </>

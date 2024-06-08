@@ -9,9 +9,12 @@ const Markdown = lazy(() => import("react-markdown"));
 const rehypeKatex = (await import("rehype-katex")).default;
 const remarkMath = (await import("remark-math")).default;
 
+import { useSelector } from "react-redux";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals.ts";
+import * as globals from "../Globals.ts";
+import { RootState } from "../store.ts";
 
 import 'katex/dist/katex.min.css';
 import "../css/style.css";
@@ -190,6 +193,8 @@ export default function ProblemMain() {
     const [requestKeyOfSubmissionIdFetcher, setRequestKeyOfSubmissionIdFetcher] = useState("");
     const [dialogSubmitSuccessOpenState, setDialogSubmitSuccessOpenState] = useState(false);
     const [convertedMarkdownRenderString, setConvertedMarkdownRenderString] = useState("");
+    const loginUsername = useSelector((state: RootState) => state.loginUsername);
+    const sessionToken = useSelector((state: RootState) => state.sessionToken);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -215,8 +220,8 @@ export default function ProblemMain() {
         sendJsonMessage({
             type: "submission",
             content: {
-                username: globals.fetchData("loginUsername"),
-                session_token: globals.fetchData("sessionToken"),
+                username: loginUsername.value,
+                session_token: sessionToken.value,
                 problem_number: problemNumber,
                 language: submissionCodeLanguage,
                 code: submissionCode.split('\n'),

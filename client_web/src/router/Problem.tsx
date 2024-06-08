@@ -12,9 +12,13 @@ import {
     Divider,
 } from "@fluentui/react-components";
 
+import { useSelector } from "react-redux";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
-import * as globals from "./Globals.ts";
+import * as globals from "../Globals.ts";
+
+import { RootState } from "../store.ts";
 
 import "../css/style.css";
 
@@ -125,8 +129,8 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
                 {
                     problemList !== undefined
                         ?
-                        problemList.map((problem_number: string) => (
-                            <TableCellForProblemList problem_number={problem_number} />
+                        problemList.map((problem_number: string, index: number) => (
+                            <TableCellForProblemList key={index} problem_number={problem_number} />
                         )
                         )
                         :
@@ -145,10 +149,11 @@ export default function Problem() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const navigate = useNavigate();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const style = useStyles();
 
     useEffect(() => {
-        if (!globals.fetchData("isLoggedIn"))
+        if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
     }, []);
 
@@ -159,7 +164,7 @@ export default function Problem() {
     return <>
         <div className={style.root}>
             {
-                globals.fetchData("isLoggedIn")
+                loginStatus.value === true
                     ?
                     <>
                         <div style={{ flex: 20 }}>

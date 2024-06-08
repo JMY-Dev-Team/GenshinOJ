@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Divider, Avatar, Tab } from "@fluentui/react-components";
 import { ChartMultipleFilled, ChatFilled, ClipboardTaskListLtrFilled } from "@fluentui/react-icons";
 
-import * as globals from "./Globals.ts";
+import { useSelector } from "react-redux";
+
+import { RootState } from "../store";
 
 import "../css/style.css";
 
 export default function NavBar() {
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const navigate = useNavigate();
     const onTabSelect = (value: string) => {
         if (value === "home") navigate("/home");
@@ -30,7 +33,7 @@ export default function NavBar() {
                 <Tab onClick={() => onTabSelect("submission")} style={{ float: "left" }} value="submission" icon={<ChartMultipleFilled />}>Submission</Tab>
                 <Tab onClick={() => onTabSelect("chat")} style={{ float: "left" }} value="chat" icon={<ChatFilled />}>Chat</Tab>
                 {
-                    (globals.fetchData("isLoggedIn"))
+                    loginStatus.value === true
                         ?
                         <Tab onClick={() => onTabSelect("logout")} style={{ float: "right" }} value="logout">Sign out</Tab>
                         :
