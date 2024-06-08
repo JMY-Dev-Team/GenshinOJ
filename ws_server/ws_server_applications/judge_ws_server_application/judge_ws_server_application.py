@@ -1,3 +1,5 @@
+import os
+import platform
 import sys, json, enum, hashlib
 
 import websockets
@@ -13,6 +15,28 @@ class judge_ws_server_log_level(enum.Enum):
 
 
 class judge_ws_server_application(ws_server.ws_server_application_protocol):
+
+    def __init__(self, ws_server_instance: ws_server) -> None:
+        super().__init__(ws_server_instance)
+        if platform.system() == "Windows":
+            JUDGE_WS_SERVER_APPLICATION_CONFIG_JSON_PATH = (
+                os.getcwd()
+                + "\\ws_server\\ws_server_applications\\judge_ws_server_application\\config.json"
+            )
+        if platform.system() == "Linux":
+            JUDGE_WS_SERVER_APPLICATION_CONFIG_JSON_PATH = (
+                os.getcwd()
+                + "/ws_server/ws_server_applications/judge_ws_server_application/config.json"
+            )
+        with open(
+            JUDGE_WS_SERVER_APPLICATION_CONFIG_JSON_PATH,
+            "r",
+        ) as judge_ws_server_application_config_json_file:
+            self.judge_ws_server_application_config = json.load(
+                judge_ws_server_application_config_json_file
+            )
+
+            self.log(self.judge_ws_server_application_config)
 
     def log(
         self,
@@ -278,7 +302,6 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         websocket_protocol: websockets.server.WebSocketServerProtocol,
         content: dict,
     ):
-        PAGE_SIZE = 10
         now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
             "judge"
         ).now_submission_id
@@ -286,8 +309,14 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             "db_connector"
         ).database_cursor.execute(
             "SELECT result FROM judge_submission_result WHERE submission_id >= {} AND submission_id < {} ORDER BY submission_id DESC;".format(
-                now_submission_id - content["index"] * PAGE_SIZE + 1,
-                now_submission_id - (content["index"] - 1) * PAGE_SIZE + 1,
+                now_submission_id
+                - content["index"]
+                * self.judge_ws_server_application_config["page_size"]
+                + 1,
+                now_submission_id
+                - (content["index"] - 1)
+                * self.judge_ws_server_application_config["page_size"]
+                + 1,
             )
         )
 
@@ -315,7 +344,6 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
     ):
         import math
 
-        PAGE_SIZE = 10
         now_submission_id = self.ws_server_instance.server_instance.get_module_instance(
             "judge"
         ).now_submission_id
@@ -324,7 +352,9 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
         response["content"] = dict()
         response["content"]["request_key"] = content["request_key"]
         response["content"]["total_submissions_list_index"] = int(
-            math.ceil(now_submission_id / 10)
+            math.ceil(
+                now_submission_id / self.judge_ws_server_application_config["page_size"]
+            )
         )
         await websocket_protocol.send(json.dumps(response))
         response.clear()
