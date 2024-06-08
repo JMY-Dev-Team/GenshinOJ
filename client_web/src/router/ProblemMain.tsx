@@ -269,41 +269,44 @@ ${statement}
     }, []);
 
     return <>
-        <Suspense fallback={<Spinner delay={100} />}>
-            <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
-                {
-                    problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement
-                        ?
-                        <>
-                            <Title3>
-                                P{(problemInfo as ProblemInfoFromFetcher).problem_number} - {(problemInfo as ProblemInfoFromFetcher).problem_name}
-                            </Title3>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
-                            <div style={{ display: "block", marginLeft: "1em" }}>
-                                <Subtitle1>Problem Statement</Subtitle1>
-                                <div style={{ textIndent: "1em", marginTop: "1em" }}>
+        <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
+            {
+                problemInfo && (problemInfo as ProblemInfoFromFetcher).problem_statement
+                    ?
+                    <>
+                        <Title3>
+                            P{(problemInfo as ProblemInfoFromFetcher).problem_number} - {(problemInfo as ProblemInfoFromFetcher).problem_name}
+                        </Title3>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                        <DifficultyShower difficulty={(problemInfo as ProblemInfoFromFetcher).difficulty} />
+                        <div style={{ display: "block", marginLeft: "1em" }}>
+                            <Subtitle1>Problem Statement</Subtitle1>
+                            <div style={{ textIndent: "1em", marginTop: "1em" }}>
+                                <Suspense fallback={<Spinner size="tiny" delay={500} />}>
                                     <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                                         {convertedMarkdownRenderString}
                                     </Markdown>
-                                </div>
-                                <Subtitle1>Submit Code</Subtitle1>
-                                <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} style={{ marginTop: "0.5em", marginBottom: "1em" }} />
+                                </Suspense>
+                            </div>
+                            <Subtitle1>Submit Code</Subtitle1>
+                            <CodeLanguageChooser setCodeLanguage={setCodeLanguage} setSubmissionCodeLanguage={setSubmissionCodeLanguage} style={{ marginTop: "0.5em", marginBottom: "1em" }} />
+                            <Suspense fallback={<Spinner size="tiny" delay={500} />}>
                                 <Editor
                                     height="500px"
                                     language={codeLanguage}
                                     onChange={handleEditorContentChange}
                                     loading={<Spinner delay={200} />} />
-                                <div style={{ alignItems: "center", justifyContent: "center", display: "flex" }}>
-                                    <Button appearance="primary" onClick={handleClickSubmitCode}>Submit</Button>
-                                </div>
+                            </Suspense>
+
+                            <div style={{ alignItems: "center", justifyContent: "center", display: "flex" }}>
+                                <Button appearance="primary" onClick={handleClickSubmitCode}>Submit</Button>
                             </div>
-                        </>
-                        :
-                        <></>
-                }
-            </div>
-        </Suspense>
+                        </div>
+                    </>
+                    :
+                    <></>
+            }
+        </div>
         <ProblemInfoFetcher
             lastJsonMessage={lastJsonMessage}
             setProblemInfo={setProblemInfo}

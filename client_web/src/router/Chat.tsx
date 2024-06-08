@@ -1,4 +1,4 @@
-import { useEffect, useState, Suspense, useCallback, lazy } from "react";
+import { useEffect, useState, useCallback, lazy } from "react";
 import { useNavigate, Outlet, useOutletContext } from "react-router-dom";
 
 import {
@@ -9,8 +9,8 @@ import {
     TableHeaderCell,
     TableCell,
     TableBody,
-    Skeleton,
     Divider,
+    Spinner,
 } from "@fluentui/react-components";
 
 import { useSelector } from "react-redux";
@@ -100,7 +100,7 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
     lastJsonMessage: unknown
 }) {
     const [, setWebsocketMessageHistory] = useState([]);
-    const [onlineUsersList, setOnlineUsersList] = useState([]);
+    const [onlineUsersList, setOnlineUsersList] = useState<string[] | undefined>(undefined);
     const [requestKey, setRequestKey] = useState("");
     const navigate = useNavigate();
 
@@ -134,12 +134,15 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
             </TableHeader>
             <TableBody>
                 {
-                    onlineUsersList.map((username: string) => (
-                        <TableRow key={username}>
-                            <TableCell onClick={() => navigate("/chat/user/" + username)} >{username}</TableCell>
-                        </TableRow>
-                    )
-                    )
+                    onlineUsersList === undefined ?
+                        <Spinner size="tiny" label="Waiting..." delay={500} />
+                        :
+                        onlineUsersList.map((username: string) => (
+                            <TableRow key={username}>
+                                <TableCell onClick={() => navigate("/chat/user/" + username)} >{username}</TableCell>
+                            </TableRow>
+                        )
+                        )
                 }
             </TableBody>
         </Table>
@@ -160,7 +163,7 @@ export default function Chat() {
     useEffect(() => {
         if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
-    }, []);
+    }, [loginStatus]);
 
     return <>
         <div className={style.root}>
@@ -169,11 +172,9 @@ export default function Chat() {
                     ?
                     <>
                         <div className={style.chat_list}>
-                            <Suspense fallback={<Skeleton />}>
-                                <ChatList
-                                    sendJsonMessage={sendJsonMessage}
-                                    lastJsonMessage={lastJsonMessage} />
-                            </Suspense>
+                            <ChatList
+                                sendJsonMessage={sendJsonMessage}
+                                lastJsonMessage={lastJsonMessage} />
                         </div>
                         <div className={style.divider}>
                             <Divider vertical style={{ height: "100%" }} />

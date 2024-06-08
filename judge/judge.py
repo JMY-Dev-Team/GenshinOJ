@@ -69,7 +69,8 @@ class judge:
                 """
             CREATE TABLE IF NOT EXISTS judge_submission_result (
                 submission_id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
-                result JSON NOT NULL
+                result JSON NOT NULL,
+                UNIQUE KEY submission_id (submission_id) USING BTREE
             )
             """
             )
@@ -263,26 +264,13 @@ class judge:
             await asyncio.sleep(0)
             try:
                 for judgment in self.judgment_queue:
-                    try:
-                        self.server_instance.get_module_instance(
-                            "db_connector"
-                        ).database_cursor.execute(
-                            "INSERT INTO judge_user_submission (username, general) VALUE ('{}', 1) ON DUPLICATE KEY UPDATE general = general + 1;".format(
-                                judgment["username"]
-                            )
-                        )
-                        self.server_instance.get_module_instance(
-                            "db_connector"
-                        ).database.commit()
-                    except pymysql.OperationalError:
-                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
-
                     submission_id = judgment["submission_id"]  # Submission ID
                     submission_language = judgment["language"]  # Submission language
                     submission_problem_number = judgment[
                         "problem_number"
                     ]  # Problem number
                     submission_code = judgment["code"]
+                    submission_username = judgment["username"]
                     self.log(
                         "Judging Submission {} (language: {}, problem number: {}).".format(
                             submission_id,
@@ -290,6 +278,46 @@ class judge:
                             submission_problem_number,
                         )
                     )
+
+                    judgment_result = {
+                        "submission_id": submission_id,
+                        "result": "PD",
+                        "problem_number": submission_problem_number,
+                        "code": submission_code,
+                        "language": submission_language,
+                        "username": submission_username,
+                    }
+
+                    self.server_instance.get_module_instance(
+                        "db_connector"
+                    ).database_cursor.execute(
+                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
+                            submission_id,
+                            pymysql.converters.escape_string(
+                                json.dumps(judgment_result)
+                            ),
+                            pymysql.converters.escape_string(
+                                json.dumps(judgment_result)
+                            ),
+                        )
+                    )
+                    self.server_instance.get_module_instance(
+                        "db_connector"
+                    ).database.commit()
+
+                    try:
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database_cursor.execute(
+                            "INSERT INTO judge_user_submission (username, general) VALUE ('{}', 1) ON DUPLICATE KEY UPDATE general = general + 1;".format(
+                                submission_username
+                            )
+                        )
+                        self.server_instance.get_module_instance(
+                            "db_connector"
+                        ).database.commit()
+                    except pymysql.OperationalError:
+                        self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
 
                     # Compile Part
 
@@ -374,6 +402,8 @@ class judge:
                                         "scores": [0],
                                         "problem_number": submission_problem_number,
                                         "code": submission_code,
+                                        "language": submission_language,
+                                        "username": submission_username,
                                     }
 
                                     response = dict()
@@ -386,8 +416,11 @@ class judge:
                                     self.server_instance.get_module_instance(
                                         "db_connector"
                                     ).database_cursor.execute(
-                                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
                                             submission_id,
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
                                             pymysql.converters.escape_string(
                                                 json.dumps(judgment_result)
                                             ),
@@ -409,6 +442,8 @@ class judge:
                                         "scores": [0],
                                         "problem_number": submission_problem_number,
                                         "code": submission_code,
+                                        "language": submission_language,
+                                        "username": submission_username,
                                     }
 
                                     response = dict()
@@ -421,8 +456,11 @@ class judge:
                                     self.server_instance.get_module_instance(
                                         "db_connector"
                                     ).database_cursor.execute(
-                                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                                        "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
                                             submission_id,
+                                            pymysql.converters.escape_string(
+                                                json.dumps(judgment_result)
+                                            ),
                                             pymysql.converters.escape_string(
                                                 json.dumps(judgment_result)
                                             ),
@@ -453,6 +491,8 @@ class judge:
                             "scores": [0],
                             "problem_number": submission_problem_number,
                             "code": submission_code,
+                            "language": submission_language,
+                            "username": submission_username,
                         }
 
                         response = dict()
@@ -463,8 +503,11 @@ class judge:
                         self.server_instance.get_module_instance(
                             "db_connector"
                         ).database_cursor.execute(
-                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
                                 submission_id,
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
                                 pymysql.converters.escape_string(
                                     json.dumps(judgment_result)
                                 ),
@@ -506,6 +549,8 @@ class judge:
                                 "scores": [0],
                                 "problem_number": submission_problem_number,
                                 "code": submission_code,
+                                "language": submission_language,
+                                "username": submission_username,
                             }
 
                             response = dict()
@@ -518,8 +563,11 @@ class judge:
                             self.server_instance.get_module_instance(
                                 "db_connector"
                             ).database_cursor.execute(
-                                "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                                "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
                                     submission_id,
+                                    pymysql.converters.escape_string(
+                                        json.dumps(judgment_result)
+                                    ),
                                     pymysql.converters.escape_string(
                                         json.dumps(judgment_result)
                                     ),
@@ -700,6 +748,8 @@ class judge:
                                 "scores": scores,
                                 "problem_number": submission_problem_number,
                                 "code": submission_code,
+                                "language": submission_language,
+                                "username": submission_username,
                             }
                             self.server_instance.get_module_instance(
                                 "db_connector"
@@ -720,6 +770,8 @@ class judge:
                                 "scores": scores,
                                 "problem_number": submission_problem_number,
                                 "code": submission_code,
+                                "language": submission_language,
+                                "username": submission_username,
                             }
 
                         response = dict()
@@ -729,8 +781,11 @@ class judge:
                         self.server_instance.get_module_instance(
                             "db_connector"
                         ).database_cursor.execute(
-                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}');".format(
+                            "INSERT INTO judge_submission_result (submission_id, result) VALUES ({}, '{}') ON DUPLICATE KEY UPDATE result = '{}';".format(
                                 submission_id,
+                                pymysql.converters.escape_string(
+                                    json.dumps(judgment_result)
+                                ),
                                 pymysql.converters.escape_string(
                                     json.dumps(judgment_result)
                                 ),

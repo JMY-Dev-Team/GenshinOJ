@@ -1,9 +1,9 @@
-import { CSSProperties, MouseEventHandler, useCallback, useEffect, useState } from "react";
+import { CSSProperties, MouseEventHandler, ReactNode, useCallback, useEffect, useState } from "react";
 
-export default function BadgeButton({ text, style, onClick }: {
-    text: string;
+export default function BadgeButton({ children, style, onClick }: {
+    children: ReactNode;
     style?: CSSProperties | undefined;
-    onClick?: MouseEventHandler<HTMLButtonElement> | undefined;
+    onClick?: MouseEventHandler<HTMLDivElement> | undefined;
 }) {
     const [stateHover, setStateHover] = useState(false);
     const [stateClick, setStateClick] = useState(false);
@@ -21,15 +21,15 @@ export default function BadgeButton({ text, style, onClick }: {
         setStateHover(false);
     }, []);
 
-    const handleClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (onClick) onClick(event); setStateClick(true);
     }, [onClick]);
 
-    return <button style={{ ...style, border: "1px solid", borderWidth: "1px", borderRadius: "3px", backgroundColor: stateClick ? "rgb(65, 131, 196)" : (stateHover ? "rgba(65, 131, 196, 0.1)" : "rgba(65, 131, 196, 0)"), color: "#4183C4" }}
+    return <div style={{ ...style, display: "flex", padding: "0 4px", alignItems: "center", border: "1px solid", borderWidth: "1px", borderRadius: "3px", backgroundColor: stateClick ? "rgb(65, 131, 196)" : (stateHover ? "rgba(65, 131, 196, 0.1)" : "rgba(65, 131, 196, 0)"), color: "#4183C4" }}
         onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
-        onClick={handleClick}>
-        <span style={{ margin: "0 2px 0 2px", color: stateClick ? "#ffffff" : "#4183C4", lineHeight: "1.5" }}>
-            {text}
-        </span>
-    </button>;
+        onMouseDown={handleClick}>
+        <div style={{ margin: "0 2px 0 2px", color: stateClick ? "#ffffff" : "#4183C4", lineHeight: "1.5", display: "flex", alignItems: "center" }}>
+            {children}
+        </div>
+    </div>;
 }

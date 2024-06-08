@@ -112,7 +112,7 @@ export default function Register() {
             setRequestKey(handleClickRegisterSession());
     }, [handleClickRegisterSession, registerPasswordFromInput, registerPasswordConfirmFromInput]);
 
-    useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, []);
+    useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, [loginStatus]);
     return (
         <>
             <div className={useStyles().root}>

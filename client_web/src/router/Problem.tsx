@@ -10,6 +10,7 @@ import {
     TableCell,
     TableBody,
     Divider,
+    Spinner,
 } from "@fluentui/react-components";
 
 import { useSelector } from "react-redux";
@@ -97,7 +98,7 @@ function TableCellForProblemList({ problem_number }: {
 
 export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMessage: globals.SendJsonMessage, lastJsonMessage: unknown }) {
     const [, setWebsocketMessageHistory] = useState<unknown[]>([]);
-    const [problemList, setProblemList] = useState<string[] | undefined>([]);
+    const [problemList, setProblemList] = useState<string[] | undefined>(undefined);
     const [requestKey, setRequestKey] = useState<string>("");
 
     useEffect(() => {
@@ -122,25 +123,27 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
     }, [handleLoadProblemList]);
 
     return <div>
-        <Table size="medium">
-            <TableHeader>
-                <TableRow>
-                    <TableHeaderCell>Problem List</TableHeaderCell>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {
-                    problemList !== undefined
-                        ?
-                        problemList.map((problem_number: string, index: number) => (
-                            <TableCellForProblemList key={index} problem_number={problem_number} />
-                        )
-                        )
-                        :
-                        <></>
-                }
-            </TableBody>
-        </Table>
+        {
+            problemList !== undefined
+                ?
+                <Table size="medium">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell>Problem List</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {
+                            problemList.map((problem_number: string, index: number) => (
+                                <TableCellForProblemList key={index} problem_number={problem_number} />
+                            )
+                            )
+                        }
+                    </TableBody>
+                </Table>
+                :
+                <Spinner size="tiny" label="Waiting..." delay={500} />
+        }
         <ProblemListFetcher
             setProblemList={setProblemList}
             lastJsonMessage={lastJsonMessage}
@@ -158,7 +161,7 @@ export default function Problem() {
     useEffect(() => {
         if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
-    }, []);
+    }, [loginStatus]);
 
     const handleCloseDialogRequireLogin = useCallback(() => {
         navigate("/login");

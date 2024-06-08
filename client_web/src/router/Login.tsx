@@ -128,7 +128,7 @@ export default function Login() {
         navigate(-1);
     }, [navigate]);
 
-    useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, []);
+    useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, [loginStatus]);
     return (
         <>
             <div className={useStyles().root}>

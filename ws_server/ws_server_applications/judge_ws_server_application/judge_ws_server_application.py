@@ -243,6 +243,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 > self.ws_server_instance.server_instance.get_module_instance(
                     "judge"
                 ).now_submission_id
+                or content["submission_id"] <= 0
             ):
                 self.log(
                     "Submission {} is not found!".format(content["submission_id"]),
@@ -265,12 +266,8 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             fetch_results = self.ws_server_instance.server_instance.get_module_instance(
                 "db_connector"
             ).database_cursor.fetchone()
-            if fetch_results == None:
-                response["content"]["result"] = "PD"
-                response["content"]["submission_id"] = content["submission_id"]
-            else:
-                response["content"] = json.loads(fetch_results[0])
 
+            response["content"] = json.loads(fetch_results[0])
             await websocket_protocol.send(json.dumps(response))
             response.clear()
         except Exception as e:

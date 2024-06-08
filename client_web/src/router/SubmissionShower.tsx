@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, BaseSyntheticEvent, lazy } from "react";
+import { useState, useEffect, useCallback, BaseSyntheticEvent, lazy, ReactNode, Suspense } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 
 
-import { ClipboardCheckmarkRegular, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
+import { ClipboardCheckmarkRegular, ClipboardCodeRegular, ClipboardTaskFilled, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
 import { Label, Spinner, Table, TableBody, TableHeader, TableHeaderCell, TableCell, TableRow } from "@fluentui/react-components";
 
 import { useSelector } from "react-redux";
@@ -26,26 +26,29 @@ interface SubmissionInfoFromLoader {
 interface SubmissionResult {
     submission_id: number;
     result: string;
-    general_score: number;
-    statuses: string[];
-    scores: number[];
+    general_score?: number;
+    statuses?: string[];
+    scores?: number[];
     problem_number: number;
     code: string[];
+    language: string;
+    username: string;
 }
 
 function CopyToTheClipboardButton({ content }: {
     content: string;
 }) {
     const [tipText, setTipText] = useState("Copy");
+    const [tipIcon, setTipIcon] = useState<ReactNode>(<ClipboardCodeRegular fontSize="1.1em" style={{ margin: "0 4px 0 0" }} />);
     useEffect(() => {
         if (tipText === "Copied")
             setTimeout(() => {
-                if (tipText === "Copied") setTipText("Copy");
+                if (tipText === "Copied") setTipText("Copy"), setTipIcon(<ClipboardCodeRegular fontSize="1.1em" style={{ margin: "0 4px 0 0" }} />);
             }, 500);
     }, [tipText]);
 
-    const handleOnClick = useCallback((e: BaseSyntheticEvent) => { console.log(e); copy(content); setTipText(() => "Copied"); }, [content]);
-    return <BadgeButton style={{ marginLeft: "auto", marginRight: "4px" }} text={tipText} onClick={handleOnClick} />
+    const handleOnClick = useCallback((_: BaseSyntheticEvent) => { copy(content); setTipText("Copied"); setTipIcon(<ClipboardTaskFilled fontSize="1.1em" style={{ margin: "0 4px 0 0" }} />) }, [content]);
+    return <BadgeButton style={{ marginLeft: "auto", marginRight: "4px" }} onClick={handleOnClick}>{tipIcon}<span style={{ fontSize: "1.1em" }}>{tipText}</span></BadgeButton>
 }
 
 function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionResult, setDialogSubmissionNotFoundOpenState }: {
@@ -73,6 +76,8 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                     scores: number[];
                     problem_number: number;
                     code: string[];
+                    language: string;
+                    username: string;
                 };
             }
 
@@ -95,16 +100,20 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                 content: {
                     submission_id: number;
                     result: string;
-                    problem_number: number;
-                    code: string[];
+                    general_score?: number;
+                    statuses?: string[];
+                    scores?: number[];
+                    problem_number?: number;
+                    code?: string[];
+                    language?: string;
+                    username?: string;
                 };
             }
 
             function isSubmissionResultOthersFromFetch(x: object) {
                 if ('type' in x && 'content' in x && typeof x.content === 'object') {
                     return 'submission_id' in (x.content as object) &&
-                        'result' in (x.content as object) &&
-                        'code' in (x.content as object);
+                        'result' in (x.content as object);
                 }
 
                 return false;
@@ -171,7 +180,7 @@ export default function SubmissionShower() {
             setDialogRequireLoginOpenState(true);
         else
             handleSubmissionResultFetch();
-    }, [handleSubmissionResultFetch]);
+    }, [handleSubmissionResultFetch, loginStatus]);
 
     useEffect(() => {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
@@ -191,92 +200,105 @@ export default function SubmissionShower() {
                 ?
                 <>
                     <div style={{ display: "flex", marginBottom: "10px" }}>
-                        <Label style={{ margin: "auto 2px auto 18px" }}
-                        >Submission ID: {submissionResult?.submission_id}</Label>
-                        <div style={{ margin: "auto 2px auto 18px" }}>Submission Problem:&nbsp;
-                            <Label style={{ color: "#4183C4" }}
-                                onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
-                                onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
-                                onClick={() => { navigate("/problem/" + String(submissionResult?.problem_number)); }}>
-                                {submissionResult?.problem_number}
-                            </Label>
-                        </div>
-                        <Label style={{ margin: "auto 2px auto 18px" }}>Status:&nbsp;</Label>
+                        <Label style={{ margin: "auto 2px auto 18px" }}>Submission ID: {submissionResult?.submission_id}</Label>
                         {
-                            (
-                                submissionResult === undefined
-                                    ?
-                                    <Spinner size="tiny" label="Waiting..." />
-                                    :
-                                    (
-                                        submissionResult.result === "AC"
-                                            ?
-                                            <><Label style={{ color: "#3AAF00" }}>&nbsp;AC</Label></>
-                                            :
-                                            (
-                                                submissionResult.result === "CE"
-                                                    ?
-                                                    <><Label style={{ color: "#FDDB10" }}>&nbsp;CE</Label></>
-                                                    :
-                                                    (
-                                                        submissionResult.result === "WA"
-                                                            ?
-                                                            <><Label style={{ color: "#DA3737" }}>&nbsp;WA</Label></>
-                                                            :
-                                                            <></>
-                                                    )
-
-                                            )
-
-                                    )
-                            )
-                        }
-                        {
-                            submissionResult !== undefined && submissionResult.result !== "PD" && submissionResult.result !== "SNF"
+                            submissionResult !== undefined && submissionResult.result !== "SNF"
                                 ?
-                                <Label style={{ margin: "auto 4px auto 20px" }}>Score:&nbsp;
-                                    <Label style={{
-                                        color: (submissionResult.general_score >= 80) ? "#3AAF00" : ((submissionResult.general_score >= 60) ? "#FDDB10" : "#DA3737")
-                                    }}>
-                                        {submissionResult.general_score}
-                                    </Label>
-                                </Label>
+                                <>
+                                    <div style={{ margin: "auto 2px auto 18px" }}>Submission Problem:&nbsp;
+                                        <Label style={{ color: "#4183C4" }}
+                                            onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                            onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
+                                            onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
+                                            {submissionResult.problem_number}
+                                        </Label>
+                                    </div>
+                                    <Label style={{ margin: "auto 2px auto 18px" }}>Status:&nbsp;</Label>
+                                    {
+                                        (
+                                            submissionResult.result === "PD"
+                                                ?
+                                                <Spinner size="tiny" label="Waiting..." delay={500} />
+                                                :
+                                                (
+                                                    submissionResult.result === "AC"
+                                                        ?
+                                                        <><Label style={{ color: "#3AAF00" }}>&nbsp;AC</Label></>
+                                                        :
+                                                        (
+                                                            submissionResult.result === "CE"
+                                                                ?
+                                                                <><Label style={{ color: "#FDDB10" }}>&nbsp;CE</Label></>
+                                                                :
+                                                                (
+                                                                    submissionResult.result === "WA"
+                                                                        ?
+                                                                        <><Label style={{ color: "#DA3737" }}>&nbsp;WA</Label></>
+                                                                        :
+                                                                        <></>
+                                                                )
+
+                                                        )
+
+                                                )
+                                        )
+                                    }
+                                    <Label style={{ margin: "auto 2px auto 20px" }}>Score:&nbsp;</Label>
+                                    {
+                                        submissionResult.general_score !== undefined
+                                            ?
+                                            <Label style={{
+                                                color: (submissionResult.general_score >= 80) ? "#3AAF00" : ((submissionResult.general_score >= 60) ? "#FDDB10" : "#DA3737")
+                                            }}>
+                                                {submissionResult.general_score}
+                                            </Label>
+                                            :
+                                            <Label>{`-`}</Label>
+                                    }
+
+                                    <Label style={{ margin: "auto 2px auto 18px" }}>Language:&nbsp;{submissionResult.language}</Label>
+                                    <Label style={{ margin: "auto 2px auto 18px" }}>Submitter:&nbsp;{submissionResult.username}</Label>
+                                </>
                                 :
                                 <></>
                         }
                     </div>
-                    <div style={{ margin: "auto 10px", marginBottom: "10px" }}>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHeaderCell><ReOrderDotsHorizontalRegular fontSize="18px" /><Label>Test Case ID</Label></TableHeaderCell>
-                                    <TableHeaderCell><StatusRegular fontSize="18px" /><Label>Status</Label></TableHeaderCell>
-                                    <TableHeaderCell><ClipboardCheckmarkRegular fontSize="18px" /><Label>Score</Label></TableHeaderCell>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {
-                                    submissionResult?.statuses
-                                        ?
-                                        submissionResult.statuses.map((status, index) => {
-                                            return <TableRow key={index}>
-                                                <TableCell>{index + 1}</TableCell>
-                                                <TableCell style={{
-                                                    color: status === "AC" ? "#3AAF00" : status === "WA" ? "#DA3737" : "#000643"
-                                                }}>{status}</TableCell>
-                                                <TableCell style={{
-                                                    color: submissionResult.scores[index] !== 0 ? "#3AAF00" : "#DA3737"
-                                                }}>{submissionResult.scores[index]}</TableCell>
-                                            </TableRow>;
-                                        })
-                                        :
-                                        <></>
-                                }
-                            </TableBody>
-                        </Table>
-                    </div>
                     {
-                        submissionResult
+                        submissionResult !== undefined && submissionResult.scores !== undefined && submissionResult.statuses !== undefined
+                            ?
+                            <div style={{ margin: "auto 10px", marginBottom: "10px" }}>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHeaderCell><ReOrderDotsHorizontalRegular fontSize="18px" /><Label>Test Case ID</Label></TableHeaderCell>
+                                            <TableHeaderCell><StatusRegular fontSize="18px" /><Label>Status</Label></TableHeaderCell>
+                                            <TableHeaderCell><ClipboardCheckmarkRegular fontSize="18px" /><Label>Score</Label></TableHeaderCell>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {
+                                            submissionResult.statuses.map((status, index) => {
+                                                const _: number[] = submissionResult.scores as number[];
+                                                return <TableRow key={index}>
+                                                    <TableCell>{index + 1}</TableCell>
+                                                    <TableCell style={{
+                                                        color: status === "AC" ? "#3AAF00" : status === "WA" ? "#DA3737" : "#000643"
+                                                    }}>{status}</TableCell>
+                                                    <TableCell style={{
+                                                        color: _[index] !== 0 ? "#3AAF00" : "#DA3737"
+                                                    }}>{_[index]}</TableCell>
+                                                </TableRow>;
+                                            })
+                                        }
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            :
+                            <></>
+                    }
+
+                    {
+                        submissionResult !== undefined && submissionResult.code !== undefined
                             ?
                             <div>
                                 <div style={{ marginLeft: "18px", display: "flex" }}>
@@ -284,7 +306,10 @@ export default function SubmissionShower() {
                                     <CopyToTheClipboardButton content={convertCodeToRenderString(submissionResult.code)} />
                                 </div>
                                 <div>
-                                    <SyntaxHighlighter showLineNumbers={true} >{convertCodeToRenderString(submissionResult.code)}</SyntaxHighlighter>
+                                    <Suspense fallback={<Spinner size="tiny" delay={500} />}>
+                                        <SyntaxHighlighter showLineNumbers={true} >{convertCodeToRenderString(submissionResult.code)}</SyntaxHighlighter>
+                                    </Suspense>
+
                                 </div>
                             </div>
                             :

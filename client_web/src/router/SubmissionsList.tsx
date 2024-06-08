@@ -202,12 +202,17 @@ export default function SubmissionsList() {
     useEffect(() => {
         if (loginStatus.value === false)
             setDialogRequireLoginOpenState(true);
-        else {
+        else
             setRequestKeyOfSubmissionsListFetcher(handleFetchSubmissionsList(submissionsListIndex));
-            setRequestKeyOfTotalSubmissionsListIndexFetcher(handleFetchTotalSubmissionsListIndex());
-        }
 
-    }, [handleFetchSubmissionsList, handleFetchTotalSubmissionsListIndex, submissionsListIndex, setRequestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfSubmissionsListFetcher]);
+    }, [setRequestKeyOfSubmissionsListFetcher, handleFetchSubmissionsList, submissionsListIndex, loginStatus]);
+
+    useEffect(() => {
+        if (loginStatus.value === false)
+            setDialogRequireLoginOpenState(true);
+        else
+            setRequestKeyOfTotalSubmissionsListIndexFetcher(handleFetchTotalSubmissionsListIndex());
+    }, [setRequestKeyOfTotalSubmissionsListIndexFetcher, handleFetchTotalSubmissionsListIndex, loginStatus]);
 
     const handleNavigateLogin = useCallback(() => {
         navigate("/login");
@@ -234,13 +239,13 @@ export default function SubmissionsList() {
                             onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 1))); }}>Previous</Button>
                         <Button appearance="primary"
                             style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.min(totalSubmissionsListIndex, c + 1))); }}>Next</Button>
-                        <Button appearance="primary"
+                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(totalSubmissionsListIndex, c + 1)))); }}>Next</Button>
+                        <Button appearance="secondary"
                             style={{ flex: "25%" }}
                             onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 10))); }}>Backward 10</Button>
-                        <Button appearance="primary"
+                        <Button appearance="secondary"
                             style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.min(totalSubmissionsListIndex, c + 10))); }}>Forward 10</Button>
+                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(1, totalSubmissionsListIndex, c + 10)))); }}>Forward 10</Button>
                     </div>
                 </div>
             </form>
