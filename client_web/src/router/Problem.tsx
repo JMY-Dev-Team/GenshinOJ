@@ -14,6 +14,8 @@ import {
 
 import { useSelector } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
@@ -21,6 +23,7 @@ import * as globals from "../Globals.ts";
 import { RootState } from "../store.ts";
 
 import "../css/style.css";
+
 
 const useStyles = makeStyles({
     root: {
@@ -103,7 +106,7 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
     }, [lastJsonMessage]);
 
     const handleLoadProblemList = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "problem_set",
             content: {

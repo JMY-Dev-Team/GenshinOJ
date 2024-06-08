@@ -15,6 +15,8 @@ import {
 
 import { useSelector } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
@@ -108,7 +110,7 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
     }, [lastJsonMessage]);
 
     const handleLoadOnlineUsersList = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "online_user",
             content: {

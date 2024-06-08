@@ -17,6 +17,7 @@
     "@swc/core": "^1.5.25",
     "katex": "^0.16.10",
     "monaco-editor": "^0.48.0",
+    "nanoid": "^5.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^9.0.1",

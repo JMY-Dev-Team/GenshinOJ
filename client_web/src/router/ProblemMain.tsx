@@ -11,6 +11,8 @@ const remarkMath = (await import("remark-math")).default;
 
 import { useSelector } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
@@ -202,7 +204,7 @@ export default function ProblemMain() {
     }, [lastJsonMessage]);
 
     const handleLoadProblemInfo = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "problem_statement",
             content: {
@@ -216,7 +218,7 @@ export default function ProblemMain() {
 
     const handleSubmitCode = useCallback(() => {
         console.log("`handleSubmitCode()` triggered.");
-        const request_key = globals.randomUUID();
+        const request_key = nanoid();
         sendJsonMessage({
             type: "submission",
             content: {

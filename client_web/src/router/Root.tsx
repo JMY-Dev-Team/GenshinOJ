@@ -7,9 +7,10 @@ import { useSelector, useDispatch } from "react-redux";
 
 import useWebSocket from "react-use-websocket";
 
+import { nanoid } from "nanoid";
+
 const NavBar = lazy(() => import("./NavBar.tsx"));
 
-import * as globals from "../Globals.ts";
 import { RootState } from "../store.ts";
 import { logoutReducer } from "../../redux/loginStatusSlice.ts";
 
@@ -37,7 +38,7 @@ export default function Root() {
                     content: {
                         username: loginUsername.value,
                         session_token: sessionToken.value,
-                        request_key: globals.randomUUID()
+                        request_key: nanoid()
                     }
                 });
 
@@ -55,7 +56,7 @@ export default function Root() {
                     content: {
                         username: loginUsername.value,
                         session_token: sessionToken.value,
-                        request_key: globals.randomUUID()
+                        request_key: nanoid()
                     }
                 });
 

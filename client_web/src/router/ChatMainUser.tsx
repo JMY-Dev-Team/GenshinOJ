@@ -5,6 +5,8 @@ import { Input, Button, Field } from "@fluentui/react-components";
 
 import { useSelector } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
@@ -173,7 +175,7 @@ export default function ChatMainUser() {
     }, [toUsername]);
 
     const handleClickSendChatMessage = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "chat_user",
             content: {

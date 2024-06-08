@@ -3,6 +3,8 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 
 import { useDispatch, useSelector } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
@@ -26,7 +28,7 @@ export default function Logout() {
                 content: {
                     username: loginUsername.value,
                     session_token: sessionToken.value,
-                    request_key: globals.randomUUID(),
+                    request_key: nanoid(),
                 }
             });
 

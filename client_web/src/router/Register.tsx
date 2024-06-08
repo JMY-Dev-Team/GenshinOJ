@@ -6,6 +6,8 @@ import { PersonRegular, PasswordRegular } from "@fluentui/react-icons";
 
 import { useDispatch, useSelector } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
@@ -91,7 +93,7 @@ export default function Register() {
     const navigate = useNavigate();
 
     const handleClickRegisterSession = useCallback(() => {
-        const request_key = globals.randomUUID();
+        const request_key = nanoid();
         sendJsonMessage({
             type: "register",
             content: {

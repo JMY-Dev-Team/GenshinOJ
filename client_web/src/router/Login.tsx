@@ -8,6 +8,8 @@ const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import { useSelector, useDispatch } from "react-redux";
 
+import { nanoid } from "nanoid";
+
 import * as globals from "../Globals.ts";
 
 import { loginReducer, logoutReducer } from "../../redux/loginStatusSlice.ts";
@@ -105,7 +107,7 @@ export default function Login() {
     const navigate = useNavigate();
 
     const handleClickLoginSession = useCallback(() => {
-        const _requestKey = globals.randomUUID();
+        const _requestKey = nanoid();
         sendJsonMessage({
             type: "login",
             content: {
