@@ -37,9 +37,12 @@ export default function NavBar() {
                         ?
                         <Tab onClick={() => onTabSelect("logout")} style={{ float: "right" }} value="logout">Sign out</Tab>
                         :
-                        <Tab onClick={() => onTabSelect("login")} style={{ float: "right" }} value="login">Sign in</Tab>
+                        <>
+                            <Tab onClick={() => onTabSelect("login")} style={{ float: "right" }} value="login">Sign in</Tab>
+                            <Tab onClick={() => onTabSelect("register")} style={{ float: "right" }} value="register">Sign up</Tab>
+                        </>
                 }
-                <Tab onClick={() => onTabSelect("register")} style={{ float: "right" }} value="register">Sign up</Tab>
+
                 <Tab onClick={() => onTabSelect("user")} style={{ float: "right" }} value="user">User</Tab>
                 <Divider />
             </div>
