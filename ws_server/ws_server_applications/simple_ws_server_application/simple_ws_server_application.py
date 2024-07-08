@@ -114,7 +114,7 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
         """
         Official callback method for login with a authentication plugin.
         """
-        setattr(websocket_protocol, "is_logged_in", False)
+
         password_hash = self.get_md5(content["password"])
         self.log(
             "The user {} try to login with the hash: {}.".format(
@@ -149,6 +149,7 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
             }
             await websocket_protocol.send(json.dumps(response))
             response.clear()
+            return
 
         if real_password_hash != None and real_password_hash == password_hash:
             new_session_token = generate_session_token(
@@ -156,6 +157,13 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
             )
 
             self.log("The user {} logged in successfully.".format(content["username"]))
+            if getattr(websocket_protocol, "is_logged_in", False) == True:
+                for k, v in list(self.ws_server_instance.sessions.items()):
+                    if v == content["username"]:
+                        del self.ws_server_instance.sessions[k]
+                
+                self.log("Cleared the previous session token of {}.".format(content["username"]))
+
             self.ws_server_instance.sessions[new_session_token] = content["username"]
             self.log("The session token: {}".format(new_session_token))
             setattr(self, "username", content["username"])
@@ -188,8 +196,9 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
     async def on_close_connection(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict = None, # Ignored one
     ):
-        await super().on_close_connection(websocket_protocol)
+        await super().on_close_connection(websocket_protocol, content)
         if getattr(websocket_protocol, "is_logged_in", False):
             setattr(websocket_protocol, "is_logged_in", False)
             await self.on_quit(
@@ -218,6 +227,7 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
                     ).sessions[content["session_token"]]
                 ):
                     del self.ws_server_instance.sessions[content["session_token"]]
+                    setattr(websocket_protocol, "is_logged_in", False)
                 else:
                     self.log(
                         "The user {} wanted to quit with a fake session token.".format(
@@ -226,13 +236,19 @@ class simple_ws_server_application(ws_server.ws_server_application_protocol):
                         simple_ws_server_application_log_level.LEVEL_WARNING,
                     )
             except KeyError:
-                pass
+                try:
+                    self.log(
+                        "The user {} wanted to quit with a fake session token.".format(
+                            content["username"]
+                        ),
+                        simple_ws_server_application_log_level.LEVEL_WARNING,
+                    )
+                except:
+                    pass
             except AttributeError:
                 pass
             except Exception as e:
                 raise e
-
-            await self.on_close_connection(websocket_protocol)
 
     def get_md5(self, data):
         import hashlib

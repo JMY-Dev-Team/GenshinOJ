@@ -1,4 +1,4 @@
-import { CSSProperties, MouseEventHandler, ReactNode, useCallback, useEffect, useState } from "react";
+import { CSSProperties, MouseEventHandler, ReactNode, useEffect, useState } from "react";
 
 export default function BadgeButton({ children, style, onClick }: {
     children: ReactNode;
@@ -13,17 +13,17 @@ export default function BadgeButton({ children, style, onClick }: {
             setTimeout(() => setStateClick(false), 500);
     }, [stateClick]);
 
-    const handleMouseEnter = useCallback(() => {
+    const handleMouseEnter = () => {
         setStateHover(true);
-    }, []);
+    };
 
-    const handleMouseLeave = useCallback(() => {
+    const handleMouseLeave = () => {
         setStateHover(false);
-    }, []);
+    };
 
-    const handleClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (onClick) onClick(event); setStateClick(true);
-    }, [onClick]);
+    };
 
     return <div style={{ ...style, display: "flex", padding: "0 4px", alignItems: "center", border: "1px solid", borderWidth: "1px", borderRadius: "3px", backgroundColor: stateClick ? "rgb(65, 131, 196)" : (stateHover ? "rgba(65, 131, 196, 0.1)" : "rgba(65, 131, 196, 0)"), color: "#4183C4" }}
         onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}

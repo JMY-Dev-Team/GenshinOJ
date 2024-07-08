@@ -40,6 +40,7 @@ class music_player_ws_server_application(ws_server.ws_server_application_protoco
     async def on_close_connection(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict = None
     ):
         await super().on_close_connection(websocket_protocol)
 

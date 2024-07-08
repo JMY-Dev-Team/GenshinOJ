@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, lazy } from "react";
+import { useEffect, useState, lazy } from "react";
 import {
     makeStyles,
     Button,
@@ -42,10 +42,10 @@ const useStyles = makeStyles({
     root: {
         display: "flex",
         flexDirection: "column",
-        rowGap: "4px",
-        columnGap: "4px",
-        maxWidth: "450px",
-        padding: "4px 0 0 0",
+        rowGap: "0.25em",
+        columnGap: "0.25em",
+        maxWidth: "30%",
+        padding: "0.25em 0 0.25em 0",
     },
 });
 
@@ -81,12 +81,27 @@ function isSubmissionsListFromFetch(x: object) {
     return false;
 }
 
-function SubmissionsListFetcher({ lastJsonMessage, setSubmissionsList, requestKey }: {
-    lastJsonMessage: unknown;
-    setSubmissionsList: React.Dispatch<React.SetStateAction<SubmissionResult[] | SubmissionResultOthers[] | undefined>>;
-    requestKey: string;
-}) {
+function useSubmissionsList(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown
+) {
+    const [requestKey, setRequestKey] = useState("");
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[] | undefined>(undefined);
+
+    const loadSubmissionsList = (_submissionsListIndex: number) => {
+        const _requestKey = nanoid();
+        sendJsonMessage({
+            type: "submissions_list",
+            content: {
+                index: _submissionsListIndex,
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
+
     useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
@@ -108,9 +123,9 @@ function SubmissionsListFetcher({ lastJsonMessage, setSubmissionsList, requestKe
         });
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, setSubmissionsList, requestKey]);
+    }, [websocketMessageHistory, requestKey]);
 
-    return <></>;
+    return { submissionsList, loadSubmissionsList };
 }
 
 interface TotalSubmissionsListIndexFromFetch {
@@ -130,12 +145,26 @@ function isTotalSubmissionsListIndexFromFetch(x: object) {
     return false;
 }
 
-function TotalSubmissionsListIndexFetcher({ lastJsonMessage, setTotalSubmissionsListIndex, requestKey }: {
-    lastJsonMessage: unknown;
-    setTotalSubmissionsListIndex: React.Dispatch<number>;
-    requestKey: string;
-}) {
+function useTotalSubmissionsListIndex(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown
+) {
+    const [requestKey, setRequestKey] = useState("");
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const [totalSubmissionsListIndex, setTotalSubmissionsListIndex] = useState(1);
+
+    const loadTotalSubmissionsListIndex = () => {
+        const _requestKey = nanoid();
+        sendJsonMessage({
+            type: "total_submissions_list_index",
+            content: {
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
+
     useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
@@ -157,153 +186,133 @@ function TotalSubmissionsListIndexFetcher({ lastJsonMessage, setTotalSubmissions
         });
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, setTotalSubmissionsListIndex, requestKey]);
+    }, [websocketMessageHistory, requestKey]);
 
-    return <></>;
+    return { totalSubmissionsListIndex, loadTotalSubmissionsListIndex };
 }
 
 export default function SubmissionsList() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
-    const [requestKeyOfSubmissionsListFetcher, setRequestKeyOfSubmissionsListFetcher] = useState("");
-    const [requestKeyOfTotalSubmissionsListIndexFetcher, setRequestKeyOfTotalSubmissionsListIndexFetcher] = useState("");
     const [submissionId, setSubmissionId] = useState("-1");
     const [submissionsListIndex, setSubmissionsListIndex] = useState(1);
-    const [submissionsList, setSubmissionsList] = useState<SubmissionResult[] | SubmissionResultOthers[] | undefined>(undefined);
-    const [totalSubmissionsListIndex, setTotalSubmissionsListIndex] = useState(1);
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
     const loginStatus = useSelector((state: RootState) => state.loginStatus);
+    const { totalSubmissionsListIndex, loadTotalSubmissionsListIndex } = useTotalSubmissionsListIndex(sendJsonMessage, lastJsonMessage)
+    const { submissionsList, loadSubmissionsList } = useSubmissionsList(sendJsonMessage, lastJsonMessage)
     const navigate = useNavigate();
-
-    const handleFetchSubmissionsList = useCallback((_submissionsListIndex: number) => {
-        const _requestKey = nanoid();
-        sendJsonMessage({
-            type: "submissions_list",
-            content: {
-                index: _submissionsListIndex,
-                request_key: _requestKey
-            }
-        });
-
-        return _requestKey;
-    }, [sendJsonMessage]);
-
-    const handleFetchTotalSubmissionsListIndex = useCallback(() => {
-        const _requestKey = nanoid();
-        sendJsonMessage({
-            type: "total_submissions_list_index",
-            content: {
-                request_key: _requestKey
-            }
-        });
-
-        return _requestKey;
-    }, [sendJsonMessage]);
+    const rootStyle = useStyles().root;
 
     useEffect(() => {
-        if (loginStatus.value === false)
+        const localLoginStatus = localStorage.getItem("loginStatus");
+        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
             setDialogRequireLoginOpenState(true);
-        else
-            setRequestKeyOfSubmissionsListFetcher(handleFetchSubmissionsList(submissionsListIndex));
 
-    }, [setRequestKeyOfSubmissionsListFetcher, handleFetchSubmissionsList, submissionsListIndex, loginStatus]);
+    }, [loginStatus]);
 
     useEffect(() => {
-        if (loginStatus.value === false)
-            setDialogRequireLoginOpenState(true);
-        else
-            setRequestKeyOfTotalSubmissionsListIndexFetcher(handleFetchTotalSubmissionsListIndex());
-    }, [setRequestKeyOfTotalSubmissionsListIndexFetcher, handleFetchTotalSubmissionsListIndex, loginStatus]);
+        if (loginStatus.value === true)
+            loadTotalSubmissionsListIndex();
 
-    const handleNavigateLogin = useCallback(() => {
+    }, [loginStatus]);
+
+    useEffect(() => {
+        const localLoginStatus = localStorage.getItem("loginStatus");
+        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
+            setDialogRequireLoginOpenState(true);
+
+    }, [submissionsListIndex, loginStatus]);
+
+    useEffect(() => {
+        if (loginStatus.value === true)
+            loadSubmissionsList(submissionsListIndex);
+
+    }, [submissionsListIndex, loginStatus]);
+
+    const handleNavigateLogin = () => {
         navigate("/login");
-    }, [navigate]);
+    };
 
     return <>
-        <div className={useStyles().root}>
-            <form style={{ margin: "0 0 0 12px" }}>
-                <Field label="Submission ID">
-                    <div style={{ display: "flex", columnGap: "4px" }}>
-                        <Input onChange={(props) => setSubmissionId(props.target.value)} style={{ flex: "75%" }} />
-                        <Button appearance="primary"
-                            style={{ flex: "25%" }}
-                            onClick={() => { navigate("/submission/" + String(submissionId)); }}>Jump to</Button>
+        {
+            submissionsList === undefined ?
+                <div style={{ padding: "0.25em 0.25em 0 0.25em", maxWidth: "50%" }}><Spinner size="tiny" label="Waiting..." delay={500} /></div>
+                :
+                <>
+                    <div className={rootStyle}>
+                        <form style={{ padding: "0 0.9em" }}>
+                            <Field label="Submission ID">
+                                <div style={{ display: "flex", columnGap: "0.25em" }}>
+                                    <Input onChange={(props) => setSubmissionId(props.target.value)} style={{ flex: "75%" }} />
+                                    <Button appearance="primary"
+                                        style={{ flex: "25%" }}
+                                        onClick={() => { navigate("/submission/" + String(submissionId)); }}>Jump to</Button>
+                                </div>
+                            </Field>
+                            <div style={{ marginTop: "1em" }}>
+                                <div style={{ margin: "0 0 0.25em 0" }}>
+                                    <Label>Submission Index Page of {submissionsListIndex} / {Math.max(totalSubmissionsListIndex, 1)}</Label>
+                                </div>
+                                <div style={{ display: "flex", columnGap: "0.25em" }}>
+                                    <Button appearance="primary"
+                                        style={{ flex: "25%" }}
+                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 1))); }}>Previous</Button>
+                                    <Button appearance="primary"
+                                        style={{ flex: "25%" }}
+                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(totalSubmissionsListIndex, c + 1)))); }}>Next</Button>
+                                    <Button appearance="secondary"
+                                        style={{ flex: "25%" }}
+                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 10))); }}>Backward 10</Button>
+                                    <Button appearance="secondary"
+                                        style={{ flex: "25%" }}
+                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(1, totalSubmissionsListIndex, c + 10)))); }}>Forward 10</Button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                </Field>
-                <div style={{ marginTop: "1em" }}>
-                    <div style={{ margin: "0 0 4px 0" }}>
-                        <Label>Submission Index Page of {submissionsListIndex} / {Math.max(totalSubmissionsListIndex, 1)}</Label>
-                    </div>
-                    <div style={{ display: "flex", columnGap: "4px" }}>
-                        <Button appearance="primary"
-                            style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 1))); }}>Previous</Button>
-                        <Button appearance="primary"
-                            style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(totalSubmissionsListIndex, c + 1)))); }}>Next</Button>
-                        <Button appearance="secondary"
-                            style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 10))); }}>Backward 10</Button>
-                        <Button appearance="secondary"
-                            style={{ flex: "25%" }}
-                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(1, totalSubmissionsListIndex, c + 10)))); }}>Forward 10</Button>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div style={{ padding: "4px 4px 0 4px", maxWidth: "700px", marginTop: "1em" }}>
-            {
-                submissionsList === undefined ?
-                    <div style={{ padding: "4px 4px 0 4px", maxWidth: "450px" }}><Spinner size="tiny" label="Waiting..." delay={500} /></div>
-                    :
-                    <>
+                    <div style={{ padding: "0.25em 0.25em 0 0.3em", maxWidth: "90%", marginTop: "1em" }}>
                         <Table size="medium">
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHeaderCell>Submission ID</TableHeaderCell>
-                                    <TableHeaderCell>Problem Number</TableHeaderCell>
-                                    <TableHeaderCell>Status</TableHeaderCell>
-                                    <TableHeaderCell>Score</TableHeaderCell>
+                            <TableHeader className="my-table-sticky">
+                                <TableRow className="my-table-row-header">
+                                    <TableHeaderCell style={{ width: "25%" }} className="my-table-cell">Submission ID</TableHeaderCell>
+                                    <TableHeaderCell style={{ width: "25%" }}>Problem Number</TableHeaderCell>
+                                    <TableHeaderCell style={{ width: "25%" }}>Status</TableHeaderCell>
+                                    <TableHeaderCell style={{ width: "25%" }}>Score</TableHeaderCell>
                                 </TableRow>
                             </TableHeader>
-                            <TableBody>
+                            <TableBody className="my-table-scrollbar my-scrollbar">
                                 {
                                     submissionsList.map((submissionResult: SubmissionResult | SubmissionResultOthers, key) => (
-                                        <TableRow key={key}>
-                                            <TableCell style={{ color: "#4183C4" }}
+                                        <TableRow key={key} className="my-table-row-body">
+                                            <TableCell style={{ color: "#4183C4", width: "25%" }} className="my-table-cell"
                                                 onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
                                                 onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
                                                 onClick={() => { navigate("/submission/" + String(submissionResult.submission_id)); }}>
                                                 {submissionResult.submission_id}
                                             </TableCell>
-                                            <TableCell style={{ color: "#4183C4" }}
+                                            <TableCell style={{ color: "#4183C4", width: "25%" }} className="my-table-cell"
                                                 onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
                                                 onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
                                                 onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
                                                 {submissionResult.problem_number}
                                             </TableCell>
-                                            <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD") }}>{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
-                                            <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined }}>{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
+                                            <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD"), width: "25%" }} className="my-table-cell">{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
+                                            <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined, width: "25%" }} className="my-table-cell">{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
                                         </TableRow>
                                     )
                                     )
                                 }
                             </TableBody>
                         </Table>
-                    </>
-            }
-            <PopupDialog
-                open={dialogRequireLoginOpenState}
-                setPopupDialogOpenState={setDialogRequireLoginOpenState}
-                text="Please login first."
-                onClose={handleNavigateLogin} />
-            <SubmissionsListFetcher
-                setSubmissionsList={setSubmissionsList}
-                requestKey={requestKeyOfSubmissionsListFetcher}
-                lastJsonMessage={lastJsonMessage} />
-            <TotalSubmissionsListIndexFetcher
-                setTotalSubmissionsListIndex={setTotalSubmissionsListIndex}
-                requestKey={requestKeyOfTotalSubmissionsListIndexFetcher}
-                lastJsonMessage={lastJsonMessage} />
-        </div>
+                    </div>
+                </>
+        }
+        <PopupDialog
+            open={dialogRequireLoginOpenState}
+            setPopupDialogOpenState={setDialogRequireLoginOpenState}
+            text="Please login first."
+            onClose={handleNavigateLogin} />
     </>;
 }
+
+414.55
+418.3

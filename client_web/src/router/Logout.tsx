@@ -1,52 +1,32 @@
-import { useEffect, useCallback, useState, lazy } from "react";
+import { useEffect, useState, lazy } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-
-import { useDispatch, useSelector } from "react-redux";
-
-import { nanoid } from "nanoid";
 
 const PopupDialog = lazy(() => import("./PopupDialog.tsx"));
 
 import * as globals from "../Globals.ts";
+import { useSelector } from "react-redux";
 import { RootState } from "../store.ts";
-import { logoutReducer } from "../../redux/loginStatusSlice.ts";
-import { clearLoginUsernameReducer } from "../../redux/loginUsernameSlice.ts";
-import { clearSessionTokenReducer } from "../../redux/sessionTokenSlice.ts";
+
 
 export default function Logout() {
     const { sendJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [dialogLogoutSuccessOpenState, setDialogLogoutSuccessOpenState] = useState(false);
-    const loginStatus = useSelector((state: RootState) => state.loginStatus);
+
+    const { handleQuit } = globals.useLogoutSession();
     const loginUsername = useSelector((state: RootState) => state.loginUsername);
     const sessionToken = useSelector((state: RootState) => state.sessionToken);
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    const handleQuit = useCallback(() => {
-        if (loginStatus.value === true) {
-            sendJsonMessage({
-                type: "quit",
-                content: {
-                    username: loginUsername.value,
-                    session_token: sessionToken.value,
-                    request_key: nanoid(),
-                }
-            });
-
-            dispatch(logoutReducer());
-            dispatch(clearLoginUsernameReducer());
-            dispatch(clearSessionTokenReducer());
-        }
-
-        setDialogLogoutSuccessOpenState(true);
-    }, [sendJsonMessage]);
 
     useEffect(() => {
         handleQuit();
-    }, [handleQuit]);
+        globals.handleLogout(sendJsonMessage, loginUsername.value, sessionToken.value);
+        setDialogLogoutSuccessOpenState(true);
+    }, []);
 
-    const handleGoHome = useCallback(() => {
+    const navigate = useNavigate();
+
+    const handleGoHome = () => {
         navigate("/home");
-    }, [navigate]);
+    };
 
     return <>
         <PopupDialog

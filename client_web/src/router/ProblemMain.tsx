@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useState, lazy } from "react";
+import { Suspense, useEffect, useState, lazy } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
 
 import { Button, Dropdown, Spinner, Subtitle1, Tag, Option, Title3, DropdownProps, SelectionEvents, OptionOnSelectData } from "@fluentui/react-components";
@@ -55,12 +55,26 @@ const options = [
     }
 ];
 
-function ProblemInfoFetcher({ lastJsonMessage, setProblemInfo, requestKey }: {
-    lastJsonMessage: unknown;
-    setProblemInfo: React.Dispatch<React.SetStateAction<ProblemInfoFromFetcher | undefined>>;
-    requestKey: string;
-}) {
+function useProblemInfo(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown
+) {
+    const [requestKey, setRequestKey] = useState("");
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const [problemInfo, setProblemInfo] = useState<ProblemInfoFromFetcher | undefined>(undefined);
+
+    const fetchProblemInfo = (problemNumber: number) => {
+        const _requestKey = nanoid();
+        sendJsonMessage({
+            type: "problem_statement",
+            content: {
+                problem_number: problemNumber,
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
 
     useEffect(() => {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
@@ -102,23 +116,44 @@ function ProblemInfoFetcher({ lastJsonMessage, setProblemInfo, requestKey }: {
                         problem_name: message.content.problem_name as string,
                         problem_statement: message.content.problem_statement as string[]
                     });
+
                     delete _websocketMessageHistory[_index];
                 }
             }
         });
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, requestKey, setProblemInfo]);
-    return <></>;
+    }, [websocketMessageHistory, requestKey]);
+
+    return { problemInfo, fetchProblemInfo };
 }
 
-function SubmissionIdFetcher({ lastJsonMessage, requestKey, setSubmissionId, setDialogSubmitSuccessOpenState }: {
-    lastJsonMessage: unknown;
-    setSubmissionId: React.Dispatch<React.SetStateAction<number>>;
-    setDialogSubmitSuccessOpenState: React.Dispatch<React.SetStateAction<boolean>>;
-    requestKey: string;
-}) {
+function useSubmission(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown
+) {
+    const [submissionId, setSubmissionId] = useState<number | undefined>(undefined);
+    const [requestKey, setRequestKey] = useState("");
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const loginUsername = useSelector((state: RootState) => state.loginUsername);
+    const sessionToken = useSelector((state: RootState) => state.sessionToken);
+
+    const submit = (problemNumber: number, submissionCodeLanguage: string, submissionCode: string) => {
+        const _requestKey = nanoid();
+        sendJsonMessage({
+            type: "submission",
+            content: {
+                username: loginUsername.value,
+                session_token: sessionToken.value,
+                problem_number: problemNumber,
+                language: submissionCodeLanguage,
+                code: submissionCode.split('\n'),
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
 
     useEffect(() => {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
@@ -149,16 +184,15 @@ function SubmissionIdFetcher({ lastJsonMessage, requestKey, setSubmissionId, set
                 console.log(message);
                 if (message.content.request_key == requestKey) {
                     setSubmissionId(message.content.submission_id);
-                    setDialogSubmitSuccessOpenState(true);
                     delete _websocketMessageHistory[_index];
                 }
             }
         });
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, requestKey, setSubmissionId, setDialogSubmitSuccessOpenState]);
+    }, [websocketMessageHistory, requestKey]);
 
-    return <></>;
+    return { submissionId, submit };
 }
 
 function DifficultyShower({ difficulty }: {
@@ -184,66 +218,26 @@ function DifficultyShower({ difficulty }: {
 
 export default function ProblemMain() {
     const { problemNumber } = (useLoaderData() as ProblemInfoFromLoader);
-    const [, setWebsocketMessageHistory] = useState([]);
     const [submissionCode, setSubmissionCode] = useState("");
-    const [submissionId, setSubmissionId] = useState(-1);
     const [submissionCodeLanguage, setSubmissionCodeLanguage] = useState("cpp");
     const [codeLanguage, setCodeLanguage] = useState("cpp");
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
-    const [problemInfo, setProblemInfo] = useState<ProblemInfoFromFetcher | undefined>(undefined);
-    const [requestKeyOfProblemInfoFetcher, setRequestKeyOfProblemInfoFetcher] = useState("");
-    const [requestKeyOfSubmissionIdFetcher, setRequestKeyOfSubmissionIdFetcher] = useState("");
     const [dialogSubmitSuccessOpenState, setDialogSubmitSuccessOpenState] = useState(false);
     const [convertedMarkdownRenderString, setConvertedMarkdownRenderString] = useState("");
-    const loginUsername = useSelector((state: RootState) => state.loginUsername);
-    const sessionToken = useSelector((state: RootState) => state.sessionToken);
+    const { submissionId, submit } = useSubmission(sendJsonMessage, lastJsonMessage);
+    const { problemInfo, fetchProblemInfo } = useProblemInfo(sendJsonMessage, lastJsonMessage);
+
     const navigate = useNavigate();
 
-    useEffect(() => {
-        if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
-    }, [lastJsonMessage]);
+    const handleSubmitCode = () => {
+        submit(problemNumber, submissionCodeLanguage, submissionCode)
+    };
 
-    const handleLoadProblemInfo = useCallback(() => {
-        const _requestKey = nanoid();
-        sendJsonMessage({
-            type: "problem_statement",
-            content: {
-                problem_number: problemNumber,
-                request_key: _requestKey
-            }
-        });
+    const handleClickSubmitCode = () => {
+        handleSubmitCode();
+    };
 
-        return _requestKey;
-    }, [problemNumber, sendJsonMessage]);
-
-    const handleSubmitCode = useCallback(() => {
-        console.log("`handleSubmitCode()` triggered.");
-        const request_key = nanoid();
-        sendJsonMessage({
-            type: "submission",
-            content: {
-                username: loginUsername.value,
-                session_token: sessionToken.value,
-                problem_number: problemNumber,
-                language: submissionCodeLanguage,
-                code: submissionCode.split('\n'),
-                request_key: request_key
-            }
-        });
-
-        return request_key;
-    }, [problemNumber, sendJsonMessage, submissionCode, submissionCodeLanguage]);
-
-    useEffect(() => {
-        setRequestKeyOfProblemInfoFetcher(handleLoadProblemInfo());
-    }, [handleLoadProblemInfo]);
-
-    const handleClickSubmitCode = useCallback(() => {
-        console.log("`handleClickSubmitCode()` triggered.");
-        setRequestKeyOfSubmissionIdFetcher(handleSubmitCode());
-    }, [handleSubmitCode]);
-
-    const convertStringListToMarkdownRenderString = useCallback((_problemInfo: ProblemInfoFromFetcher) => {
+    const convertStringListToMarkdownRenderString = (_problemInfo: ProblemInfoFromFetcher) => {
         let markdownRenderString: string = "";
         _problemInfo.problem_statement.map((statement) => {
             markdownRenderString = markdownRenderString +
@@ -253,20 +247,28 @@ ${statement}
         });
 
         return markdownRenderString;
-    }, []);
+    };
+
+    const handleSubmissionNavigate = () => {
+        navigate("/submission/" + submissionId);
+    };
+
+    const handleEditorContentChange = (code: string | undefined,) => {
+        setSubmissionCode((code === undefined) ? "" : code);
+    };
 
     useEffect(() => {
         if (problemInfo !== undefined)
             setConvertedMarkdownRenderString(convertStringListToMarkdownRenderString(problemInfo));
-    }, [convertStringListToMarkdownRenderString, problemInfo]);
+    }, [problemInfo]);
 
-    const handleSubmissionNavigate = useCallback(() => {
-        navigate("/submission/" + submissionId);
-    }, [submissionId, navigate]);
+    useEffect(() => {
+        fetchProblemInfo(problemNumber);
+    }, [problemNumber]);
 
-    const handleEditorContentChange = useCallback((code: string | undefined,) => {
-        setSubmissionCode((code === undefined) ? "" : code);
-    }, []);
+    useEffect(() => {
+        if (submissionId !== undefined) setDialogSubmitSuccessOpenState(true);
+    }, [submissionId]);
 
     return <>
         <div style={{ display: "block", marginLeft: "0.5em", marginTop: "0.5em" }}>
@@ -307,15 +309,6 @@ ${statement}
                     <></>
             }
         </div>
-        <ProblemInfoFetcher
-            lastJsonMessage={lastJsonMessage}
-            setProblemInfo={setProblemInfo}
-            requestKey={requestKeyOfProblemInfoFetcher} />
-        <SubmissionIdFetcher
-            lastJsonMessage={lastJsonMessage}
-            setSubmissionId={setSubmissionId}
-            setDialogSubmitSuccessOpenState={setDialogSubmitSuccessOpenState}
-            requestKey={requestKeyOfSubmissionIdFetcher} />
         <PopupDialog
             open={dialogSubmitSuccessOpenState}
             setPopupDialogOpenState={setDialogSubmitSuccessOpenState}
@@ -332,13 +325,13 @@ function CodeLanguageChooser({ setCodeLanguage, setSubmissionCodeLanguage, style
     props: DropdownProps;
 }>) {
     const [, setSelectedOptions] = useState(["cpp cpp"]);
-    const handleOptionSelect = useCallback((_ev: SelectionEvents, data: OptionOnSelectData) => {
+    const handleOptionSelect = (_ev: SelectionEvents, data: OptionOnSelectData) => {
         if (data.optionValue) {
             setSelectedOptions(data.selectedOptions);
             setCodeLanguage(data.optionValue.split(' ')[1]);
             setSubmissionCodeLanguage(data.optionValue.split(' ')[0]);
         }
-    }, [setCodeLanguage, setSubmissionCodeLanguage]);
+    };
 
     return (
         <div style={style}>

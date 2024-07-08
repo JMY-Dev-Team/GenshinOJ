@@ -95,8 +95,9 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
     async def on_close_connection(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict = None,
     ):
-        await super().on_close_connection(websocket_protocol)
+        await super().on_close_connection(websocket_protocol, content)
 
     async def on_quit(
         self,
@@ -275,6 +276,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 )
                 response["content"]["result"] = "SNF"
                 response["content"]["submission_id"] = content["submission_id"]
+                response["content"]["request_key"] = content["request_key"]
                 await websocket_protocol.send(json.dumps(response))
                 response.clear()
                 return
@@ -292,6 +294,7 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
             ).database_cursor.fetchone()
 
             response["content"] = json.loads(fetch_results[0])
+            response["content"]["request_key"] = content["request_key"]
             await websocket_protocol.send(json.dumps(response))
             response.clear()
         except Exception as e:
@@ -356,5 +359,31 @@ class judge_ws_server_application(ws_server.ws_server_application_protocol):
                 now_submission_id / self.judge_ws_server_application_config["page_size"]
             )
         )
+        await websocket_protocol.send(json.dumps(response))
+        response.clear()
+
+    async def on_user_profile(
+        self,
+        websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict,
+    ):
+        response = dict()
+        response["type"] = "user_profile"
+        response["content"] = dict()
+        response["content"]["request_key"] = content["request_key"]
+        self.ws_server_instance.server_instance.get_module_instance(
+            "db_connector"
+        ).database_cursor.execute(
+            "SELECT accepted, test_accepted, general FROM judge_user_submission WHERE username = '{}';".format(
+                content["username"]
+            )
+        )
+        fetch_result = self.ws_server_instance.server_instance.get_module_instance(
+            "db_connector"
+        ).database_cursor.fetchone()
+        response["content"]["accepted"] = fetch_result[0]
+        response["content"]["test_accepted"] = fetch_result[1]
+        response["content"]["general"] = fetch_result[2]
+
         await websocket_protocol.send(json.dumps(response))
         response.clear()

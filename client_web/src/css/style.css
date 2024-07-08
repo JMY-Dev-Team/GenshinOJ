@@ -1,9 +1,83 @@
-nav.navbar {
-    display: inline-block;
-    background-color: whitesmoke;
-    padding: 0.5em;
+a {
+  text-decoration: none;
 }
 
-a {
-    text-decoration: none;
+.my-scrollbar::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border-radius: 0.4em;
+}
+
+.my-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #7f7f7f;
+  border-radius: 0.4em;
+}
+
+.my-scrollbar::-webkit-scrollbar {
+  width: 0.3em;
+}
+
+.my-scrollbar {
+  -webkit-mask-image: linear-gradient(to top, transparent, black),
+    linear-gradient(to left, transparent 16px, black 16px);
+  -webkit-mask-size: 100% 20000px;
+  -webkit-mask-position: left bottom;
+  mask-size: 100% 20000px;
+  mask-position: left bottom;
+  mask-image: linear-gradient(to top, transparent, black),
+    linear-gradient(to left, transparent 16px, black 16px);
+  transition: mask-position 0.7s 0.5s, -webkit-mask-position 0.7s 0.5s;
+}
+
+.my-scrollbar:hover {
+  -webkit-mask-position: left top;
+  mask-position: left top;
+  transition: mask-position 0.1s, -webkit-mask-position 0.1s;
+}
+
+.my-scrollbar-no-fadeout::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border-radius: 0.4em;
+}
+
+.my-scrollbar-no-fadeout::-webkit-scrollbar-thumb:hover {
+  background: #7f7f7f;
+  border-radius: 0.4em;
+}
+
+.my-scrollbar-no-fadeout::-webkit-scrollbar {
+  width: 0.3em;
+}
+
+thead.my-table-sticky {
+  display: block;
+  position: sticky;
+  z-index: 1;
+  min-width: calc(100vw - 14.2em);
+}
+
+tbody.my-table-scrollbar {
+  display: block;
+  overflow-y: auto;
+  max-height: calc(100vh - 20.7em);
+  width: calc(100vw - 14.2em);
+}
+
+tr.my-table-row-body {
+  display: flex;
+  width: calc(100vw - 15.3em);
+  align-items: center;
+  text-align: left;
+}
+
+tr.my-table-row-header {
+  display: flex;
+  width: calc(100vw - 15.3em);
+  align-items: center;
+  text-align: left;
+}
+
+td.my-table-cell {
+  display: flex;
+  align-items: center;
+  text-align: left;
 }

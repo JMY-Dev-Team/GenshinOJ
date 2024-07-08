@@ -80,8 +80,9 @@ class chat_ws_server_application(ws_server.ws_server_application_protocol):
     async def on_close_connection(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict = None
     ):
-        await super().on_close_connection(websocket_protocol)
+        await super().on_close_connection(websocket_protocol, content)
 
     async def on_quit(
         self,

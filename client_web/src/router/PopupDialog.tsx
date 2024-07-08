@@ -1,4 +1,4 @@
-import { MouseEventHandler, useCallback } from "react";
+import { MouseEventHandler } from "react";
 
 import {
     Button,
@@ -18,14 +18,14 @@ export default function PopupDialog({ text, open, setPopupDialogOpenState, onClo
     setPopupDialogOpenState: React.Dispatch<React.SetStateAction<boolean>>,
     onClose?: MouseEventHandler<HTMLButtonElement> | undefined,
 }) {
-    const handleClose = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClose = (event: React.MouseEvent<HTMLButtonElement>) => {
         if (onClose) onClose(event);
         setPopupDialogOpenState(false);
-    }, [onClose, setPopupDialogOpenState]);
+    };
 
-    const handleOpenChange = useCallback((_: DialogOpenChangeEvent, data: DialogOpenChangeData) => {
+    const handleOpenChange = (_: DialogOpenChangeEvent, data: DialogOpenChangeData) => {
         setPopupDialogOpenState(data.open);
-    }, [setPopupDialogOpenState]);
+    };
 
     return <Dialog modalType="alert" open={open} onOpenChange={handleOpenChange}>
         <DialogSurface>

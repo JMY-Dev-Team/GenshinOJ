@@ -215,7 +215,7 @@ class judge:
     async def go_judge_server_loop(self):
         try:
             self.go_judge_server_proc = await asyncio.create_subprocess_shell(
-                "go-judge>/tmp/go-judge.log",
+                "go-judge -mount-conf " + os.getcwd() + ("\\" if platform.system() == "Windows" else "/") + "judge/go-judge-config/mount.yaml >/tmp/go-judge.log",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -778,6 +778,8 @@ class judge:
                         response["type"] = "submission_result"
                         response["content"] = judgment_result
                         await judgment["websocket_protocol"].send(json.dumps(response))
+                        response.clear()
+                        
                         self.server_instance.get_module_instance(
                             "db_connector"
                         ).database_cursor.execute(
@@ -794,7 +796,6 @@ class judge:
                         self.server_instance.get_module_instance(
                             "db_connector"
                         ).database.commit()
-                        response.clear()
                         del judgment_result
                     except:
                         self.log(traceback.format_exc(), judge_log_level.LEVEL_WARNING)
