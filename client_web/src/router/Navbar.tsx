@@ -24,7 +24,7 @@ export default function NavBar() {
     };
 
     return (
-        <div style={{ padding: "4px 0" }}>
+        <div style={{ padding: "0.35em 0" }}>
             <div style={{ display: "inline" }}>
                 <Tab onClick={() => onTabSelect("home")} style={{ float: "left" }} value="home" icon={<Avatar size={24} image={{ src: "https://img.atcoder.jp/icons/373e4eb93e4b8e5f441eeeea55e5ac84.jpg" }} />}>
                     Genshin OJ

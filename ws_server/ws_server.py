@@ -270,6 +270,7 @@ class ws_server_application_protocol:
     async def on_close_connection(
         self,
         websocket_protocol: websockets.server.WebSocketServerProtocol,
+        content: dict = None
     ):
         """
         Callback method `on_close_connection`

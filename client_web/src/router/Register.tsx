@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, useCallback } from "react";
+import { useEffect, useState, lazy } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import { makeStyles, Input, Field, Button } from "@fluentui/react-components";
@@ -23,18 +23,33 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         maxWidth: "300px",
-        padding: "4px 0 0 12px ",
+        padding: "4px 0 0 12px",
     },
 });
 
-function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterFailureOpenState, requestKey, lastJsonMessage }: {
-    setDialogRegisterSuccessOpenState: React.Dispatch<React.SetStateAction<boolean>>;
-    setDialogRegisterFailureOpenState: React.Dispatch<React.SetStateAction<boolean>>;
-    requestKey: string;
-    lastJsonMessage: unknown;
-}) {
+function useRegisterSession(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown
+) {
+    const [requestKey, setRequestKey] = useState("");
+    const [registerSessionState, setRegisterSessionState] = useState<boolean | undefined>(undefined);
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
     const dispatch = useDispatch();
+
+    const registerSession = (registerUsername: string, registerPassword: string) => {
+        const _requestKey = nanoid();
+        setRegisterSessionState(undefined);
+        sendJsonMessage({
+            type: "register",
+            content: {
+                username: registerUsername,
+                password: registerPassword,
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
 
     useEffect(() => {
         if (lastJsonMessage !== null)
@@ -61,27 +76,26 @@ function RegisterChecker({ setDialogRegisterSuccessOpenState, setDialogRegisterF
             }
             if (_message && isRegisterSession(_message)) {
                 const message = _message as RegisterSessionResult;
-                if (message.content.reason == "registration_success") {
-                    setDialogRegisterSuccessOpenState(true);
+                if (message.content.reason == "registration_success" && message.content.request_key === requestKey) {
                     dispatch(logoutReducer());
+                    setRegisterSessionState(true);
                     delete _websocketMessageHistory[index];
                 }
 
-                if (message.type == "quit" && message.content.reason == "registration_failure") {
-                    setDialogRegisterFailureOpenState(true);
+                if (message.type == "quit" && message.content.reason == "registration_failure" && message.content.request_key === requestKey) {
                     dispatch(logoutReducer());
+                    setRegisterSessionState(false);
                     delete _websocketMessageHistory[index];
                 }
             }
         });
-    }, [websocketMessageHistory, requestKey, setDialogRegisterFailureOpenState, setDialogRegisterSuccessOpenState]);
+    }, [websocketMessageHistory, requestKey]);
 
-    return <></>;
+    return { registerSession, registerSessionState };
 }
 
 export default function Register() {
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
-    const [requestKey, setRequestKey] = useState("");
     const [registerUsernameFromInput, setRegisterUsernameFromInput] = useState("");
     const [registerPasswordFromInput, setRegisterPasswordFromInput] = useState("");
     const [registerPasswordConfirmFromInput, setRegisterPasswordConfirmFromInput] = useState("");
@@ -90,29 +104,25 @@ export default function Register() {
     const [dialogRegisterFailureOpenState, setDialogRegisterFailureOpenState] = useState(false);
     const [dialogRegisterSuccessOpenState, setDialogRegisterSuccessOpenState] = useState(false);
     const loginStatus = useSelector((state: RootState) => state.loginStatus);
+    const { registerSession, registerSessionState } = useRegisterSession(sendJsonMessage, lastJsonMessage);
     const navigate = useNavigate();
 
-    const handleClickRegisterSession = useCallback(() => {
-        const request_key = nanoid();
-        sendJsonMessage({
-            type: "register",
-            content: {
-                username: registerUsernameFromInput,
-                password: registerPasswordFromInput,
-                request_key: request_key
-            }
-        });
-        return request_key;
-    }, [registerPasswordFromInput, registerUsernameFromInput, sendJsonMessage]);
-
-    const handleRegistrationClick = useCallback(() => {
+    const handleRegistrationClick = () => {
         if (registerPasswordFromInput != registerPasswordConfirmFromInput)
             setDialogPasswordInputAndConfirmNotTheSameOpenState(true);
         else
-            setRequestKey(handleClickRegisterSession());
-    }, [handleClickRegisterSession, registerPasswordFromInput, registerPasswordConfirmFromInput]);
+            registerSession(registerUsernameFromInput, registerPasswordFromInput);
+    };
 
     useEffect(() => { if (loginStatus.value === true) setDialogLoggedInOpenState(true); }, [loginStatus]);
+
+    useEffect(() => {
+        if (registerSessionState !== undefined) {
+            if (registerSessionState === true) setDialogRegisterSuccessOpenState(true);
+            if (registerSessionState === false) setDialogRegisterFailureOpenState(true);
+        }
+    }, [registerSessionState]);
+
     return (
         <>
             <div className={useStyles().root}>
@@ -149,11 +159,6 @@ export default function Register() {
                     setPopupDialogOpenState={setDialogRegisterSuccessOpenState}
                     text="Registration succeeded."
                     onClose={() => navigate("/login")} />
-                <RegisterChecker
-                    setDialogRegisterFailureOpenState={setDialogRegisterFailureOpenState}
-                    setDialogRegisterSuccessOpenState={setDialogRegisterSuccessOpenState}
-                    requestKey={requestKey}
-                    lastJsonMessage={lastJsonMessage} />
             </div>
         </>
     );

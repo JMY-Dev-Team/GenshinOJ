@@ -1,4 +1,4 @@
-import { useCallback, useEffect, lazy } from "react";
+import { useEffect, lazy } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
@@ -14,7 +14,10 @@ const NavBar = lazy(() => import("./NavBar.tsx"));
 import { RootState } from "../store.ts";
 import { logoutReducer } from "../../redux/loginStatusSlice.ts";
 
+import * as globals from "../Globals.ts";
+
 import "../css/style.css";
+import Footer from "./Footer.tsx";
 
 export default function Root() {
     const loginStatus = useSelector((state: RootState) => state.loginStatus);
@@ -47,7 +50,7 @@ export default function Root() {
         },
     });
 
-    const beforeunload = useCallback((ev: Event) => {
+    const beforeunload = (ev: Event) => {
         if (ev) {
             if (loginStatus.value === true) {
                 console.log("quitting...");
@@ -60,28 +63,52 @@ export default function Root() {
                     }
                 });
 
+                sendJsonMessage({
+                    type: "close_connection",
+                    content: {
+                        request_key: nanoid()
+                    }
+                });
+
                 dispatch(logoutReducer());
             }
         }
-    }, [sendJsonMessage]);
+    };
 
     useEffect(() => {
-        window.addEventListener('beforeunload', beforeunload);
-    }, [beforeunload]);
+        if (loginUsername.value !== undefined && loginUsername.value !== "") window.addEventListener('beforeunload', beforeunload);
+        return () => window.removeEventListener('beforeunload', beforeunload);
+    }, [loginUsername]);
 
     const navigate = useNavigate();
     const nowLocation = useLocation();
+
     useEffect(() => {
         if (nowLocation.pathname == "/") navigate("/home");
         if (nowLocation.pathname == "/user") navigate("/user/" + loginUsername.value);
-    }, [nowLocation, navigate]);
+    }, [nowLocation]);
+
+    const { loginSession } = globals.useLoginSession(sendJsonMessage, lastJsonMessage);
+
+    useEffect(() => {
+        const loginUsernameFromLocalStorage = localStorage.getItem("loginUsername");
+        const loginPasswordFromLocalStorage = localStorage.getItem("loginPassword");
+        if (loginUsernameFromLocalStorage !== null && loginPasswordFromLocalStorage !== null) {
+            loginSession(loginUsernameFromLocalStorage, loginPasswordFromLocalStorage);
+            console.log("Logged in.");
+        }
+    }, []);
 
     return (
         <FluentProvider theme={webLightTheme}>
             <NavBar />
-            <div className="react-router-outlet">
-                <Outlet context={{ sendJsonMessage, lastJsonMessage, readyState }} />
+            <div className="scroll-bar-wrap">
+                <div className="react-router-outlet scroll-box" style={{ overflowY: "auto", height: "calc(100vh - 7.5em)" }}>
+                    <Outlet context={{ sendJsonMessage, lastJsonMessage, readyState }} />
+                </div>
+                <div className="cover-bar" />
             </div>
+            <Footer />
         </FluentProvider>
     );
 }

@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, BaseSyntheticEvent, lazy, ReactNode, Suspense } from "react";
+import { useState, useEffect, BaseSyntheticEvent, lazy, ReactNode, Suspense } from "react";
 import { useLoaderData, useNavigate, useOutletContext } from "react-router-dom";
-
 
 import { ClipboardCheckmarkRegular, ClipboardCodeRegular, ClipboardTaskFilled, ReOrderDotsHorizontalRegular, StatusRegular } from "@fluentui/react-icons";
 import { Label, Spinner, Table, TableBody, TableHeader, TableHeaderCell, TableCell, TableRow } from "@fluentui/react-components";
 
 import { useSelector } from "react-redux";
 const copy = (await import("copy-to-clipboard")).default;
+import { nanoid } from "nanoid";
 
 const SyntaxHighlighter = lazy(() => import("react-syntax-highlighter"));
 
@@ -39,25 +39,45 @@ function CopyToTheClipboardButton({ content }: {
     content: string;
 }) {
     const [tipText, setTipText] = useState("Copy");
-    const [tipIcon, setTipIcon] = useState<ReactNode>(<ClipboardCodeRegular fontSize="1.1em" style={{ margin: "0 4px 0 0" }} />);
+    const [tipIcon, setTipIcon] = useState<ReactNode>(<ClipboardCodeRegular fontSize="1.1em" style={{ margin: "0 0.25em 0 0" }} />);
     useEffect(() => {
         if (tipText === "Copied")
             setTimeout(() => {
-                if (tipText === "Copied") setTipText("Copy"), setTipIcon(<ClipboardCodeRegular fontSize="1.1em" style={{ margin: "0 4px 0 0" }} />);
+                if (tipText === "Copied") setTipText("Copy"), setTipIcon(<ClipboardCodeRegular fontSize="1.1em" style={{ margin: "0 0.25em 0 0" }} />);
             }, 500);
     }, [tipText]);
 
-    const handleOnClick = useCallback((_: BaseSyntheticEvent) => { copy(content); setTipText("Copied"); setTipIcon(<ClipboardTaskFilled fontSize="1.1em" style={{ margin: "0 4px 0 0" }} />) }, [content]);
-    return <BadgeButton style={{ marginLeft: "auto", marginRight: "4px" }} onClick={handleOnClick}>{tipIcon}<span style={{ fontSize: "1.1em" }}>{tipText}</span></BadgeButton>
+    const handleOnClick = (_: BaseSyntheticEvent) => {
+        copy(content);
+        setTipText("Copied");
+        setTipIcon(<ClipboardTaskFilled fontSize="1.1em" style={{ margin: "0 0.25em 0 0" }} />);
+    };
+
+    return <BadgeButton style={{ marginLeft: "auto", marginRight: "0.25em" }} onClick={handleOnClick}>{tipIcon}<span style={{ fontSize: "1.1em" }}>{tipText}</span></BadgeButton>
 }
 
-function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionResult, setDialogSubmissionNotFoundOpenState }: {
-    submissionId: number;
-    lastJsonMessage: unknown;
-    setSubmissionResult: React.Dispatch<React.SetStateAction<SubmissionResult | undefined>>;
-    setDialogSubmissionNotFoundOpenState: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
+function useSubmissionResult(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown,
+    submissionId: number
+) {
+    const [requestKey, setRequestKey] = useState("");
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const [submissionResult, setSubmissionResult] = useState<SubmissionResult | undefined>(undefined);
+
+    const loadSubmissionResult = (submissionId: number) => {
+        const _requestKey = nanoid();
+        sendJsonMessage({
+            type: "submission_result",
+            content: {
+                submission_id: submissionId,
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
+
     useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
@@ -78,6 +98,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                     code: string[];
                     language: string;
                     username: string;
+                    request_key?: string;
                 };
             }
 
@@ -107,6 +128,7 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                     code?: string[];
                     language?: string;
                     username?: string;
+                    request_key?: string;
                 };
             }
 
@@ -120,10 +142,11 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
             }
 
             if (_message) {
+                console.log(_message);
                 if (isSubmissionResultFromFetch(_message)) {
                     const message = _message as SubmissionResultFromFetch;
                     console.log(message);
-                    if (message.content.submission_id == submissionId) {
+                    if ((message.content.request_key !== undefined && message.content.request_key === requestKey) || message.content.submission_id === submissionId) {
                         setSubmissionResult(message.content as SubmissionResult);
                         delete _websocketMessageHistory[_index];
                     }
@@ -131,9 +154,8 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
                 else if (isSubmissionResultOthersFromFetch(_message)) {
                     const message = _message as SubmissionResultOthersFromFetch;
                     console.log(message);
-                    if (message.content.submission_id == submissionId) {
+                    if ((message.content.request_key !== undefined && message.content.request_key === requestKey) || message.content.submission_id === submissionId) {
                         setSubmissionResult(message.content as SubmissionResult);
-                        if (message.content.result === "SNF") setDialogSubmissionNotFoundOpenState(true);
                         delete _websocketMessageHistory[_index];
                     }
                 }
@@ -141,31 +163,22 @@ function SubmissionStatusFetcher({ submissionId, lastJsonMessage, setSubmissionR
         });
 
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, submissionId, setSubmissionResult, setDialogSubmissionNotFoundOpenState]);
+    }, [websocketMessageHistory]);
 
-    return <></>;
+    return { submissionResult, loadSubmissionResult };
 }
 
 export default function SubmissionShower() {
     const { submissionId } = (useLoaderData() as SubmissionInfoFromLoader);
-    const [submissionResult, setSubmissionResult] = useState<SubmissionResult | undefined>(undefined);
     const [, setWebsocketMessageHistory] = useState([]);
     const { sendJsonMessage, lastJsonMessage } = useOutletContext<globals.WebSocketHook>();
     const [dialogRequireLoginOpenState, setDialogRequireLoginOpenState] = useState(false);
     const [dialogSubmissionNotFoundOpenState, setDialogSubmissionNotFoundOpenState] = useState(false);
     const loginStatus = useSelector((state: RootState) => state.loginStatus);
+    const { submissionResult, loadSubmissionResult } = useSubmissionResult(sendJsonMessage, lastJsonMessage, submissionId);
     const navigate = useNavigate();
 
-    const handleSubmissionResultFetch = useCallback(() => {
-        sendJsonMessage({
-            type: "submission_result",
-            content: {
-                submission_id: submissionId
-            }
-        });
-    }, [sendJsonMessage, submissionId]);
-
-    const convertCodeToRenderString = useCallback((x: string[]) => {
+    const convertCodeToRenderString = (x: string[]) => {
         let renderString: string = "";
         x.map((_s, index) => {
             renderString = renderString + _s.replace("\t", "    ");
@@ -173,39 +186,46 @@ export default function SubmissionShower() {
         });
 
         return renderString;
-    }, []);
+    };
 
     useEffect(() => {
-        if (loginStatus.value === false)
+        const localLoginStatus = localStorage.getItem("loginStatus");
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
-        else
-            handleSubmissionResultFetch();
-    }, [handleSubmissionResultFetch, loginStatus]);
+    }, [loginStatus]);
+
+    useEffect(() => {
+        if (loginStatus.value === true)
+            loadSubmissionResult(submissionId);
+    }, [loginStatus]);
 
     useEffect(() => {
         if (lastJsonMessage !== null) setWebsocketMessageHistory((previousMessage) => previousMessage.concat(lastJsonMessage as []));
     }, [lastJsonMessage]);
 
-    const handleNavigateLogin = useCallback(() => {
+    useEffect(() => {
+        if (submissionResult !== undefined && submissionResult.result === "SNF") setDialogSubmissionNotFoundOpenState(true);
+    }, [submissionResult]);
+
+    const handleNavigateLogin = () => {
         navigate("/login");
-    }, [navigate]);
+    };
 
-    const handleNavigateBackward = useCallback(() => {
+    const handleNavigateBackward = () => {
         navigate(-1);
-    }, [navigate]);
+    };
 
-    return <div style={{ padding: "4px 0" }}>
+    return <>
         {
-            loginStatus
-                ?
-                <>
-                    <div style={{ display: "flex", marginBottom: "10px" }}>
-                        <Label style={{ margin: "auto 2px auto 18px" }}>Submission ID: {submissionResult?.submission_id}</Label>
+            loginStatus.value && (
+                <div style={{ padding: "0.25em 0", maxWidth: "90%" }}>
+                    <div style={{ display: "flex", marginBottom: "0.75em" }}>
+                        <Label style={{ margin: "0.20em 0.15em 0.20em 0.85em" }}>Submission ID: {submissionResult?.submission_id}</Label>
                         {
                             submissionResult !== undefined && submissionResult.result !== "SNF"
                                 ?
                                 <>
-                                    <div style={{ margin: "auto 2px auto 18px" }}>Submission Problem:&nbsp;
+                                    <div style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Submission Problem:&nbsp;
                                         <Label style={{ color: "#4183C4" }}
                                             onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
                                             onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
@@ -213,27 +233,38 @@ export default function SubmissionShower() {
                                             {submissionResult.problem_number}
                                         </Label>
                                     </div>
-                                    <Label style={{ margin: "auto 2px auto 18px" }}>Status:&nbsp;</Label>
                                     {
                                         (
                                             submissionResult.result === "PD"
                                                 ?
-                                                <Spinner size="tiny" label="Waiting..." delay={500} />
+                                                <>
+                                                    <Label style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Status:&nbsp;</Label>
+                                                    <Spinner style={{ margin: "0.20em 0" }} size="tiny" label="Waiting..." delay={500} />
+                                                </>
                                                 :
                                                 (
                                                     submissionResult.result === "AC"
                                                         ?
-                                                        <><Label style={{ color: "#3AAF00" }}>&nbsp;AC</Label></>
+                                                        <>
+                                                            <Label style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Status:&nbsp;</Label>
+                                                            <Label style={{ margin: "0.20em 0", color: "#3AAF00" }}>AC</Label>
+                                                        </>
                                                         :
                                                         (
                                                             submissionResult.result === "CE"
                                                                 ?
-                                                                <><Label style={{ color: "#FDDB10" }}>&nbsp;CE</Label></>
+                                                                <>
+                                                                    <Label style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Status:&nbsp;</Label>
+                                                                    <Label style={{ margin: "0.20em 0", color: "#FDDB10" }}>CE</Label>
+                                                                </>
                                                                 :
                                                                 (
                                                                     submissionResult.result === "WA"
                                                                         ?
-                                                                        <><Label style={{ color: "#DA3737" }}>&nbsp;WA</Label></>
+                                                                        <>
+                                                                            <Label style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Status:&nbsp;</Label>
+                                                                            <Label style={{ margin: "0.20em 0", color: "#DA3737" }}>WA</Label>
+                                                                        </>
                                                                         :
                                                                         <></>
                                                                 )
@@ -243,11 +274,12 @@ export default function SubmissionShower() {
                                                 )
                                         )
                                     }
-                                    <Label style={{ margin: "auto 2px auto 20px" }}>Score:&nbsp;</Label>
+                                    <Label style={{ margin: "0.20em 0.15em 0.20em 1.85em" }}>Score:&nbsp;</Label>
                                     {
                                         submissionResult.general_score !== undefined
                                             ?
                                             <Label style={{
+                                                margin: "0.20em 0",
                                                 color: (submissionResult.general_score >= 80) ? "#3AAF00" : ((submissionResult.general_score >= 60) ? "#FDDB10" : "#DA3737")
                                             }}>
                                                 {submissionResult.general_score}
@@ -256,8 +288,8 @@ export default function SubmissionShower() {
                                             <Label>{`-`}</Label>
                                     }
 
-                                    <Label style={{ margin: "auto 2px auto 18px" }}>Language:&nbsp;{submissionResult.language}</Label>
-                                    <Label style={{ margin: "auto 2px auto 18px" }}>Submitter:&nbsp;{submissionResult.username}</Label>
+                                    <Label style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Language:&nbsp;{submissionResult.language}</Label>
+                                    <Label style={{ margin: "0.20em 0.15em 0.20em 1.55em" }}>Submitter:&nbsp;{submissionResult.username}</Label>
                                 </>
                                 :
                                 <></>
@@ -266,13 +298,13 @@ export default function SubmissionShower() {
                     {
                         submissionResult !== undefined && submissionResult.scores !== undefined && submissionResult.statuses !== undefined
                             ?
-                            <div style={{ margin: "auto 10px", marginBottom: "10px" }}>
+                            <div style={{ margin: "0.20em 0.75em", marginBottom: "0.75em" }}>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHeaderCell><ReOrderDotsHorizontalRegular fontSize="18px" /><Label>Test Case ID</Label></TableHeaderCell>
-                                            <TableHeaderCell><StatusRegular fontSize="18px" /><Label>Status</Label></TableHeaderCell>
-                                            <TableHeaderCell><ClipboardCheckmarkRegular fontSize="18px" /><Label>Score</Label></TableHeaderCell>
+                                            <TableHeaderCell><ReOrderDotsHorizontalRegular fontSize="1.4em" /><Label>Test Case ID</Label></TableHeaderCell>
+                                            <TableHeaderCell><StatusRegular fontSize="1.4em" /><Label>Status</Label></TableHeaderCell>
+                                            <TableHeaderCell><ClipboardCheckmarkRegular fontSize="1.4em" /><Label>Score</Label></TableHeaderCell>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -301,7 +333,7 @@ export default function SubmissionShower() {
                         submissionResult !== undefined && submissionResult.code !== undefined
                             ?
                             <div>
-                                <div style={{ marginLeft: "18px", display: "flex" }}>
+                                <div style={{ marginLeft: "0.85em", display: "flex" }}>
                                     <Label style={{ marginRight: "auto" }}>Code:&nbsp;</Label>
                                     <CopyToTheClipboardButton content={convertCodeToRenderString(submissionResult.code)} />
                                 </div>
@@ -315,9 +347,8 @@ export default function SubmissionShower() {
                             :
                             <></>
                     }
-                </>
-                :
-                <></>
+                </div>
+            )
         }
         <PopupDialog
             open={dialogSubmissionNotFoundOpenState}
@@ -329,10 +360,5 @@ export default function SubmissionShower() {
             setPopupDialogOpenState={setDialogRequireLoginOpenState}
             text="Please login first."
             onClose={handleNavigateLogin} />
-        <SubmissionStatusFetcher
-            submissionId={submissionId}
-            lastJsonMessage={lastJsonMessage}
-            setSubmissionResult={setSubmissionResult}
-            setDialogSubmissionNotFoundOpenState={setDialogSubmissionNotFoundOpenState} />
-    </div>;
+    </>
 }

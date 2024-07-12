@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, lazy } from "react";
+import { useEffect, useState, lazy } from "react";
 import { useNavigate, Outlet, useOutletContext } from "react-router-dom";
 
 import {
@@ -29,18 +29,17 @@ const useStyles = makeStyles({
         display: "flex",
         flexDirection: "row",
         rowGap: "4px",
-        columnGap: "4px",
-        height: "fill",
-        margin: "auto 4px",
+        columnGap: "0.3em",
+        marginLeft: "0.3em"
     },
     chat_list: {
-        flex: "20"
+        width: "calc((100vw - 30.2px) * 0.15)",
     },
     divider: {
-        flex: "1"
+        width: "calc((100vw - 30.2px) * 0.01)",
     },
     chat_main_outlet: {
-        flex: "120"
+        width: "calc((100vw - 30.2px) * 0.84)",
     }
 });
 
@@ -61,13 +60,27 @@ function isOnlineUsersList(x: object) {
     return false;
 }
 
-function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessage }: {
-    setOnlineUsersList: React.Dispatch<React.SetStateAction<string[]>>;
-    requestKey: string;
-    lastJsonMessage: unknown;
-}) {
+function useOnlineUsersList(
+    sendJsonMessage: globals.SendJsonMessage,
+    lastJsonMessage: unknown,
+) {
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const [onlineUsersList, setOnlineUsersList] = useState<string[] | undefined>(undefined);
     const loginUsername = useSelector((state: RootState) => state.loginUsername);
+    const [requestKey, setRequestKey] = useState("");
+
+    const fetchOnlineUsersList = () => {
+        const _requestKey = nanoid();
+        sendJsonMessage({
+            type: "online_user",
+            content: {
+                request_key: _requestKey
+            }
+        });
+
+        setRequestKey(_requestKey);
+    };
+
     useEffect(() => {
         if (lastJsonMessage !== null)
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
@@ -90,9 +103,9 @@ function OnlineUsersListFetcher({ setOnlineUsersList, requestKey, lastJsonMessag
 
         if (changed) setOnlineUsersList(newOnlineUsersList.filter((element) => element !== loginUsername.value));
         if (!globals.compareArray(_websocketMessageHistory, websocketMessageHistory)) setWebsocketMessageHistory(_websocketMessageHistory);
-    }, [websocketMessageHistory, requestKey, setOnlineUsersList]);
+    }, [websocketMessageHistory, requestKey]);
 
-    return <></>;
+    return { onlineUsersList, fetchOnlineUsersList };
 }
 
 export function ChatList({ sendJsonMessage, lastJsonMessage }: {
@@ -100,8 +113,8 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
     lastJsonMessage: unknown
 }) {
     const [, setWebsocketMessageHistory] = useState([]);
-    const [onlineUsersList, setOnlineUsersList] = useState<string[] | undefined>(undefined);
-    const [requestKey, setRequestKey] = useState("");
+    const { onlineUsersList, fetchOnlineUsersList } = useOnlineUsersList(sendJsonMessage, lastJsonMessage);
+    const loginStatus = useSelector((state: RootState) => state.loginStatus);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -109,21 +122,9 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
             setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
     }, [lastJsonMessage]);
 
-    const handleLoadOnlineUsersList = useCallback(() => {
-        const _requestKey = nanoid();
-        sendJsonMessage({
-            type: "online_user",
-            content: {
-                request_key: _requestKey
-            }
-        });
-
-        return _requestKey;
-    }, [sendJsonMessage]);
-
     useEffect(() => {
-        setRequestKey(handleLoadOnlineUsersList());
-    }, [handleLoadOnlineUsersList]);
+        if (loginStatus.value === true) fetchOnlineUsersList();
+    }, [loginStatus]);
 
     return <div>
         <Table size="medium">
@@ -146,10 +147,6 @@ export function ChatList({ sendJsonMessage, lastJsonMessage }: {
                 }
             </TableBody>
         </Table>
-        <OnlineUsersListFetcher
-            setOnlineUsersList={setOnlineUsersList as React.Dispatch<React.SetStateAction<string[]>>}
-            lastJsonMessage={lastJsonMessage}
-            requestKey={requestKey} />
     </div>;
 }
 
@@ -161,36 +158,34 @@ export default function Chat() {
     const style = useStyles();
 
     useEffect(() => {
-        if (loginStatus.value === false)
+        const localLoginStatus = localStorage.getItem("loginStatus");
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
     }, [loginStatus]);
 
     return <>
-        <div className={style.root}>
-            {
-                loginStatus.value === true
-                    ?
-                    <>
-                        <div className={style.chat_list}>
-                            <ChatList
-                                sendJsonMessage={sendJsonMessage}
-                                lastJsonMessage={lastJsonMessage} />
-                        </div>
-                        <div className={style.divider}>
-                            <Divider vertical style={{ height: "100%" }} />
-                        </div>
-                        <div className={style.chat_main_outlet}>
-                            <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
-                        </div>
-                    </>
-                    :
-                    <></>
-            }
-            <PopupDialog
-                open={dialogRequireLoginOpenState}
-                setPopupDialogOpenState={setDialogRequireLoginOpenState}
-                text="Please login first."
-                onClose={() => navigate("/login")} />
-        </div>
+        {
+            loginStatus.value && (
+                <div className={style.root}>
+                    <div className={style.chat_list}>
+                        <ChatList
+                            sendJsonMessage={sendJsonMessage}
+                            lastJsonMessage={lastJsonMessage} />
+                    </div>
+                    <div className={style.divider}>
+                        <Divider vertical style={{ height: "calc(100vh - 8.8em)" }} />
+                    </div>
+                    <div className={style.chat_main_outlet}>
+                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
+                    </div>
+                </div>
+            )
+        }
+
+        <PopupDialog
+            open={dialogRequireLoginOpenState}
+            setPopupDialogOpenState={setDialogRequireLoginOpenState}
+            text="Please login first."
+            onClose={() => navigate("/login")} />
     </>;
 }
