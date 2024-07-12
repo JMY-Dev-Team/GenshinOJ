@@ -102,8 +102,11 @@ export default function Root() {
     return (
         <FluentProvider theme={webLightTheme}>
             <NavBar />
-            <div className="react-router-outlet my-scrollbar" style={{ overflowY: "auto", minHeight: "calc(100vh - 7.5em)", maxHeight: "calc(100vh - 7.5em)" }}>
-                <Outlet context={{ sendJsonMessage, lastJsonMessage, readyState }} />
+            <div className="scroll-bar-wrap">
+                <div className="react-router-outlet scroll-box" style={{ overflowY: "auto", height: "calc(100vh - 7.5em)" }}>
+                    <Outlet context={{ sendJsonMessage, lastJsonMessage, readyState }} />
+                </div>
+                <div className="cover-bar" />
             </div>
             <Footer />
         </FluentProvider>

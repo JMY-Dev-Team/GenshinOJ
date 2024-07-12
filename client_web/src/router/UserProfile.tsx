@@ -99,7 +99,7 @@ export default function UserProfile() {
 
     useEffect(() => {
         const localLoginStatus = localStorage.getItem("loginStatus");
-        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
 
     }, [loginStatus]);
@@ -110,7 +110,7 @@ export default function UserProfile() {
 
     }, [loginStatus]);
 
-    return <div>
+    return <>
         <>
             {
                 userProfile ?
@@ -129,5 +129,5 @@ export default function UserProfile() {
             setPopupDialogOpenState={setDialogRequireLoginOpenState}
             text="Please login first."
             onClose={() => navigate("/login")} />
-    </div>;
+    </>;
 }

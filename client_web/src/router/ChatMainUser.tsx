@@ -198,17 +198,20 @@ export default function ChatMainUser() {
     };
 
     return <>
-        <div style={{ display: "block" }}>
-            <div style={{ display: "block", height: "400px", overflowY: "auto" }} className="my-scrollbar-no-fadeout">
-                <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill" }}>
-                    {
-                        chatMessageList == null
-                            ?
-                            <></>
-                            :
-                            chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
-                    }
+        <div style={{ display: "block", height: "80%" }}>
+            <div className="scroll-bar-wrap">
+                <div style={{ display: "block", height: "400px", overflowY: "auto", marginTop: "1em" }} className="scroll-box">
+                    <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap", width: "fill", marginRight: "1em" }}>
+                        {
+                            chatMessageList == null
+                                ?
+                                <></>
+                                :
+                                chatMessageList.map((message, index) => <div key={index} style={{ alignItems: message.fromMe ? "right" : "left", justifyContent: message.fromMe ? "right" : "left", display: "flex", width: "fill", minHeight: "50px" }}><ChatBubble text={message.message} fromMe={message.fromMe} /></div>)
+                        }
+                    </div>
                 </div>
+                <div className="cover-bar" />
             </div>
             <div style={{ display: "flex", flexDirection: "row", width: "fill", alignItems: "end" }}>
                 <form>

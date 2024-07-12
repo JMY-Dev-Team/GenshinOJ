@@ -2,50 +2,43 @@ a {
   text-decoration: none;
 }
 
-.my-scrollbar::-webkit-scrollbar-thumb {
-  background: #cfcfcf;
-  border-radius: 0.4em;
+.scroll-bar-wrap {
+  margin: -0.4em;
+  position: relative;
 }
 
-.my-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #7f7f7f;
-  border-radius: 0.4em;
+.scroll-box {
+  overflow-y: scroll;
 }
 
-.my-scrollbar::-webkit-scrollbar {
-  width: 0.3em;
+.scroll-box::-webkit-scrollbar {
+  width: 0.4em;
 }
 
-.my-scrollbar {
-  -webkit-mask-image: linear-gradient(to top, transparent, black),
-    linear-gradient(to left, transparent 16px, black 16px);
-  -webkit-mask-size: 100% 20000px;
-  -webkit-mask-position: left bottom;
-  mask-size: 100% 20000px;
-  mask-position: left bottom;
-  mask-image: linear-gradient(to top, transparent, black),
-    linear-gradient(to left, transparent 16px, black 16px);
-  transition: mask-position 0.7s 0.5s, -webkit-mask-position 0.7s 0.5s;
+.scroll-box::-webkit-scrollbar,
+.scroll-box::-webkit-scrollbar-thumb {
+  overflow: visible;
+  border-radius: 4px;
 }
 
-.my-scrollbar:hover {
-  -webkit-mask-position: left top;
-  mask-position: left top;
-  transition: mask-position 0.1s, -webkit-mask-position 0.1s;
+.scroll-box::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
 }
 
-.my-scrollbar-no-fadeout::-webkit-scrollbar-thumb {
-  background: #cfcfcf;
-  border-radius: 0.4em;
+.cover-bar {
+  position: absolute;
+  background: #fff;
+  height: 100%;
+  top: 0;
+  right: 0;
+  width: 0.4em;
+  transition: all 0.5s;
+  opacity: 1;
 }
 
-.my-scrollbar-no-fadeout::-webkit-scrollbar-thumb:hover {
-  background: #7f7f7f;
-  border-radius: 0.4em;
-}
-
-.my-scrollbar-no-fadeout::-webkit-scrollbar {
-  width: 0.3em;
+.scroll-bar-wrap:hover > .cover-bar {
+  opacity: 0;
+  transition: all 0.5s;
 }
 
 thead.my-table-sticky {

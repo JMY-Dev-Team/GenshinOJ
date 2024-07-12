@@ -42,10 +42,10 @@ const useStyles = makeStyles({
     root: {
         display: "flex",
         flexDirection: "column",
-        rowGap: "0.25em",
-        columnGap: "0.25em",
-        maxWidth: "30%",
-        padding: "0.25em 0 0.25em 0",
+        rowGap: "0.5em",
+        columnGap: "0.5em",
+        maxWidth: "100%",
+        margin: "0.5em 0 0.5em 0",
     },
 });
 
@@ -217,7 +217,7 @@ export default function SubmissionsList() {
 
     useEffect(() => {
         const localLoginStatus = localStorage.getItem("loginStatus");
-        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
 
     }, [submissionsListIndex, loginStatus]);
@@ -234,77 +234,81 @@ export default function SubmissionsList() {
 
     return <>
         {
-            submissionsList === undefined ?
-                <div style={{ padding: "0.25em 0.25em 0 0.25em", maxWidth: "50%" }}><Spinner size="tiny" label="Waiting..." delay={500} /></div>
-                :
-                <>
-                    <div className={rootStyle}>
-                        <form style={{ padding: "0 0.9em" }}>
-                            <Field label="Submission ID">
-                                <div style={{ display: "flex", columnGap: "0.25em" }}>
-                                    <Input onChange={(props) => setSubmissionId(props.target.value)} style={{ flex: "75%" }} />
-                                    <Button appearance="primary"
-                                        style={{ flex: "25%" }}
-                                        onClick={() => { navigate("/submission/" + String(submissionId)); }}>Jump to</Button>
+            loginStatus.value &&
+            (
+                submissionsList === undefined ?
+                    <div style={{ padding: "0.5em 0.5em 0 0.5em" }}><Spinner size="large" label="Waiting..." delay={500} /></div>
+                    :
+                    <>
+                        <div className={rootStyle}>
+                            <form style={{ padding: "0 0.9em" }}>
+                                <Field label="Submission ID">
+                                    <div style={{ display: "flex", columnGap: "0.25em" }}>
+                                        <Input onChange={(props) => setSubmissionId(props.target.value)} style={{ flex: "75%" }} />
+                                        <Button appearance="primary"
+                                            style={{ flex: "25%" }}
+                                            onClick={() => { navigate("/submission/" + String(submissionId)); }}>Jump to</Button>
+                                    </div>
+                                </Field>
+                                <div style={{ marginTop: "1em" }}>
+                                    <div style={{ margin: "0 0 0.25em 0" }}>
+                                        <Label>Submission Index Page of {submissionsListIndex} / {Math.max(totalSubmissionsListIndex, 1)}</Label>
+                                    </div>
+                                    <div style={{ display: "flex", columnGap: "0.25em" }}>
+                                        <Button appearance="primary"
+                                            style={{ flex: "25%" }}
+                                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 1))); }}>Previous</Button>
+                                        <Button appearance="primary"
+                                            style={{ flex: "25%" }}
+                                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(totalSubmissionsListIndex, c + 1)))); }}>Next</Button>
+                                        <Button appearance="secondary"
+                                            style={{ flex: "25%" }}
+                                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 10))); }}>Backward 10</Button>
+                                        <Button appearance="secondary"
+                                            style={{ flex: "25%" }}
+                                            onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(1, totalSubmissionsListIndex, c + 10)))); }}>Forward 10</Button>
+                                    </div>
                                 </div>
-                            </Field>
-                            <div style={{ marginTop: "1em" }}>
-                                <div style={{ margin: "0 0 0.25em 0" }}>
-                                    <Label>Submission Index Page of {submissionsListIndex} / {Math.max(totalSubmissionsListIndex, 1)}</Label>
-                                </div>
-                                <div style={{ display: "flex", columnGap: "0.25em" }}>
-                                    <Button appearance="primary"
-                                        style={{ flex: "25%" }}
-                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 1))); }}>Previous</Button>
-                                    <Button appearance="primary"
-                                        style={{ flex: "25%" }}
-                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(totalSubmissionsListIndex, c + 1)))); }}>Next</Button>
-                                    <Button appearance="secondary"
-                                        style={{ flex: "25%" }}
-                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, c - 10))); }}>Backward 10</Button>
-                                    <Button appearance="secondary"
-                                        style={{ flex: "25%" }}
-                                        onClick={() => { setSubmissionsListIndex((c) => (Math.max(1, Math.min(1, totalSubmissionsListIndex, c + 10)))); }}>Forward 10</Button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div style={{ padding: "0.25em 0.25em 0 0.3em", maxWidth: "90%", marginTop: "1em" }}>
-                        <Table size="medium">
-                            <TableHeader className="my-table-sticky">
-                                <TableRow className="my-table-row-header">
-                                    <TableHeaderCell style={{ width: "25%" }} className="my-table-cell">Submission ID</TableHeaderCell>
-                                    <TableHeaderCell style={{ width: "25%" }}>Problem Number</TableHeaderCell>
-                                    <TableHeaderCell style={{ width: "25%" }}>Status</TableHeaderCell>
-                                    <TableHeaderCell style={{ width: "25%" }}>Score</TableHeaderCell>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody className="my-table-scrollbar my-scrollbar">
-                                {
-                                    submissionsList.map((submissionResult: SubmissionResult | SubmissionResultOthers, key) => (
-                                        <TableRow key={key} className="my-table-row-body">
-                                            <TableCell style={{ color: "#4183C4", width: "25%" }} className="my-table-cell"
-                                                onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
-                                                onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
-                                                onClick={() => { navigate("/submission/" + String(submissionResult.submission_id)); }}>
-                                                {submissionResult.submission_id}
-                                            </TableCell>
-                                            <TableCell style={{ color: "#4183C4", width: "25%" }} className="my-table-cell"
-                                                onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
-                                                onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
-                                                onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
-                                                {submissionResult.problem_number}
-                                            </TableCell>
-                                            <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD"), width: "25%" }} className="my-table-cell">{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
-                                            <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined, width: "25%" }} className="my-table-cell">{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
-                                        </TableRow>
-                                    )
-                                    )
-                                }
-                            </TableBody>
-                        </Table>
-                    </div>
-                </>
+                            </form>
+                        </div>
+                        <div style={{ margin: "0.6em 0.25em 0 0.75em", maxWidth: "90%", marginTop: "1em" }} >
+                            <Table size="medium" className="scroll-bar-wrap">
+                                <TableHeader className="my-table-sticky">
+                                    <TableRow className="my-table-row-header">
+                                        <TableHeaderCell style={{ width: "25%" }} className="my-table-cell">Submission ID</TableHeaderCell>
+                                        <TableHeaderCell style={{ width: "25%" }}>Problem Number</TableHeaderCell>
+                                        <TableHeaderCell style={{ width: "25%" }}>Status</TableHeaderCell>
+                                        <TableHeaderCell style={{ width: "25%" }}>Score</TableHeaderCell>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody className="scroll-box my-table-scrollbar">
+                                    {
+                                        submissionsList.map((submissionResult: SubmissionResult | SubmissionResultOthers, key) => (
+                                            <TableRow key={key} className="my-table-row-body">
+                                                <TableCell style={{ color: "#4183C4", width: "25%" }} className="my-table-cell"
+                                                    onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                                    onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
+                                                    onClick={() => { navigate("/submission/" + String(submissionResult.submission_id)); }}>
+                                                    {submissionResult.submission_id}
+                                                </TableCell>
+                                                <TableCell style={{ color: "#4183C4", width: "25%" }} className="my-table-cell"
+                                                    onMouseEnter={(e) => { (e.target as HTMLTableCellElement).style.color = "#0056B3"; (e.target as HTMLTableCellElement).style.cursor = "pointer"; }}
+                                                    onMouseLeave={(e) => { (e.target as HTMLTableCellElement).style.color = "#4183C4"; (e.target as HTMLTableCellElement).style.cursor = "default"; }}
+                                                    onClick={() => { navigate("/problem/" + String(submissionResult.problem_number)); }}>
+                                                    {submissionResult.problem_number}
+                                                </TableCell>
+                                                <TableCell style={{ color: getColorByResult('result' in submissionResult ? submissionResult.result : "PD"), width: "25%" }} className="my-table-cell">{'result' in submissionResult ? submissionResult.result : "PD"}</TableCell>
+                                                <TableCell style={{ color: "general_score" in submissionResult ? getColorByScore(submissionResult.general_score) : undefined, width: "25%" }} className="my-table-cell">{"general_score" in submissionResult ? submissionResult.general_score : "-"}</TableCell>
+                                            </TableRow>
+                                        )
+                                        )
+                                    }
+                                </TableBody>
+                                <div className="cover-bar" />
+                            </Table>
+                        </div>
+                    </>
+            )
         }
         <PopupDialog
             open={dialogRequireLoginOpenState}

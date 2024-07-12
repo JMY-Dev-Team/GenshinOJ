@@ -190,7 +190,7 @@ export default function SubmissionShower() {
 
     useEffect(() => {
         const localLoginStatus = localStorage.getItem("loginStatus");
-        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
     }, [loginStatus]);
 
@@ -215,11 +215,10 @@ export default function SubmissionShower() {
         navigate(-1);
     };
 
-    return <div style={{ padding: "0.25em 0", maxWidth: "90%" }}>
+    return <>
         {
-            loginStatus
-                ?
-                <>
+            loginStatus.value && (
+                <div style={{ padding: "0.25em 0", maxWidth: "90%" }}>
                     <div style={{ display: "flex", marginBottom: "0.75em" }}>
                         <Label style={{ margin: "0.20em 0.15em 0.20em 0.85em" }}>Submission ID: {submissionResult?.submission_id}</Label>
                         {
@@ -348,9 +347,8 @@ export default function SubmissionShower() {
                             :
                             <></>
                     }
-                </>
-                :
-                <></>
+                </div>
+            )
         }
         <PopupDialog
             open={dialogSubmissionNotFoundOpenState}
@@ -362,5 +360,5 @@ export default function SubmissionShower() {
             setPopupDialogOpenState={setDialogRequireLoginOpenState}
             text="Please login first."
             onClose={handleNavigateLogin} />
-    </div>;
+    </>
 }

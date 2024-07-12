@@ -29,17 +29,17 @@ const useStyles = makeStyles({
         display: "flex",
         flexDirection: "row",
         rowGap: "4px",
-        columnGap: "4px",
-        margin: "auto 4px",
+        columnGap: "0.3em",
+        marginLeft: "0.3em"
     },
     chat_list: {
-        width: "calc((100vw - 30.2px) * 0.15)"
+        width: "calc((100vw - 30.2px) * 0.15)",
     },
     divider: {
-        width: "calc((100vw - 30.2px) * 0.01)"
+        width: "calc((100vw - 30.2px) * 0.01)",
     },
     chat_main_outlet: {
-        width: "calc((100vw - 30.2px) * 0.84)"
+        width: "calc((100vw - 30.2px) * 0.84)",
     }
 });
 
@@ -159,36 +159,33 @@ export default function Chat() {
 
     useEffect(() => {
         const localLoginStatus = localStorage.getItem("loginStatus");
-        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
     }, [loginStatus]);
 
     return <>
-        <div className={style.root}>
-            {
-                loginStatus.value === true
-                    ?
-                    <div style={{ display: "flex" }}>
-                        <div className={style.chat_list}>
-                            <ChatList
-                                sendJsonMessage={sendJsonMessage}
-                                lastJsonMessage={lastJsonMessage} />
-                        </div>
-                        <div className={style.divider}>
-                            <Divider vertical style={{ height: "calc(100vh - 8.8em)" }} />
-                        </div>
-                        <div className={style.chat_main_outlet}>
-                            <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
-                        </div>
+        {
+            loginStatus.value && (
+                <div className={style.root}>
+                    <div className={style.chat_list}>
+                        <ChatList
+                            sendJsonMessage={sendJsonMessage}
+                            lastJsonMessage={lastJsonMessage} />
                     </div>
-                    :
-                    <></>
-            }
-            <PopupDialog
-                open={dialogRequireLoginOpenState}
-                setPopupDialogOpenState={setDialogRequireLoginOpenState}
-                text="Please login first."
-                onClose={() => navigate("/login")} />
-        </div>
+                    <div className={style.divider}>
+                        <Divider vertical style={{ height: "calc(100vh - 8.8em)" }} />
+                    </div>
+                    <div className={style.chat_main_outlet}>
+                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
+                    </div>
+                </div>
+            )
+        }
+
+        <PopupDialog
+            open={dialogRequireLoginOpenState}
+            setPopupDialogOpenState={setDialogRequireLoginOpenState}
+            text="Please login first."
+            onClose={() => navigate("/login")} />
     </>;
 }

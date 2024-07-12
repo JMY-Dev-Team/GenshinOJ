@@ -158,7 +158,7 @@ export default function Problem() {
 
     useEffect(() => {
         const localLoginStatus = localStorage.getItem("loginStatus");
-        if (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false)
+        if (localLoginStatus === null || (loginStatus.value === false && localLoginStatus !== null && JSON.parse(localLoginStatus) === false))
             setDialogRequireLoginOpenState(true);
     }, [loginStatus]);
 
@@ -167,31 +167,27 @@ export default function Problem() {
     };
 
     return <>
-        <div className={style.root}>
-            {
-                loginStatus.value === true
-                    ?
-                    <div style={{ display: "flex" }}>
-                        <div style={{ width: "calc((100vw - 20.2px) * 0.15)" }}>
-                            <ProblemList
-                                sendJsonMessage={sendJsonMessage}
-                                lastJsonMessage={lastJsonMessage} />
-                        </div>
-                        <div style={{ width: "calc((100vw - 20.2px) * 0.01)" }}>
-                            <Divider vertical style={{ height: "calc(100vh - 8.8em)" }} />
-                        </div>
-                        <div style={{ width: "calc((100vw - 20.2px) * 0.84)" }}>
-                            <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
-                        </div>
+        {
+            loginStatus.value && (
+                <div className={style.root}>
+                    <div style={{ width: "calc((100vw - 23.7px) * 0.15)" }}>
+                        <ProblemList
+                            sendJsonMessage={sendJsonMessage}
+                            lastJsonMessage={lastJsonMessage} />
                     </div>
-                    :
-                    <></>
-            }
-            <PopupDialog
-                open={dialogRequireLoginOpenState}
-                setPopupDialogOpenState={setDialogRequireLoginOpenState}
-                text="Please login first."
-                onClose={handleCloseDialogRequireLogin} />
-        </div>
+                    <div style={{ width: "calc((100vw - 23.7px) * 0.01)" }}>
+                        <Divider vertical style={{ height: "calc(100vh - 8.8em)" }} />
+                    </div>
+                    <div style={{ width: "calc((100vw - 23.7px) * 0.84)" }}>
+                        <Outlet context={{ sendJsonMessage, lastJsonMessage }} />
+                    </div>
+                </div>
+            )
+        }
+        <PopupDialog
+            open={dialogRequireLoginOpenState}
+            setPopupDialogOpenState={setDialogRequireLoginOpenState}
+            text="Please login first."
+            onClose={handleCloseDialogRequireLogin} />
     </>;
 }
