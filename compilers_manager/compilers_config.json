@@ -1,0 +1,116 @@
+{
+    "compilers": {
+        "c": {
+            "name": "c",
+            "sourceFileName": "a.c",
+            "compileCmd": ["/usr/bin/gcc", "-O2", "-o", "a", "a.c"],
+            "executable": "a",
+            "runCmd": ["a"]
+        },
+        "c++": {
+            "name": "cpp",
+            "sourceFileName": "a.cc",
+            "compileCmd": ["/usr/bin/g++", "-O2", "-std=c++11", "-o", "a", "a.cc"],
+            "executable": "a",
+            "runCmd": ["a"]
+        },
+        "go": {
+            "name": "go",
+            "sourceFileName": "a.go",
+            "compileCmd": ["/usr/bin/go", "build", "-o", "a", "a.go"],
+            "executable": "a",
+            "runCmd": ["a"]
+        },
+        "javascript": {
+            "name": "javascript",
+            "sourceFileName": "a.js",
+            "compileCmd": ["/bin/echo", "compiled"],
+            "executable": "a.js",
+            "runCmd": ["/usr/bin/node", "a.js"]
+        },
+        "typescript": {
+            "name": "typescript",
+            "sourceFileName": "a.ts",
+            "compileCmd": ["/usr/bin/tsc", "a.ts"],
+            "executable": "a.js",
+            "runCmd": ["/usr/bin/node", "a.js"]
+        },
+        "java": {
+            "name": "java",
+            "sourceFileName": "Main.java",
+            "compileCmd": ["/usr/bin/javac", "Main.java"],
+            "executable": "Main.class",
+            "runCmd": ["/usr/bin/java", "Main"]
+        },
+        "pascal": {
+            "name": "pascal",
+            "sourceFileName": "a.pas",
+            "compileCmd": ["/usr/bin/fpc", "-O2", "a.pas"],
+            "executable": "a",
+            "runCmd": ["a"]
+        },
+        "python": {
+            "name": "py",
+            "sourceFileName": "a.py",
+            "compileCmd": ["/bin/echo", "compiled"],
+            "executable": "a.py",
+            "runCmd": ["/usr/bin/python3", "a.py"]
+        },
+        "haskell": {
+            "name": "haskell",
+            "sourceFileName": "a.hs",
+            "compileCmd": ["/usr/bin/ghc", "-o", "a", "a.hs"],
+            "executable": "a",
+            "runCmd": ["a"]
+        },
+        "rust": {
+            "name": "rust",
+            "sourceFileName": "a.rs",
+            "compileCmd": ["/usr/bin/rustc", "-o", "a", "a.rs"],
+            "executable": "a",
+            "runCmd": ["a"]
+        },
+        "ruby": {
+            "name": "ruby",
+            "sourceFileName": "a.rb",
+            "compileCmd": ["/bin/echo", "compiled"],
+            "executable": "a.rb",
+            "runCmd": ["/usr/bin/ruby", "a.rb"]
+        },
+        "php": {
+            "name": "php",
+            "sourceFileName": "a.php",
+            "compileCmd": ["/bin/echo", "compiled"],
+            "executable": "a.php",
+            "runCmd": ["/usr/bin/php", "a.php"]
+        },
+        "c#": {
+            "name": "csharp",
+            "sourceFileName": "a.cs",
+            "compileCmd": ["/usr/bin/mcs", "-optimize+", "-out:a", "a.cs"],
+            "executable": "a",
+            "runCmd": ["/usr/bin/mono", "a"]
+        },
+        "perl": {
+            "name": "perl",
+            "sourceFileName": "a.pl",
+            "compileCmd": ["/bin/echo", "compiled"],
+            "executable": "a.pl",
+            "runCmd": ["/usr/bin/perl", "a.pl"]
+        },
+        "perl6": {
+            "name": "perl",
+            "sourceFileName": "a.pl",
+            "compileCmd": ["/bin/echo", "compiled"],
+            "executable": "a.pl",
+            "runCmd": ["/usr/bin/perl6", "a.pl"]
+        },
+        "ocaml": {
+            "name": "ocaml",
+            "sourceFileName": "a.ml",
+            "compileCmd": ["/usr/bin/ocamlc", "str.cma", "-o", "a", "a.ml"],
+            "executable": "a",
+            "runCmd": ["a"]
+        }
+    }
+}
