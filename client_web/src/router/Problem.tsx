@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy } from "react";
+import { useRef, useEffect, useState, lazy } from "react";
 import { Outlet, useOutletContext, useNavigate } from "react-router-dom";
 
 import {
@@ -11,6 +11,7 @@ import {
     TableBody,
     Divider,
     Spinner,
+    Label,
 } from "@fluentui/react-components";
 
 import { useSelector } from "react-redux";
@@ -24,6 +25,7 @@ import * as globals from "../Globals.ts";
 import { RootState } from "../store.ts";
 
 import "../css/style.css";
+import { ErrorCircle20Color } from "@fluentui/react-icons";
 
 
 const useStyles = makeStyles({
@@ -33,17 +35,33 @@ const useStyles = makeStyles({
         rowGap: "4px",
         columnGap: "4px",
         height: "fill",
-        margin: "0 0.3em",
+        // Top offset cancels the global `.scroll-bar-wrap { margin: -0.4em }` lift in Root, which
+        // otherwise pulls the list's sticky header up into the navbar's bottom divider.
+        margin: "0.4em 0.3em 0 0.3em",
     },
 });
 
 function useProblemList(
     sendJsonMessage: globals.SendJsonMessage,
-    lastJsonMessage: unknown
+    lastJsonMessage: unknown,
+    setElapsedTime: React.Dispatch<React.SetStateAction<number>>
 ) {
     const [problemList, setProblemList] = useState<string[] | undefined>(undefined);
     const [requestKey, setRequestKey] = useState<string>("");
     const [websocketMessageHistory, setWebsocketMessageHistory] = useState([]);
+    const elapsedTimerSinceLoaded = useRef(0);
+
+    useEffect(() => {
+        elapsedTimerSinceLoaded.current = setInterval(() => {
+            setElapsedTime(x => x + 1);
+        }, 1000);
+
+        return () => {
+            if (elapsedTimerSinceLoaded.current) {
+                clearInterval(elapsedTimerSinceLoaded.current);
+            }
+        };
+    }, []);
 
     const loadProblemList = () => {
         const _requestKey = nanoid();
@@ -107,18 +125,13 @@ function TableCellForProblemList({ problem_number }: {
         navigate("/problem/" + problem_number);
     };
     return <TableRow key={problem_number}>
-        <TableCell onClick={handleClick} >{problem_number}</TableCell>
+        <TableCell onClick={handleClick}>{problem_number}</TableCell>
     </TableRow>;
 }
 
 export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMessage: globals.SendJsonMessage, lastJsonMessage: unknown }) {
-    const [, setWebsocketMessageHistory] = useState<unknown[]>([]);
-    const { problemList, loadProblemList } = useProblemList(sendJsonMessage, lastJsonMessage);
-
-    useEffect(() => {
-        if (lastJsonMessage !== null)
-            setWebsocketMessageHistory((previousMessageHistory) => previousMessageHistory.concat(lastJsonMessage as []));
-    }, [lastJsonMessage]);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const { problemList, loadProblemList } = useProblemList(sendJsonMessage, lastJsonMessage, setElapsedTime);
 
     useEffect(() => {
         loadProblemList();
@@ -128,23 +141,42 @@ export function ProblemList({ sendJsonMessage, lastJsonMessage }: { sendJsonMess
         {
             problemList !== undefined
                 ?
-                <Table size="medium">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>Problem List</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {
-                            problemList.map((problem_number: string, index: number) => (
-                                <TableCellForProblemList key={index} problem_number={problem_number} />
-                            )
-                            )
-                        }
-                    </TableBody>
-                </Table>
+                <div style={{ overflowY: "auto", maxHeight: "60vh" }}>
+                    <Table size="medium">
+                        <TableHeader style={{ position: "sticky", top: 0, zIndex: 1, background: "#fff" }}>
+                            <TableRow>
+                                <TableHeaderCell>Problem List</TableHeaderCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {
+                                problemList.map((problem_number: string, index: number) => (
+                                    <TableCellForProblemList key={index} problem_number={problem_number} />
+                                )
+                                )
+                            }
+                        </TableBody>
+                    </Table>
+                </div>
                 :
-                <Spinner size="tiny" label="Waiting..." delay={500} />
+                <div style={{ display: "flex", blockSize: "100%" }}>
+                    {
+                        elapsedTime >= 10
+                            ?
+                            <div style={{ display: "flex", margin: "50% 10% 50% 10%" }}>
+                                <div style={{ display: "flex", blockSize: "100% 80%" }}>
+                                    <ErrorCircle20Color style={{ margin: "auto" }} />
+                                    <Label style={{ margin: "auto", padding: "0 0 0 8px", fontSize: "14px" }}>
+                                        Failed to fetch the problem list.
+                                    </Label>
+                                </div>
+                            </div>
+                            :
+                            <div style={{ display: "flex", margin: "50% 0% 50% 35%" }}>
+                                <Spinner size="tiny" label="Waiting..." delay={500} style={{ margin: "auto" }} />
+                            </div>
+                    }
+                </div>
         }
     </>;
 }

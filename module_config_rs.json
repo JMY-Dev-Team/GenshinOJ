@@ -1,0 +1,89 @@
+{
+    "restricted_mode": true,
+    "working_load": {
+        "simple_authenticator": {
+            "name": "Simple Authenticator",
+            "id": "simple_authenticator",
+            "protocol": "std_authenticator@0.1.0",
+            "enabled": true,
+            "dependencies": [],
+            "unload_timeout": 0
+        },
+        "db_connector": {
+            "name": "Database Connector",
+            "id": "db_connector",
+            "protocol": "std_db_connector@0.1.0",
+            "enabled": false,
+            "dependencies": [],
+            "unload_timeout": 0
+        },
+        "ws_server": {
+            "name": "Websocket Server",
+            "id": "ws_server",
+            "protocol": "std_ws_server@0.1.0",
+            "enabled": true,
+            "dependencies": [
+                "std_authenticator@0.1.0"
+            ],
+            "unload_timeout": 0
+        },
+        "compilers_manager": {
+            "name": "Compilers Manager",
+            "id": "compilers_manager",
+            "protocol": "std_compilers_manager@0.1.0",
+            "enabled": false,
+            "dependencies": [],
+            "unload_timeout": 0
+        },
+        "judge": {
+            "name": "Judge",
+            "id": "judge",
+            "protocol": "std_judge@0.1.0",
+            "enabled": true,
+            "dependencies": [
+                "std_ws_server@0.1.0",
+                "std_authenticator@0.1.0"
+            ],
+            "unload_timeout": 0
+        },
+        "chat_server": {
+            "name": "Chat Server",
+            "id": "chat_server",
+            "protocol": "std_chat_server@0.1.0",
+            "enabled": true,
+            "dependencies": [
+                "std_ws_server@0.1.0"
+            ],
+            "unload_timeout": 0
+        },
+        "userish": {
+            "name": "Userish",
+            "id": "userish",
+            "protocol": "std_userish@0.1.0",
+            "enabled": true,
+            "dependencies": [
+                "std_ws_server@0.1.0",
+                "std_authenticator@0.1.0"
+            ],
+            "unload_timeout": 0
+        },
+        "music_player_server": {
+            "name": "Music Player Server",
+            "id": "music_player_server",
+            "protocol": "music_player_server@0.1.0",
+            "enabled": false,
+            "dependencies": [
+                "std_ws_server@0.1.0"
+            ],
+            "unload_timeout": 0
+        },
+        "control_panel": {
+            "name": "Control Panel",
+            "id": "control_panel",
+            "protocol": "std_control_panel@0.1.0",
+            "enabled": true,
+            "dependencies": [],
+            "unload_timeout": 0
+        }
+    }
+}
